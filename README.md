@@ -1,11 +1,10 @@
-鍏充簬
+说明
 =========
-杩欐槸涓mysql sql璇瑙ｆ瀽鍣涓昏璇嶆硶鍒鍜璇鍒嗘绉绘鑷oceanbase 0.4
-瑙ｆ鍚庣sql璇硶瑙ｆ鍜鎵ц浼樺浠ｇ姝ｅ缂栧锛鍚庣浼闄嗙涓婁銆
+该项目为mysql sql解析器，词法分析和语法分析基于oceanbase 0.4版本，后续的语法树解析和
+sql语句优化分拆再次拼装代码正在编写，会陆续上传。
 
 
-by qinbo
-
+DATE : 2013.6.17
 EMAIL: gqinbo@gmail.com
 
 
