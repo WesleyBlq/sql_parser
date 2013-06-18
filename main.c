@@ -14,11 +14,11 @@ int main (void)
       printf("parse_init error!!!\n");
     }
     
+    sql = "INSERT INTO Persons (LastName, Address) VALUES ('Wilson', 'Champs-Elysees')";
     fprintf(stderr, "<<Part 1 : SQL STRING>>\n%s\n", sql);
-
-    sql = "select user_id, sum(qty) sum_qty from order_list group by user_id having item_id >9;";
-    
     parse_sql(&result, sql, strlen(sql));
+
+
     fflush(stderr);
     if(result.result_tree_ == 0)
     {
