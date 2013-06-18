@@ -1010,7 +1010,7 @@ insert_stmt:
   	replace_or_insert INTO relation_factor opt_insert_columns VALUES insert_vals_list
     {
     	ParseNode* val_list = NULL;
-      merge_nodes(val_list, result->malloc_pool_, T_VALUE_LIST, $6);
+      	merge_nodes(val_list, result->malloc_pool_, T_VALUE_LIST, $6);
     	malloc_non_terminal_node($$, result->malloc_pool_, T_INSERT, 5,
                               $3,           /* target relation */
                               $4,           /* column list */

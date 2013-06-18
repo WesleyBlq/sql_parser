@@ -4,17 +4,15 @@
 #include <stdlib.h>
 #include "parse_node.h"
 
-int main (void)
+int sql_parser(char * sql)
 {
     ParseResult result;
-    char *sql = NULL;
     
     if(parse_init(&result))
     {
       printf("parse_init error!!!\n");
     }
     
-    sql = "INSERT INTO Persons (LastName, Address) VALUES ('Wilson', 'Champs-Elysees')";
     fprintf(stderr, "<<Part 1 : SQL STRING>>\n%s\n", sql);
     parse_sql(&result, sql, strlen(sql));
 
@@ -31,6 +29,23 @@ int main (void)
       print_tree(result.result_tree_, 0);
     }
 
+    if (result.result_tree_)
+    {
+      destroy_tree(result.result_tree_);
+      result.result_tree_ = NULL;
+    }
+
+    printf("\n\n\n\n");
+}
+int main (void)
+{
+    char *sql1 = "INSERT INTO Persons (LastName, Address) VALUES ('Wilson', 'Champs-Elysees')";
+    char *sql2 = "INSERT INTO table2(id, name, address) SELECT id, name, address FROM table1"; 
+    char *sql3 = "INSERT INTO table2(id, name, address) SELECT id, name, address, dd FROM table1";
+    
+    sql_parser(sql1);
+    sql_parser(sql2);
+    sql_parser(sql3);
     return 1;
 }
 

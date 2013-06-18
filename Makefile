@@ -1,5 +1,5 @@
 
-OBJS = parse_malloc.o parse_node.o sql_non_reserved_keywords.o sql_parser.lex.o sql_parser.tab.o type_name.o main.o 
+OBJS = parse_malloc.o parse_node.o sql_non_reserved_keywords.o sql_parser.lex.o sql_parser.tab.o main.o 
 
 sql_parser: $(OBJS)  
 	gcc -o sql_parser $(OBJS) 
