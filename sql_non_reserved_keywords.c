@@ -1,19 +1,3 @@
-/**
- * (C) 2010-2012 Alibaba Group Holding Limited.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
- *
- * Version: $Id$
- *
- * ob_non_reserved_keywords.c
- *
- * Authors:
- *   Guibin Du <tianguan.dgb@taobao.com>
- *
- */
-
 #include <stdio.h>
 #include <ctype.h>
 #include <strings.h>
