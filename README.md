@@ -7,7 +7,7 @@ sql语句优化分拆再次拼装代码正在编写，会陆续上传。
 STEP1：$ sh gen_parser.sh
 STEP2: $ make
 
-执行： $ ./sql_parser.exe
+执行： $ ./sql_parser
 
 当insert语句如下时，解析后的语法树：
 $ ./sql_parser.exe
@@ -17,7 +17,7 @@ INSERT INTO Persons (LastName, Address) VALUES ('Wilson', 'Champs-Elysees')
 <<Part 2 : PARSE TREE>>
 |-T_STMT_LIST
     |-T_INSERT
-        |-T_IDENT : persons
+        |-T_IDENT : persons 
         |-T_COLUMN_LIST
             |-T_IDENT : lastname
             |-T_IDENT : address
