@@ -11,4 +11,3 @@ typedef struct _NonReservedKeyword
 extern const NonReservedKeyword *non_reserved_keyword_lookup(const char *word);
 
 #endif /* SQL_NON_RESERVED_KEYWORDS_H_ */
-

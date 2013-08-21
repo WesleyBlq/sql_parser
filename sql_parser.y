@@ -1238,7 +1238,7 @@ simple_select:
                               NULL,           /* 4. where */
                               NULL,           /* 5. group by */
                               NULL,           /* 6. having */
-                              set_op,   /* 7. set operation */
+                              set_op,   	/* 7. set operation */
                               $3,             /* 8. all specified? */
                               $1,             /* 9. former select stmt */
                               $4,             /* 10. later select stmt */
@@ -1280,7 +1280,7 @@ simple_select:
                               NULL,           /* 4. where */
                               NULL,           /* 5. group by */
                               NULL,           /* 6. having */
-                              set_op,   /* 7. set operation */
+                              set_op,   	  /* 7. set operation */
                               $3,             /* 8. all specified? */
                               $1,             /* 9. former select stmt */
                               $4,             /* 10. later select stmt */
