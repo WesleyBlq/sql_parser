@@ -1,12 +1,14 @@
 #include "ob_insert_stmt.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <vector>
 
+using namespace std;
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
 
-ObInsertStmt::ObInsertStmt(oceanbase::common::ObStringBuf* name_pool)
-: ObStmt(name_pool, T_INSERT)
+ObInsertStmt::ObInsertStmt()
+: ObStmt(T_INSERT)
 {
   sub_query_id_ = OB_INVALID_ID;
   is_replace_ = false;
@@ -14,9 +16,9 @@ ObInsertStmt::ObInsertStmt(oceanbase::common::ObStringBuf* name_pool)
 
 ObInsertStmt::~ObInsertStmt()
 {
-  for (int64_t i = 0; i < value_vectors_.count(); i++)
+  for (int64_t i = 0; i < value_vectors_.size(); i++)
   {
-    ObArray<uint64_t>& value_row = value_vectors_.at(i);
+    array<uint64_t>& value_row = value_vectors_.at(i);
     value_row.clear();
   }
 }
@@ -32,14 +34,14 @@ void ObInsertStmt::print(FILE* fp, int32_t level, int32_t index)
   {
     print_indentation(fp, level + 1);
     fprintf(fp, "VALUES ::= ");
-    for (int64_t i = 0; i < value_vectors_.count(); i++)
+    for (int64_t i = 0; i < value_vectors_.size(); i++)
     {
       if (i == 0)
         fprintf(fp, "<");
       else
         fprintf(fp, ", <");
-      ObArray<uint64_t>& value_row = value_vectors_.at(i);
-      for (int j = 0; j < value_row.count(); j++)
+      vector<uint64_t>& value_row = value_vectors_.at(i);
+      for (int j = 0; j < value_row.size(); j++)
       {
         if (j == 0)
           fprintf(fp, "%ld", value_row.at(j));

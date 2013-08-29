@@ -2,9 +2,10 @@
 #define OCEANBASE_SQL_UPDATESTMT_H_
 #include "ob_stmt.h"
 #include <stdio.h>
-#include "common/ob_array.h"
-#include "common/ob_string.h"
-#include "common/ob_string_buf.h"
+#include <vector>
+#include <array>
+#include <string>
+//#include "common/ob_string_buf.h"
 
 namespace oceanbase
 {
@@ -13,7 +14,7 @@ namespace oceanbase
     class ObUpdateStmt : public ObStmt
     {
     public:
-      ObUpdateStmt(oceanbase::common::ObStringBuf* name_pool);
+      ObUpdateStmt();
       virtual ~ObUpdateStmt();
 
       uint64_t set_update_table(uint64_t id)
@@ -83,8 +84,8 @@ namespace oceanbase
 
     private:
       uint64_t   table_id_;
-      oceanbase::common::ObArray<uint64_t> update_columns_;
-      oceanbase::common::ObArray<uint64_t> update_exprs_;        
+      vector<uint64_t> update_columns_;
+      vector<uint64_t> update_exprs_;        
     };
   }
 }

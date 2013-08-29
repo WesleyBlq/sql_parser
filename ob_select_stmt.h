@@ -3,10 +3,11 @@
 
 #include "ob_stmt.h"
 #include "ob_raw_expr.h"
-#include "common/ob_string.h"
-#include "common/ob_string_buf.h"
-#include "common/ob_array.h"
-#include "common/ob_vector.h"
+//#include "common/ob_string.h"
+//#include "common/ob_string_buf.h"
+//#include "common/ob_array.h"
+#include <vector>
+#include <string>
 
 namespace oceanbase
 {
@@ -16,8 +17,8 @@ namespace oceanbase
     {
       uint64_t   expr_id_;
       bool       is_real_alias_;
-      common::ObString alias_name_;
-      common::ObString expr_name_;
+      string     alias_name_;
+      string     expr_name_;
       common::ObObjType type_;
     };
 
@@ -49,9 +50,9 @@ namespace oceanbase
       void set_joined_tid(uint64_t tid) { joined_table_id_ = tid; }
 
       uint64_t   joined_table_id_;
-      common::ObArray<uint64_t>  table_ids_;
-      common::ObArray<uint64_t>  join_types_;
-      common::ObArray<uint64_t>  expr_ids_;
+      vector<uint64_t>  table_ids_;
+      vector<uint64_t>  join_types_;
+      vector<uint64_t>  expr_ids_;
     };
 
     struct FromItem
@@ -112,7 +113,7 @@ namespace oceanbase
         NONE,
       };
 
-      ObSelectStmt(common::ObStringBuf* name_pool);
+      ObSelectStmt();
       virtual ~ObSelectStmt();
 
       int32_t get_select_item_size() const { return select_items_.size(); }
@@ -129,8 +130,8 @@ namespace oceanbase
       void assign_set_all() { is_set_distinct_ = false; }
       void assign_left_query_id(uint64_t lid) { left_query_id_ = lid; }
       void assign_right_query_id(uint64_t rid) { right_query_id_ = rid; }
-      int check_alias_name(ResultPlan& result_plan, const common::ObString& sAlias) const;
-      uint64_t get_alias_expr_id(common::ObString& alias_name);
+      int check_alias_name(ResultPlan& result_plan, const string& sAlias) const;
+      uint64_t get_alias_expr_id(string& alias_name);
       uint64_t generate_joined_tid() { return gen_joined_tid_--; }
       uint64_t get_left_query_id() { return left_query_id_; }
       uint64_t get_right_query_id() { return right_query_id_; }
@@ -182,7 +183,7 @@ namespace oceanbase
         return having_expr_ids_[index];
       }
 
-      common::ObVector<uint64_t>& get_having_exprs()
+      vector<uint64_t>& get_having_exprs()
       {
         return having_expr_ids_;
       }
@@ -242,15 +243,15 @@ namespace oceanbase
 
       int check_having_ident(
           ResultPlan& result_plan,
-          ObString& column_name,
+          string& column_name,
           TableItem* table_item,
           ObRawExpr*& ret_expr) const;
 
       int add_select_item(
           uint64_t eid,
           bool is_real_alias,
-          const common::ObString& alias_name,
-          const common::ObString& expr_name,
+          const string& alias_name,
+          const string& expr_name,
           const common::ObObjType& type);
 
       int copy_select_items(ObSelectStmt* select_stmt);
@@ -259,12 +260,12 @@ namespace oceanbase
     private:
       /* These fields are only used by normal select */
       bool    is_distinct_;
-      common::ObVector<SelectItem>   select_items_;
-      common::ObVector<FromItem>     from_items_;
-      common::ObVector<JoinedTable*> joined_tables_;
-      common::ObVector<uint64_t>     group_expr_ids_;
-      common::ObVector<uint64_t>     having_expr_ids_;
-      common::ObVector<uint64_t>     agg_func_ids_;
+      vector<SelectItem>   select_items_;
+      vector<FromItem>     from_items_;
+      vector<JoinedTable*> joined_tables_;
+      vector<uint64_t>     group_expr_ids_;
+      vector<uint64_t>     having_expr_ids_;
+      vector<uint64_t>     agg_func_ids_;
 
       /* These fields are only used by set select */
       SetOperator set_op_;
@@ -273,7 +274,7 @@ namespace oceanbase
       uint64_t    right_query_id_;
 
       /* These fields are used by both normal select and set select */
-      common::ObVector<OrderItem>  order_items_;
+      vector<OrderItem>  order_items_;
 
       /* -1 means no limit */
       uint64_t    limit_count_id_;

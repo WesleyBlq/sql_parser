@@ -20,7 +20,27 @@
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>
-#include <openssl/md5.h>
+//#include <openssl/md5.h>
+
+typedef unsigned char        uint8;
+typedef unsigned short       uint16;
+typedef unsigned int         uint32;
+typedef unsigned long long   uint64;
+typedef signed char          int8;
+typedef signed short         int16;
+typedef signed int           int32;
+typedef long long            int64;
+
+
+typedef unsigned char        uint8_t;
+typedef unsigned short       uint16_t;
+typedef unsigned int         uint32_t;
+typedef unsigned long long   uint64_t;
+
+typedef signed char          int8_t;
+typedef signed short         int16_t;
+typedef signed int           int32_t;
+typedef long long            int64_t;
 
 namespace oceanbase
 {
@@ -544,6 +564,7 @@ namespace oceanbase
 // 完成后更新pos。如果反序列化所需数据要超出(buf+data_len)，
 // deserialize返回失败。
 
+#if 0
 #define NEED_SERIALIZE_AND_DESERIALIZE \
 int serialize(char* buf, const int64_t buf_len, int64_t& pos) const; \
   int deserialize(const char* buf, const int64_t data_len, int64_t& pos); \
@@ -573,12 +594,15 @@ virtual int serialize(char* buf, const int64_t buf_len, int64_t& pos) const = 0;
 
 #define DEFINE_GET_SERIALIZE_SIZE(TypeName) \
   int64_t TypeName::get_serialize_size(void) const
-#ifndef UNUSED
-#define UNUSED(v) ((void)(v))
-#endif
+
 
 #define DATABUFFER_SERIALIZE_INFO \
   data_buffer_.get_data(), data_buffer_.get_capacity(), data_buffer_.get_position()
+#endif
+
+#ifndef UNUSED
+#define UNUSED(v) ((void)(v))
+#endif
 
 #define OB_LIKELY(x)       __builtin_expect(!!(x),1)
 #define OB_UNLIKELY(x)     __builtin_expect(!!(x),0)
@@ -601,6 +625,7 @@ virtual int serialize(char* buf, const int64_t buf_len, int64_t& pos) const = 0;
 #define DIO_ALIGN_SIZE 512
 const int64_t OB_SERVER_VERSION_LENGTH = 64;
 
+#if 0
 #define OB_STAT_INC(module, args...) \
   do { \
     ObStatManager *mgr = ObStatSingleton::get_instance(); \
@@ -643,7 +668,7 @@ const int64_t OB_SERVER_VERSION_LENGTH = 64;
     if (NULL != mgr) { mgr->get_stat(OB_STAT_##module, (table_id), ##args); } \
   }while(0)
 
-
+#endif
 
 
 #endif // OCEANBASE_COMMON_DEFINE_H_

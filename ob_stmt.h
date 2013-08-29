@@ -1,11 +1,15 @@
 #ifndef OCEANBASE_SQL_STMT_H_
 #define OCEANBASE_SQL_STMT_H_
-#include "common/ob_row_desc.h"
+//#include "ob_row_desc.h"
 #include <string>
-#include "common/ob_string_buf.h"
-#include "common/ob_vector.h"
-#include "sql/ob_basic_stmt.h"
+#include <stdlib.h>
+//#include "common/ob_string_buf.h"
+//#include "common/ob_vector.h"
+#include <vector>
+#include "ob_basic_stmt.h"
 #include "parse_node.h"
+
+extern int ob_write_string(const string &src, string& dst);
 
 namespace oceanbase
 {
@@ -102,22 +106,16 @@ namespace oceanbase
 
   namespace sql
   {
-    class ObLogicalPlan;
+    //class ObLogicalPlan;
     class ObStmt : public ObBasicStmt
     {
     public:
-      ObStmt(stringBuf* name_pool, StmtType type);
+      ObStmt(StmtType type);
       virtual ~ObStmt();
 
       int32_t get_table_size() const { return table_items_.size(); }
       int32_t get_column_size() const { return column_items_.size(); }
       int32_t get_condition_size() const { return where_expr_ids_.size(); }
-      int check_table_column(
-          ResultPlan& result_plan,
-          const string& column_name, 
-          const TableItem& table_item,
-          uint64_t& column_id,
-          common::ObObjType& column_type);
       int add_table_item(
           ResultPlan& result_plan,
           const string& table_name,
@@ -125,11 +123,18 @@ namespace oceanbase
           uint64_t& table_id,
           const TableItem::TableType type,
           const uint64_t ref_id = common::OB_INVALID_ID);
+      int check_table_column(
+          ResultPlan& result_plan,
+          const string& column_name, 
+          const TableItem& table_item,
+          uint64_t& column_id,
+          common::ObObjType& column_type);
       int add_column_item(
           ResultPlan& result_plan,
           const oceanbase::string& column_name,
           const oceanbase::string* table_name = NULL,
           ColumnItem** col_item = NULL);
+      
       int add_column_item(const ColumnItem& column_item);
       ColumnItem* get_column_item(
         const string* table_name,
@@ -158,17 +163,21 @@ namespace oceanbase
       uint64_t get_table_item(
         const string& table_name,
         TableItem** table_item = NULL) const ;
-      int32_t get_table_bit_index(uint64_t table_id) const ;
 
-      common::ObVector<uint64_t>& get_where_exprs() 
+#if 0      
+      int32_t get_table_bit_index(uint64_t table_id) const ;
+#endif
+      vector<uint64_t>& get_where_exprs() 
       {
         return where_expr_ids_;
       }
 
+#if 0
       stringBuf* get_name_pool() const 
       {
         return name_pool_;
       }
+#endif
 
       ObQueryHint& get_query_hint()
       {
@@ -178,18 +187,18 @@ namespace oceanbase
       virtual void print(FILE* fp, int32_t level, int32_t index = 0);
 
     protected:
-      stringBuf* name_pool_;
-      common::ObVector<TableItem>    table_items_;
-      common::ObVector<ColumnItem>   column_items_;
+      //stringBuf* name_pool_;
+      vector<TableItem>     table_items_;
+      vector<ColumnItem>    column_items_;
 
     private:
       //uint64_t  where_expr_id_;
-      common::ObVector<uint64_t>     where_expr_ids_;
-      ObQueryHint                    query_hint_;
+      vector<uint64_t>      where_expr_ids_;
+      ObQueryHint           query_hint_;
 
       // it is only used to record the table_id--bit_index map
       // although it is a little weird, but it is high-performance than ObHashMap
-      common::ObRowDesc tables_hash_;
+      //common::ObRowDesc tables_hash_;
     };
   }
 }

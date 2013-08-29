@@ -5,27 +5,27 @@
 #include "ob_stmt.h"
 #include "ob_select_stmt.h"
 //#include "ob_result_set.h"
-//#include "common/ob_string.h"
 #include <string>
-#include "common/ob_string_buf.h"
-#include "common/ob_vector.h"
-#include "common/ob_stack_allocator.h"
+//#include "common/ob_string_buf.h"
+#include <vector>
+//#include "common/ob_stack_allocator.h"
 namespace oceanbase
 {
   namespace sql
   {
-    //class ObSQLSessionInfo;
+    class ObSQLSessionInfo;
     class ObLogicalPlan
     {
     public:
-      explicit ObLogicalPlan(oceanbase::common::ObStringBuf* name_pool);
+      explicit ObLogicalPlan();
       virtual ~ObLogicalPlan();
 
+#if 0
       oceanbase::common::ObStringBuf* get_name_pool() const
       {
         return name_pool_;
       }
-
+#endif
       ObBasicStmt* get_query(uint64_t query_id) const;
 
       ObBasicStmt* get_main_stmt()
@@ -74,8 +74,9 @@ namespace oceanbase
         return ret;
       }
 
-      //int fill_result_set(ObResultSet& result_set, ObSQLSessionInfo *session_info, common::StackAllocator &alloc);
-
+#if 0
+        int fill_result_set(ObResultSet& result_set, ObSQLSessionInfo *session_info, common::StackAllocator &alloc);
+#endif
       uint64_t generate_table_id()
       {
         return new_gen_tid_--;
@@ -126,13 +127,15 @@ namespace oceanbase
       }
       void print(FILE* fp = stderr, int32_t level = 0) const;
 
+#if 0
     protected:
       oceanbase::common::ObStringBuf* name_pool_;
+#endif
 
     private:
-      oceanbase::common::ObVector<ObBasicStmt*> stmts_;
-      oceanbase::common::ObVector<ObSqlRawExpr*> exprs_;
-      oceanbase::common::ObVector<ObRawExpr*> raw_exprs_store_;
+      vector<ObBasicStmt*> stmts_;
+      vector<ObSqlRawExpr*> exprs_;
+      vector<ObRawExpr*> raw_exprs_store_;
       int64_t   question_marks_count_;
       uint64_t  new_gen_tid_;
       uint64_t  new_gen_cid_;

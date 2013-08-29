@@ -2,10 +2,10 @@
 #define OCEANBASE_SQL_INSERTSTMT_H_
 #include "ob_stmt.h"
 #include <stdio.h>
-#include "common/ob_array.h"
+#include <vector>
 //#include "common/ob_string.h"
 #include <string>
-#include "common/ob_string_buf.h"
+//#include "common/ob_string_buf.h"
 
 namespace oceanbase
 {
@@ -14,18 +14,18 @@ namespace oceanbase
     class ObInsertStmt : public ObStmt
     {
     public:
-      ObInsertStmt(oceanbase::common::ObStringBuf* name_pool);
+      ObInsertStmt();
       virtual ~ObInsertStmt();
 
       void set_insert_table(uint64_t id);
       void set_insert_query(uint64_t id);
       void set_replace(bool is_replace);
-      int add_value_row(oceanbase::common::ObArray<uint64_t>& value_row);
+      int add_value_row(vector<uint64_t>& value_row);
       bool is_replace() const;
       uint64_t get_table_id() const;
       uint64_t get_insert_query_id() const;
       int64_t get_value_row_size() const;
-      const oceanbase::common::ObArray<uint64_t>& get_value_row(int64_t idx) const;
+      const vector<uint64_t>& get_value_row(int64_t idx) const;
 
       void print(FILE* fp, int32_t level, int32_t index);
 
@@ -33,7 +33,7 @@ namespace oceanbase
       uint64_t   table_id_;
       uint64_t   sub_query_id_;
       bool       is_replace_;  // replace semantic
-      oceanbase::common::ObArray<oceanbase::common::ObArray<uint64_t> > value_vectors_;
+      vector<vector<uint64_t> > value_vectors_;
     };
 
     inline void ObInsertStmt::set_insert_table(uint64_t id)
@@ -64,7 +64,7 @@ namespace oceanbase
       return is_replace_;
     }
 
-    inline int ObInsertStmt::add_value_row(oceanbase::common::ObArray<uint64_t>& value_row)
+    inline int ObInsertStmt::add_value_row(vector<uint64_t>& value_row)
     {
       return value_vectors_.push_back(value_row);
     }
@@ -84,9 +84,9 @@ namespace oceanbase
       return value_vectors_.count();
     }
 
-    inline const oceanbase::common::ObArray<uint64_t>& ObInsertStmt::get_value_row(int64_t idx) const
+    inline const vector<uint64_t>& ObInsertStmt::get_value_row(int64_t idx) const
     {
-      OB_ASSERT(idx >= 0 && idx < value_vectors_.count());
+      OB_ASSERT(idx >= 0 && idx < value_vectors_.size());
       return value_vectors_.at(idx);
     }
   }

@@ -8,8 +8,8 @@ namespace oceanbase
   {
     using namespace oceanbase::common;
 
-    ObUpdateStmt::ObUpdateStmt(oceanbase::common::ObStringBuf* name_pool)
-    : ObStmt(name_pool, T_UPDATE)
+    ObUpdateStmt::ObUpdateStmt()
+    : ObStmt(T_UPDATE)
     {
     }
 

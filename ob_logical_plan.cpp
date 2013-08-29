@@ -3,10 +3,10 @@
 #include "ob_delete_stmt.h"
 #include "ob_insert_stmt.h"
 #include "ob_update_stmt.h"
-#include "ob_show_stmt.h"
-#include "ob_execute_stmt.h"
-#include "ob_prepare_stmt.h"
-#include "ob_sql_session_info.h"
+//#include "ob_show_stmt.h"
+//#include "ob_execute_stmt.h"
+//#include "ob_prepare_stmt.h"
+//#include "ob_sql_session_info.h"
 #include "parse_malloc.h"
 
 namespace oceanbase
@@ -16,8 +16,7 @@ namespace oceanbase
     using namespace oceanbase::sql;
     using namespace oceanbase::common;
 
-    ObLogicalPlan::ObLogicalPlan(ObStringBuf* name_pool)
-      : name_pool_(name_pool)
+    ObLogicalPlan::ObLogicalPlan()
     {
       question_marks_count_ = 0;
       // from valid max id desc
@@ -103,7 +102,6 @@ namespace oceanbase
       OB_ASSERT(NULL != expr);
       return expr;
     }
-
 #if 0
     int ObLogicalPlan::fill_result_set(ObResultSet& result_set, ObSQLSessionInfo* session_info, common::StackAllocator &alloc)
     {
@@ -151,9 +149,9 @@ namespace oceanbase
           for (int32_t i = 0; ret == OB_SUCCESS && i < size; i++)
           {
             const SelectItem& select_item = select_stmt->get_select_item(i);
-            if ((ret = ob_write_string(alloc, select_item.expr_name_, field.cname_)) != OB_SUCCESS)
+            if ((ret = ob_write_string(select_item.expr_name_, field.cname_)) != OB_SUCCESS)
             {
-              TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", select_item.expr_name_.length(), select_item.expr_name_.ptr(), ret);
+              TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", select_item.expr_name_.size(), select_item.expr_name_.ptr(), ret);
               break;
             }
 
@@ -168,9 +166,9 @@ namespace oceanbase
             ObRawExpr* expr = sql_expr->get_expr();
             if (select_stmt->get_set_op() != ObSelectStmt::NONE)
             {
-              if ((ret = ob_write_string(alloc, select_item.expr_name_, field.org_cname_)) != OB_SUCCESS)
+              if ((ret = ob_write_string(select_item.expr_name_, field.org_cname_)) != OB_SUCCESS)
               {
-                TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", select_item.expr_name_.length(), select_item.expr_name_.ptr(), ret);
+                TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", select_item.expr_name_.size(), select_item.expr_name_.ptr(), ret);
                 break;
               }
             }
@@ -188,9 +186,9 @@ namespace oceanbase
                   ret = OB_ERR_ILLEGAL_ID;
                   break;
                 }
-                if (OB_SUCCESS != (ret = ob_write_string(alloc, column_item->column_name_, field.org_cname_)))
+                if (OB_SUCCESS != (ret = ob_write_string(column_item->column_name_, field.org_cname_)))
                 {
-                  TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", column_item->column_name_.length(), column_item->column_name_.ptr(), ret);
+                  TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", column_item->column_name_.size(), column_item->column_name_.ptr(), ret);
                   break;
                 }
                 TableItem *table_item = select_stmt->get_table_item_by_id(table_id);
@@ -200,25 +198,25 @@ namespace oceanbase
                   ret = OB_ERR_ILLEGAL_ID;
                   break;
                 }
-                if (table_item->alias_name_.length() > 0)
+                if (table_item->alias_name_.size() > 0)
                 {
-                  if (OB_SUCCESS != (ret = ob_write_string(alloc, table_item->alias_name_, field.tname_)))
+                  if (OB_SUCCESS != (ret = ob_write_string(table_item->alias_name_, field.tname_)))
                   {
-                    TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", table_item->alias_name_.length(), table_item->alias_name_.ptr(), ret);
+                    TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", table_item->alias_name_.size(), table_item->alias_name_.ptr(), ret);
                     break;
                   }
                 }
                 else
                 {
-                  if (OB_SUCCESS != (ret = ob_write_string(alloc, table_item->table_name_, field.tname_)))
+                  if (OB_SUCCESS != (ret = ob_write_string(table_item->table_name_, field.tname_)))
                   {
-                    TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", table_item->table_name_.length(), table_item->table_name_.ptr(), ret);
+                    TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", table_item->table_name_.size(), table_item->table_name_.ptr(), ret);
                     break;
                   }
                 }
-                if (OB_SUCCESS != (ret = ob_write_string(alloc, table_item->table_name_, field.org_tname_)))
+                if (OB_SUCCESS != (ret = ob_write_string(table_item->table_name_, field.org_tname_)))
                 {
-                  TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", table_item->table_name_.length(), table_item->table_name_.ptr(), ret);
+                  TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", table_item->table_name_.size(), table_item->table_name_.ptr(), ret);
                   break;
                 }
               }
@@ -277,9 +275,9 @@ namespace oceanbase
             break;
           }
           ObString tname;
-          if (OB_SUCCESS != (ret = ob_write_string(alloc, table_item->table_name_, tname)))
+          if (OB_SUCCESS != (ret = ob_write_string(table_item->table_name_, tname)))
           {
-            TBSYS_LOG(WARN, "fail to alloc string \"%.*s\" ret=%d", table_item->table_name_.length(), table_item->table_name_.ptr(), ret);
+            TBSYS_LOG(WARN, "fail to alloc string \"%.*s\" ret=%d", table_item->table_name_.size(), table_item->table_name_.ptr(), ret);
             break;
           }
           field.tname_ = tname;
@@ -290,9 +288,9 @@ namespace oceanbase
             const ColumnItem *col_item = show_stmt->get_column_item(i);
             if (col_item != NULL)
             {
-              if (OB_SUCCESS != (ret = ob_write_string(alloc, col_item->column_name_, cname)))
+              if (OB_SUCCESS != (ret = ob_write_string(col_item->column_name_, cname)))
               {
-                TBSYS_LOG(WARN, "fail to alloc string \"%.*s\" ret=%d", col_item->column_name_.length(), col_item->column_name_.ptr(), ret);
+                TBSYS_LOG(WARN, "fail to alloc string \"%.*s\" ret=%d", col_item->column_name_.size(), col_item->column_name_.ptr(), ret);
                 break;
               }
               field.cname_ = cname;
@@ -394,7 +392,7 @@ namespace oceanbase
           {
             ret = OB_ERR_PREPARE_STMT_UNKNOWN;
             TBSYS_LOG(USER_ERROR, "statement %.*s not prepared",
-                execute_stmt->get_stmt_name().length(), execute_stmt->get_stmt_name().ptr());
+                execute_stmt->get_stmt_name().size(), execute_stmt->get_stmt_name().ptr());
           }
           else if ((ret = result_set.from_prepared(*stored_plan)) != OB_SUCCESS)
           {

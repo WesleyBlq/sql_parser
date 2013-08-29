@@ -17,7 +17,7 @@
 #ifndef OCEANBASE_SQL_OB_BASIC_STMT_H_
 #define OCEANBASE_SQL_OB_BASIC_STMT_H_
 
-#include "common/ob_define.h"
+#include "ob_define.h"
 
 namespace oceanbase
 {

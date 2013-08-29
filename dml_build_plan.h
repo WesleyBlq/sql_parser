@@ -18,8 +18,8 @@
 #define DML_BUILD_PLAN_H_
 
 #include "parse_node.h"
-#include "sql/ob_stmt.h"
-#include "common/ob_vector.h"
+#include "ob_stmt.h"
+#include <vector>
 #include <stdint.h>
 
 /*

@@ -3,14 +3,14 @@
 #include "ob_logical_plan.h"
 #include "sql_parser.tab.h"
 #include "ob_raw_expr.h"
-#include "ob_schema_checker.h"
-#include "common/utility.h"
+//#include "ob_schema_checker.h"
+//#include "common/utility.h"
 
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
 
-ObSelectStmt::ObSelectStmt(ObStringBuf* name_pool)
-: ObStmt(name_pool, ObStmt::T_SELECT)
+ObSelectStmt::ObSelectStmt()
+: ObStmt(ObStmt::T_SELECT)
 {
   //if (m_columnMap.create(MAX_MAP_BUCKET_NUM) == -1)
   //  throw new ParseException(name_pool_, "Create m_columnMap error!");
@@ -40,10 +40,12 @@ ObSelectStmt::~ObSelectStmt()
 
 int ObSelectStmt::check_alias_name(
     ResultPlan& result_plan,
-    const ObString& alias_name) const
+    const string& alias_name) const
 {
   int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
   ObLogicalPlan *logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
+
+  #if 0
   ObSchemaChecker *schema_checker = static_cast<ObSchemaChecker*>(result_plan.schema_checker_);
   if (schema_checker == NULL)
   {
@@ -51,6 +53,7 @@ int ObSelectStmt::check_alias_name(
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
         "Schema(s) are not set");
   }
+  #endif
 
   for (int32_t i = 0; ret == OB_SUCCESS && i < table_items_.size(); i++)
   {
@@ -59,13 +62,15 @@ int ObSelectStmt::check_alias_name(
     if (item.type_ == TableItem::BASE_TABLE
       || item.type_ == TableItem::ALIAS_TABLE)
     {
+    #if 0
       if (schema_checker->column_exists(item.table_name_, alias_name))
       {
         ret = OB_ERR_COLUMN_DUPLICATE;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-            "alias name %.*s is ambiguous", alias_name.length(), alias_name.ptr());
+            "alias name %.*s is ambiguous", alias_name.size()), alias_name.ptr());
         break;
       }
+    #endif  
     }
     else if (item.type_ == TableItem::GENERATED_TABLE)
     {
@@ -78,7 +83,7 @@ int ObSelectStmt::check_alias_name(
         {
           ret = OB_ERR_COLUMN_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "alias name %.*s is ambiguous", alias_name.length(), alias_name.ptr());
+              "alias name %.*s is ambiguous", alias_name.size()), alias_name.ptr());
           break;
         }
       }
@@ -93,7 +98,7 @@ int ObSelectStmt::check_alias_name(
     {
       ret = OB_ERR_COLUMN_DUPLICATE;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "alias name %.*s is ambiguous", alias_name.length(), alias_name.ptr());
+          "alias name %.*s is ambiguous", alias_name.size()), alias_name.ptr());
       break;
     }
   }
@@ -104,8 +109,8 @@ int ObSelectStmt::check_alias_name(
 int ObSelectStmt::add_select_item(
     uint64_t eid,
     bool is_real_alias,
-    const ObString& alias_name,
-    const ObString& expr_name,
+    const string& alias_name,
+    const string& expr_name,
     const ObObjType& type)
 {
   int ret = OB_SUCCESS;
@@ -114,9 +119,9 @@ int ObSelectStmt::add_select_item(
     SelectItem item;
     item.expr_id_ = eid;
     item.is_real_alias_ = is_real_alias;
-    ret = ob_write_string(*name_pool_, alias_name, item.alias_name_);
+    ret = ob_write_string(alias_name, item.alias_name_);
     if (ret == OB_SUCCESS)
-      ret = ob_write_string(*name_pool_, expr_name, item.expr_name_);
+      ret = ob_write_string(expr_name, item.expr_name_);
     if (ret == OB_SUCCESS)
     {
       item.type_ = type;
@@ -131,7 +136,7 @@ int ObSelectStmt::add_select_item(
 }
 
 // return the first expr with name alias_name
-uint64_t ObSelectStmt::get_alias_expr_id(oceanbase::common::ObString& alias_name)
+uint64_t ObSelectStmt::get_alias_expr_id(string& alias_name)
 {
   uint64_t expr_id = OB_INVALID_ID;
   for (int32_t i = 0; i < select_items_.size(); i++)
@@ -163,7 +168,7 @@ JoinedTable* ObSelectStmt::get_joined_table(uint64_t table_id)
 
 int ObSelectStmt::check_having_ident(
   ResultPlan& result_plan,
-  ObString& column_name,
+  string& column_name,
   TableItem* table_item,
   ObRawExpr*& ret_expr) const
 {
@@ -179,6 +184,7 @@ int ObSelectStmt::check_having_ident(
               "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
   }
 
+#if 0
   ObSchemaChecker* schema_checker = NULL;
   if (ret == OB_SUCCESS)
   {
@@ -190,6 +196,7 @@ int ObSelectStmt::check_having_ident(
               "Schema(s) are not set");
     }
   }
+#endif  
 
   for (int32_t i = 0; ret == OB_SUCCESS && i < select_items_.size(); i++)
   {
@@ -209,7 +216,7 @@ int ObSelectStmt::check_having_ident(
             ColumnItem* column_item = get_column_item_by_id(col_expr->get_first_ref_id(), col_expr->get_second_ref_id());
             if (column_item && column_item->column_name_ == column_name)
             {
-              ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*)parse_malloc(sizeof(ObBinaryRefRawExpr), name_pool_);
+              ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*)parse_malloc(sizeof(ObBinaryRefRawExpr), NULL);
               b_expr = new(b_expr) ObBinaryRefRawExpr();
               b_expr->set_expr_type(T_REF_COLUMN);
               b_expr->set_first_ref_id(col_expr->get_first_ref_id());
@@ -226,7 +233,7 @@ int ObSelectStmt::check_having_ident(
         {
           ret = OB_ERR_COLUMN_AMBIGOUS;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "column %.*s of having clause is ambiguous", column_name.length(), column_name.ptr());
+              "column %.*s of having clause is ambiguous", column_name.size()), column_name.ptr());
           parse_free(ret_expr);
           ret_expr = NULL;
           break;
@@ -236,7 +243,7 @@ int ObSelectStmt::check_having_ident(
         if (expr->get_expr_type() == T_REF_COLUMN && !select_item.is_real_alias_)
         {
           ObBinaryRefRawExpr *col_expr = dynamic_cast<ObBinaryRefRawExpr *>(expr);
-          ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*)parse_malloc(sizeof(ObBinaryRefRawExpr), name_pool_);
+          ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*)parse_malloc(sizeof(ObBinaryRefRawExpr), NULL);
           b_expr = new(b_expr) ObBinaryRefRawExpr();
           b_expr->set_expr_type(T_REF_COLUMN);
           b_expr->set_first_ref_id(col_expr->get_first_ref_id());
@@ -248,7 +255,7 @@ int ObSelectStmt::check_having_ident(
         // type 4: select t1.c1 + t2.c1 as cc
         else
         {
-          ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*)parse_malloc(sizeof(ObBinaryRefRawExpr), name_pool_);
+          ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*)parse_malloc(sizeof(ObBinaryRefRawExpr), NULL);
           b_expr = new(b_expr) ObBinaryRefRawExpr();
           b_expr->set_expr_type(T_REF_COLUMN);
           b_expr->set_first_ref_id(OB_INVALID_ID);
@@ -279,7 +286,7 @@ int ObSelectStmt::check_having_ident(
                                       col_expr->get_second_ref_id());
         if (column_item && column_name == column_item->column_name_)
         {
-          ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*)parse_malloc(sizeof(ObBinaryRefRawExpr), name_pool_);
+          ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*)parse_malloc(sizeof(ObBinaryRefRawExpr), NULL);
           b_expr = new(b_expr) ObBinaryRefRawExpr();
           b_expr->set_expr_type(T_REF_COLUMN);
           b_expr->set_first_ref_id(column_item->table_id_);
@@ -295,7 +302,7 @@ int ObSelectStmt::check_having_ident(
   {
     ret = OB_ERR_COLUMN_UNKNOWN;
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-        "Unknown %.*s in having clause", column_name.length(), column_name.ptr());
+        "Unknown %.*s in having clause", column_name.size()), column_name.ptr());
   }
   return ret;
 }
@@ -310,9 +317,9 @@ int ObSelectStmt::copy_select_items(ObSelectStmt* select_stmt)
     const SelectItem& select_item = select_stmt->get_select_item(i);
     new_select_item.expr_id_ = select_item.expr_id_;
     new_select_item.type_ = select_item.type_;
-    ret = ob_write_string(*name_pool_, select_item.alias_name_, new_select_item.alias_name_);
+    ret = ob_write_string(select_item.alias_name_, new_select_item.alias_name_);
     if (ret == OB_SUCCESS)
-      ret = ob_write_string(*name_pool_, select_item.expr_name_, new_select_item.expr_name_);
+      ret = ob_write_string(select_item.expr_name_, new_select_item.expr_name_);
     if (ret == OB_SUCCESS)
       ret = select_items_.push_back(new_select_item);
   }
@@ -339,9 +346,9 @@ void ObSelectStmt::print(FILE* fp, int32_t level, int32_t index)
       if (i > 0)
         fprintf(fp, ", ");
       SelectItem& item = select_items_[i];
-      if (item.alias_name_.length() > 0)
+      if (item.alias_name_.size()) > 0)
         fprintf(fp, "<%lu, %.*s>", item.expr_id_,
-          item.alias_name_.length(), item.alias_name_.ptr());
+          item.alias_name_.size()), item.alias_name_.ptr());
       else
         fprintf(fp, "<%ld>", item.expr_id_);
     }
