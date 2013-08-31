@@ -4,7 +4,7 @@
 #include <string>
 //#include "ob_logical_plan.h"
 //#include "ob_schema_checker.h"
-//#include "common/utility.h"
+#include "utility.h"
 
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
@@ -17,7 +17,7 @@ string make_string(const char* cstr)
 }
 
 
-int ob_write_string(const string &src, string& dst)
+int ob_write_string(const string &src, string &dst)
 {
   int ret = OB_SUCCESS;
   int32_t src_len = src.size();
@@ -95,7 +95,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_ILLEGAL_NAME;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table '%.*s' must not alias the same name", table_name.size(), table_name.ptr());
+              "table '%.*s' must not alias the same name", table_name.size(), table_name.data()));
           break;
         }
         /* go through */
@@ -108,7 +108,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_TABLE_UNKNOWN;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table '%.*s' does not exist", table_name.size(), table_name.ptr());
+              "table '%.*s' does not exist", table_name.size(), table_name.data()));
           break;
         }
         if (type == TableItem::BASE_TABLE)
@@ -152,7 +152,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_TABLE_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table %.*s is ambiguous", table_name.size(), table_name.ptr());
+              "table %.*s is ambiguous", table_name.size(), table_name.data()));
           break;
         }
       }
@@ -163,7 +163,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_TABLE_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table %.*s is ambiguous", old_item.table_name_.size(), old_item.table_name_.ptr());
+              "table %.*s is ambiguous", old_item.table_name_.size(), old_item.table_name_.data()));
           break;
         }
       }
@@ -173,7 +173,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_TABLE_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table %.*s is ambiguous", table_name.size(), table_name.ptr());
+              "table %.*s is ambiguous", table_name.size(), table_name.data()));
           break;
         }
         if (alias_name == old_item.table_name_
@@ -181,7 +181,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_TABLE_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table %.*s is ambiguous", alias_name.size(), alias_name.ptr());
+              "table %.*s is ambiguous", alias_name.size(), alias_name.data()));
           break;
         }
       }
@@ -193,7 +193,7 @@ int ObStmt::add_table_item(
     if ((ret = ob_write_string(table_name, item.table_name_)) != OB_SUCCESS)
     {
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Can not make space for table name %.*s", table_name.size(), table_name.ptr());
+          "Can not make space for table name %.*s", table_name.size(), table_name.data()));
     }
   }
   if (ret == OB_SUCCESS)
@@ -201,7 +201,7 @@ int ObStmt::add_table_item(
     if ((ret = ob_write_string(alias_name, item.alias_name_)) != OB_SUCCESS)
     {
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Can not make space for alias name %.*s", alias_name.size(), alias_name.ptr());
+          "Can not make space for alias name %.*s", alias_name.size(), alias_name.data()));
     }
   }
   if (ret == OB_SUCCESS)
@@ -340,7 +340,7 @@ int ObStmt::add_column_item(
     {
       ret = OB_ERR_TABLE_UNKNOWN;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Unknown table name %.*s", table_name->size(), table_name->ptr());
+          "Unknown table name %.*s", table_name->size(), table_name->data()));
       return ret;
     }
     column_item.is_name_unique_ = false;
@@ -366,7 +366,7 @@ int ObStmt::add_column_item(
     {
       ret = OB_ERR_COLUMN_UNKNOWN;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Unknown column name %.*s", column_name.size(), column_name.ptr());
+          "Unknown column name %.*s", column_name.size(), column_name.data()));
       return ret;
     }
     table_item->has_scan_columns_ = true;
@@ -388,7 +388,7 @@ int ObStmt::add_column_item(
         {
           ret = OB_ERR_COLUMN_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "Column name %.*s is ambiguous", column_name.size(), column_name.ptr());
+              "Column name %.*s is ambiguous", column_name.size(), column_name.data()));
           return ret;
         }
         column_item.table_id_ = table_item.table_id_;
@@ -407,7 +407,7 @@ int ObStmt::add_column_item(
     {
       ret = OB_ERR_COLUMN_UNKNOWN;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Unknown column name %.*s", column_name.size(), column_name.ptr());
+          "Unknown column name %.*s", column_name.size(), column_name.data()));
       return ret;
     }
   }
@@ -417,7 +417,7 @@ int ObStmt::add_column_item(
   {
     ret = OB_ERR_PARSER_MALLOC_FAILED;
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-        "Malloc column name %.*s failed", column_name.size(), column_name.ptr());
+        "Malloc column name %.*s failed", column_name.size(), column_name.data()));
     return ret;
   }
   // not be used now
@@ -430,7 +430,7 @@ int ObStmt::add_column_item(
     if (ret != OB_SUCCESS)
     {
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Can not add column %.*s", column_name.size(), column_name.ptr());
+          "Can not add column %.*s", column_name.size(), column_name.data()));
       return ret;
     }
     ret_item = column_items_.last();
@@ -456,7 +456,7 @@ int ObStmt::add_column_item(
       if (ret != OB_SUCCESS)
       {
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-            "Can not add column %.*s", column_name.size(), column_name.ptr());
+            "Can not add column %.*s", column_name.size(), column_name.data()));
         return ret;
       }
       ret_item = column_items_.last();
@@ -543,7 +543,7 @@ int ObStmt::check_table_column(
             {
               ret = OB_ERR_COLUMN_DUPLICATE;
               snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                  "column %.*s is ambiguous", column_name.size(), column_name.ptr());
+                  "column %.*s is ambiguous", column_name.size(), column_name.data()));
               break;
             }
           }
@@ -590,9 +590,9 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
       TableItem& item = table_items_[i];
       print_indentation(fp, level + 1);
       fprintf(fp, "{Num %d, TableId:%lu, TableName:%.*s, ",
-        i, item.table_id_, item.table_name_.size(), item.table_name_.ptr());
+        i, item.table_id_, item.table_name_.size(), item.table_name_.data()));
       if (item.alias_name_.size() > 0)
-        fprintf(fp, "AliasName:%.*s, ", item.alias_name_.size(), item.alias_name_.ptr());
+        fprintf(fp, "AliasName:%.*s, ", item.alias_name_.size(), item.alias_name_.data()));
       else
         fprintf(fp, "AliasName:NULL, ");
       if (item.type_ == TableItem::BASE_TABLE)
@@ -616,7 +616,7 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
       ColumnItem& item = column_items_[i];
       print_indentation(fp, level + 1);
       fprintf(fp, "{Num %d, ColumnId:%lu, ColumnName:%.*s, TableRef:%lu}\n", i,
-        item.column_id_, item.column_name_.size(), item.column_name_.ptr(),
+        item.column_id_, item.column_name_.size(), item.column_name_.data()),
         item.table_id_);
     }
     print_indentation(fp, level);

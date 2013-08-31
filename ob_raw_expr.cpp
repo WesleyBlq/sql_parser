@@ -1,8 +1,8 @@
 #include "ob_raw_expr.h"
 //#include "ob_transformer.h"
 #include "type_name.c"
-#include "ob_prepare.h"
-#include "ob_result_set.h"
+//#include "ob_prepare.h"
+//#include "ob_result_set.h"
 
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
@@ -148,7 +148,7 @@ void ObConstRawExpr::print(FILE* fp, int32_t level) const
     {
       string str;
       value_.get_varchar(str);
-      fprintf(fp, "%.*s\n", str.size(), str.ptr());
+      fprintf(fp, "%.*s\n", str.size(), str.data());
       break;
     }
     case T_DATE:
@@ -176,7 +176,7 @@ void ObConstRawExpr::print(FILE* fp, int32_t level) const
     {
       string str;
       value_.get_varchar(str);
-      fprintf(fp, "%.*s\n", str.size(), str.ptr());
+      fprintf(fp, "%.*s\n", str.size(), str.data());
       break;
     }
     case T_BOOL:
@@ -294,19 +294,19 @@ int ObConstRawExpr::fill_sql_expression(
         && (var_ptr = sql_context->session_info_->get_sys_variable_value(var_name)) == NULL)
       {
         ret = OB_ERR_VARIABLE_UNKNOWN;
-        TBSYS_LOG(ERROR, "System variable %.*s does not exists", var_name.size(), var_name.ptr());
+        TBSYS_LOG(ERROR, "System variable %.*s does not exists", var_name.size(), var_name.data());
       }
       else if (item.type_ == T_TEMP_VARIABLE
         && (var_ptr = sql_context->session_info_->get_variable_value(var_name)) == NULL)
       {
         ret = OB_ERR_VARIABLE_UNKNOWN;
-        TBSYS_LOG(USER_ERROR, "Variable %.*s does not exists", var_name.size(), var_name.ptr());
+        TBSYS_LOG(USER_ERROR, "Variable %.*s does not exists", var_name.size(), var_name.data());
       }
       else
       {
         item.value_.int_ = reinterpret_cast<int64_t>(var_ptr);
         TBSYS_LOG(DEBUG, "get system variable type=%d name=%.*s ptr=%p val=%s",
-                  item.type_, var_name.size(), var_name.ptr(), var_ptr, to_cstring(*var_ptr));
+                  item.type_, var_name.size(), var_name.data(), var_ptr, to_cstring(*var_ptr));
       }
       break;
     }
@@ -749,7 +749,7 @@ int ObAggFunRawExpr::fill_sql_expression(
 void ObSysFunRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
-  fprintf(fp, "%s : %.*s\n", get_type_name(get_expr_type()), func_name_.size(), func_name_.ptr());
+  fprintf(fp, "%s : %.*s\n", get_type_name(get_expr_type()), func_name_.size(), func_name_.data());
   for (int32_t i = 0; i < exprs_.size(); i++)
   {
     exprs_[i]->print(fp, level + 1);
@@ -779,7 +779,7 @@ int ObSysFunRawExpr::fill_sql_expression(
   }
   if (ret == OB_SUCCESS && (ret = inter_expr.add_expr_item(item)) != OB_SUCCESS)
   {
-    TBSYS_LOG(WARN, "Add system function %.*s failed", func_name_.size(), func_name_.ptr());
+    TBSYS_LOG(WARN, "Add system function %.*s failed", func_name_.size(), func_name_.data());
   }
   return ret;
 }

@@ -29,7 +29,7 @@
 #include "ob_define.h"
 #include <array>
 //#include "common/ob_string_buf.h"
-//#include "common/utility.h"
+#include "utility.h"
 #include <stdint.h>
 #include "ob_obj_type.h"
 
@@ -349,7 +349,7 @@ int resolve_expr(
       expr = c_expr;
       if (node->type_ == T_TEMP_VARIABLE)
       {
-        TBSYS_LOG(INFO, "resolve tmp variable, name=%.*s", str.size(), str.ptr());
+        TBSYS_LOG(INFO, "resolve tmp variable, name=%.*s", str.size(), str.data());
       }
       break;
     }
@@ -657,7 +657,7 @@ int resolve_expr(
         {
           ret = OB_ERR_COLUMN_UNKNOWN;
           snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-              "Unkown column name %.*s", column_name.size(), column_name.ptr());
+              "Unkown column name %.*s", column_name.size(), column_name.data());
         }
       }
       break;
@@ -1277,7 +1277,7 @@ int resolve_expr(
         if ((ret = oceanbase::sql::ObPostfixExpression::get_sys_func_param_num(func_name, param_num)) != OB_SUCCESS)
         {
           snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                   "Unknown function '%.*s', ret=%d", func_name.size(), func_name.ptr(), ret);
+                   "Unknown function '%.*s', ret=%d", func_name.size(), func_name.data(), ret);
         }
         else
         {
@@ -1290,7 +1290,7 @@ int resolve_expr(
                 ret = OB_ERR_PARAM_SIZE;
                 snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                    "Param num of function '%.*s' can not be less than 2 or more than 3, ret=%d",
-                   func_name.size(), func_name.ptr(), ret);
+                   func_name.size(), func_name.data(), ret);
               }
               break;
             }
@@ -1301,7 +1301,7 @@ int resolve_expr(
               ret = OB_ERR_PARAM_SIZE;
               snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                    "Wrong num of function param(s), function='%.*s', num=%d, ret=%d",
-                   func_name.size(), func_name.ptr(), OCCUR_AS_PAIR, ret);
+                   func_name.size(), func_name.data(), OCCUR_AS_PAIR, ret);
               break;
             }
             case MORE_THAN_ZERO:
@@ -1310,7 +1310,7 @@ int resolve_expr(
               {
                 ret = OB_ERR_PARAM_SIZE;
                 snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                   "Param num of function '%.*s' can not be empty, ret=%d", func_name.size(), func_name.ptr(), ret);
+                   "Param num of function '%.*s' can not be empty, ret=%d", func_name.size(), func_name.data(), ret);
               }
               break;
             }
@@ -1320,7 +1320,7 @@ int resolve_expr(
               {
                 ret = OB_ERR_PARAM_SIZE;
                 snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                   "Param num of function '%.*s' must be %d, ret=%d", func_name.size(), func_name.ptr(), param_num, ret);
+                   "Param num of function '%.*s' must be %d, ret=%d", func_name.size(), func_name.data(), param_num, ret);
               }
               break;
             }
@@ -1329,15 +1329,15 @@ int resolve_expr(
       }
       if (ret == OB_SUCCESS)
       {
-        if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_LENGTH), func_name.ptr(), func_name.size()))
+        if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_LENGTH), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObIntType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_SUBSTR), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_SUBSTR), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObVarcharType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CAST), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CAST), func_name.data(), func_name.size()))
         {
           int32_t num = node->children_[1]->num_child_;
           if (num == 2)
@@ -1370,52 +1370,52 @@ int resolve_expr(
             TBSYS_LOG(WARN, "CAST function must only take 2 params");
           }
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CUR_TIME), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CUR_TIME), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObDateTimeType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CUR_DATE), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CUR_DATE), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObDateTimeType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CUR_TIMESTAMP), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CUR_TIMESTAMP), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObPreciseDateTimeType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CUR_USER), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CUR_USER), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObVarcharType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_TRIM), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_TRIM), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObVarcharType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_LOWER), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_LOWER), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObVarcharType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_UPPER), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_UPPER), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObVarcharType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_COALESCE), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_COALESCE), func_name.data(), func_name.size()))
         {
           // always cast to varchar as it is an all-mighty type
           func_expr->set_result_type(ObVarcharType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_HEX), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_HEX), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObVarcharType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_UNHEX), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_UNHEX), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObVarcharType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_IP_TO_INT), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_IP_TO_INT), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObIntType);
         }
-        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_INT_TO_IP), func_name.ptr(), func_name.size()))
+        else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_INT_TO_IP), func_name.data(), func_name.size()))
         {
           func_expr->set_result_type(ObVarcharType);
         }
@@ -1423,7 +1423,7 @@ int resolve_expr(
         {
           ret = OB_ERR_UNKNOWN_SYS_FUNC;
           snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                   "system function `%.*s' not supported", func_name.size(), func_name.ptr());
+                   "system function `%.*s' not supported", func_name.size(), func_name.data());
         }
       }
       if (ret == OB_SUCCESS)
@@ -2891,7 +2891,7 @@ int resolve_insert_columns(
         {
           ret = OB_ERR_INSERT_INNER_JOIN_COLUMN;
           snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-              "Cannot insert inner join column: %.*s", column_item->column_name_.size(), column_item->column_name_.ptr());
+              "Cannot insert inner join column: %.*s", column_item->column_name_.size(), column_item->column_name_.data());
           break;
         }
 #endif        

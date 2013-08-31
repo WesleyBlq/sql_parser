@@ -4,7 +4,7 @@
 #include "sql_parser.tab.h"
 #include "ob_raw_expr.h"
 //#include "ob_schema_checker.h"
-//#include "common/utility.h"
+#include "utility.h"
 
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
@@ -67,7 +67,7 @@ int ObSelectStmt::check_alias_name(
       {
         ret = OB_ERR_COLUMN_DUPLICATE;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-            "alias name %.*s is ambiguous", alias_name.size()), alias_name.ptr());
+            "alias name %.*s is ambiguous", alias_name.size()), alias_name.data());
         break;
       }
     #endif  
@@ -83,7 +83,7 @@ int ObSelectStmt::check_alias_name(
         {
           ret = OB_ERR_COLUMN_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "alias name %.*s is ambiguous", alias_name.size()), alias_name.ptr());
+              "alias name %.*s is ambiguous", alias_name.size()), alias_name.data());
           break;
         }
       }
@@ -98,7 +98,7 @@ int ObSelectStmt::check_alias_name(
     {
       ret = OB_ERR_COLUMN_DUPLICATE;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "alias name %.*s is ambiguous", alias_name.size()), alias_name.ptr());
+          "alias name %.*s is ambiguous", alias_name.size()), alias_name.data());
       break;
     }
   }
@@ -233,7 +233,7 @@ int ObSelectStmt::check_having_ident(
         {
           ret = OB_ERR_COLUMN_AMBIGOUS;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "column %.*s of having clause is ambiguous", column_name.size()), column_name.ptr());
+              "column %.*s of having clause is ambiguous", column_name.size()), column_name.data());
           parse_free(ret_expr);
           ret_expr = NULL;
           break;
@@ -302,7 +302,7 @@ int ObSelectStmt::check_having_ident(
   {
     ret = OB_ERR_COLUMN_UNKNOWN;
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-        "Unknown %.*s in having clause", column_name.size()), column_name.ptr());
+        "Unknown %.*s in having clause", column_name.size()), column_name.data());
   }
   return ret;
 }
@@ -348,7 +348,7 @@ void ObSelectStmt::print(FILE* fp, int32_t level, int32_t index)
       SelectItem& item = select_items_[i];
       if (item.alias_name_.size()) > 0)
         fprintf(fp, "<%lu, %.*s>", item.expr_id_,
-          item.alias_name_.size()), item.alias_name_.ptr());
+          item.alias_name_.size()), item.alias_name_.data());
       else
         fprintf(fp, "<%ld>", item.expr_id_);
     }

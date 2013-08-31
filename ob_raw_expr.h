@@ -4,10 +4,14 @@
 #include "ob_obj_type.h"
 //#include "ob_sql_expression.h"
 #include "ob_define.h"
+#include "ob_item_type.h"
+#include "ob_object.h"
 //#include "common/ob_vector.h"
 #include <string>
 //#include "common/ob_string_buf.h"
 #include <vector>
+
+using namespace oceanbase::common;
 
 namespace oceanbase
 {
@@ -234,7 +238,11 @@ namespace oceanbase
           expr = exprs_.at(index);
         return expr;
       }
-      int add_op_expr(ObRawExpr *expr) { return exprs_.push_back(expr); }
+      int add_op_expr(ObRawExpr *expr) 
+      { 
+         exprs_.push_back(expr); 
+         return OB_SUCCESS;
+      }
       int32_t get_expr_size() const { return exprs_.size(); }
       /*virtual int fill_sql_expression(
           ObSqlExpression& inter_expr,
@@ -274,8 +282,16 @@ namespace oceanbase
       }
       void set_arg_op_expr(ObRawExpr *expr) { arg_expr_ = expr; }
       void set_default_op_expr(ObRawExpr *expr) { default_expr_ = expr; }
-      int add_when_op_expr(ObRawExpr *expr) { return when_exprs_.push_back(expr); }
-      int add_then_op_expr(ObRawExpr *expr) { return then_exprs_.push_back(expr); }
+      int add_when_op_expr(ObRawExpr *expr) 
+      { 
+        when_exprs_.push_back(expr); 
+        return OB_SUCCESS;
+      }
+      int add_then_op_expr(ObRawExpr *expr) 
+      { 
+        then_exprs_.push_back(expr); 
+        return OB_SUCCESS;
+      }
       int32_t get_when_expr_size() const { return when_exprs_.size(); }
       int32_t get_then_expr_size() const { return then_exprs_.size(); }
       /*virtual int fill_sql_expression(
@@ -334,7 +350,11 @@ namespace oceanbase
           expr = exprs_[index];
         return expr;
       }
-      int add_param_expr(ObRawExpr *expr) { return exprs_.push_back(expr); }
+      int add_param_expr(ObRawExpr *expr) 
+      { 
+        exprs_.push_back(expr); 
+        return OB_SUCCESS;
+      }
       void set_func_name(const string& name) { func_name_ = name; }
       const string& get_func_name() { return func_name_; }
       int32_t get_param_size() const { return exprs_.size(); }

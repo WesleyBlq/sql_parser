@@ -6,10 +6,11 @@
 //#include "common/ob_string_buf.h"
 //#include "common/ob_vector.h"
 #include <vector>
+#include "ob_obj_type.h"
 #include "ob_basic_stmt.h"
 #include "parse_node.h"
 
-extern int ob_write_string(const string &src, string& dst);
+extern int ob_write_string(const string &src, string &dst);
 
 namespace oceanbase
 {
