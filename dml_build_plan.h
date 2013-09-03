@@ -22,6 +22,7 @@
 #include <vector>
 #include <stdint.h>
 
+using namespace std;
 /*
   * Expressions from different scope have different limitations,
   * we need a flage to distinguish where they are from.
@@ -60,7 +61,7 @@ extern int resolve_and_exprs(
     ResultPlan * result_plan,
     oceanbase::sql::ObStmt* stmt,
     ParseNode* node,
-    oceanbase::common::ObVector<uint64_t>& and_exprs,
+    vector<uint64_t>& and_exprs,
     int32_t expr_scope_type = T_NONE_LIMIT);
 extern int resolve_independ_expr(
     ResultPlan * result_plan,

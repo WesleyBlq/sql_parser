@@ -18,7 +18,7 @@ ObInsertStmt::~ObInsertStmt()
 {
   for (int64_t i = 0; i < value_vectors_.size(); i++)
   {
-    array<uint64_t>& value_row = value_vectors_.at(i);
+    vector<uint64_t>& value_row = value_vectors_.at(i);
     value_row.clear();
   }
 }

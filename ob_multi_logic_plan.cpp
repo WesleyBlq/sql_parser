@@ -1,6 +1,5 @@
 #include "ob_multi_logic_plan.h"
 #include "parse_malloc.h"
-//#include "common/ob_string.h"
 #include <string>
 
 namespace oceanbase

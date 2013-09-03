@@ -15,19 +15,20 @@
  */
 #include "dml_build_plan.h"
 #include "ob_raw_expr.h"
-//#include "common/ob_bit_set.h"
+//#include "ob_bit_set.h"
 #include "ob_select_stmt.h"
-#include "ob_multi_logic_plan.h"
 #include "ob_insert_stmt.h"
 #include "ob_delete_stmt.h"
 #include "ob_update_stmt.h"
 //#include "ob_schema_checker.h"
-#include "ob_type_convertor.h"
-#include "ob_sql_session_info.h"
+//#include "ob_multi_logic_plan.h"
+//#include "ob_type_convertor.h"
+//#include "ob_sql_session_info.h"
+#include "ob_logical_plan.h"
 #include "parse_malloc.h"
 #include <vector>
 #include "ob_define.h"
-#include <array>
+//#include <array>
 //#include "common/ob_string_buf.h"
 #include "utility.h"
 #include <stdint.h>
@@ -249,10 +250,12 @@ int resolve_and_exprs(
       ret = resolve_independ_expr(result_plan, stmt, node, expr_id, expr_scope_type);
       if (ret == OB_SUCCESS)
       {
-        ret = and_exprs.push_back(expr_id);
+        and_exprs.push_back(expr_id);
+        #if 0
         if (ret != OB_SUCCESS)
           snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
               "Add 'AND' expression error");
+        #endif
       }
     }
     else
@@ -268,7 +271,6 @@ int resolve_and_exprs(
 #define CREATE_RAW_EXPR(expr, type_name, result_plan)    \
 ({    \
   ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_); \
-  //stringBuf* name_pool = static_cast<stringBuf*>(result_plan->name_pool_);  \
   expr = (type_name*)parse_malloc(sizeof(type_name), NULL);   \
   if (expr != NULL) \
   { \
@@ -304,6 +306,8 @@ int resolve_expr(
 
   ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_);
   //stringBuf* name_pool = static_cast<stringBuf*>(result_plan->name_pool_);
+
+#if 0
 
   switch (node->type_)
   {
@@ -525,7 +529,7 @@ int resolve_expr(
         b_expr->set_first_ref_id(column_item->table_id_);
         b_expr->set_second_ref_id(column_item->column_id_);
         expr = b_expr;
-        sql_expr->get_tables_set().add_member(stmt->get_table_bit_index(column_item->table_id_));
+        //sql_expr->get_tables_set().add_member(stmt->get_table_bit_index(column_item->table_id_));
       }
       break;
     }
@@ -584,7 +588,7 @@ int resolve_expr(
             b_expr->set_first_ref_id(column_item->table_id_);
             b_expr->set_second_ref_id(column_item->column_id_);
             expr = b_expr;
-            sql_expr->get_tables_set().add_member(stmt->get_table_bit_index(column_item->table_id_));
+            //sql_expr->get_tables_set().add_member(stmt->get_table_bit_index(column_item->table_id_));
           }
         }
         if (expr == NULL)
@@ -601,7 +605,7 @@ int resolve_expr(
             b_expr->set_first_ref_id(column_item->table_id_);
             b_expr->set_second_ref_id(column_item->column_id_);
             expr = b_expr;
-            sql_expr->get_tables_set().add_member(stmt->get_table_bit_index(column_item->table_id_));
+            //sql_expr->get_tables_set().add_member(stmt->get_table_bit_index(column_item->table_id_));
           }
           else if (ret == OB_ERR_COLUMN_UNKNOWN)
           {
@@ -648,7 +652,7 @@ int resolve_expr(
               b_expr->set_first_ref_id(alias_expr->get_table_id());
               b_expr->set_second_ref_id(alias_expr->get_column_id());
               expr = b_expr;
-              sql_expr->get_tables_set().add_members(alias_expr->get_tables_set());
+              //sql_expr->get_tables_set().add_members(alias_expr->get_tables_set());
               sql_expr->set_contain_alias(true);
             }
           }
@@ -1230,7 +1234,7 @@ int resolve_expr(
       col_expr->set_first_ref_id(ret_sql_expr->get_table_id());
       col_expr->set_second_ref_id(ret_sql_expr->get_column_id());
       // add invalid table bit index, avoid aggregate function expressions are used as filter
-      sql_expr->get_tables_set().add_member(0);
+      //sql_expr->get_tables_set().add_member(0);
       sql_expr->set_contain_aggr(true);
       expr = col_expr;
       break;
@@ -1350,7 +1354,7 @@ int resolve_expr(
               obj = param_expr->get_value();
               if (OB_SUCCESS == (ret = obj.get_int(item_type)))
               {
-                ObObjType dest_type = convert_item_type_to_obj_type(static_cast<ObItemType>(item_type));
+                ObObjType dest_type = convert_item_type_to_obj_type(static_cast<SqlItemType>(item_type));
                 func_expr->set_result_type(dest_type);
               }
               else
@@ -1438,7 +1442,7 @@ int resolve_expr(
           "Wrong type in expression");
       break;
   }
-
+#endif
   return ret;
 }
 
@@ -1451,6 +1455,7 @@ int resolve_agg_func(
   int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
   uint64_t expr_id = OB_INVALID_ID;
   ObSqlRawExpr* sql_expr = NULL;
+  #if 0
   if (node != NULL)
   {
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_);
@@ -1541,7 +1546,7 @@ int resolve_agg_func(
       sql_expr->set_expr(agg_expr);
       sql_expr->set_contain_aggr(true);
       // add invalid table bit index, avoid aggregate function expressions are used as filters
-      sql_expr->get_tables_set().add_member(0);
+      //sql_expr->get_tables_set().add_member(0);
     }
   }
   else
@@ -1550,7 +1555,7 @@ int resolve_agg_func(
     snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
         "Wrong usage of aggregate function");
   }
-
+#endif
   if (ret == OB_SUCCESS)
     ret_sql_expr = sql_expr;
   return ret;
@@ -1811,6 +1816,7 @@ int resolve_table_columns(
         "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
   }
 
+#if 0
   ObSchemaChecker* schema_checker = NULL;
   if (ret == OB_SUCCESS)
   {
@@ -1822,6 +1828,7 @@ int resolve_table_columns(
           "Schema(s) are not set");
     }
   }
+#endif  
 
   if (ret == OB_SUCCESS)
   {
@@ -1891,9 +1898,9 @@ int resolve_table_columns(
             sql_expr->set_table_id(OB_INVALID_ID);
             sql_expr->set_column_id(logical_plan->generate_column_id());
             sql_expr->set_expr(expr);
-            ObBitSet<> tables_set;
-            tables_set.add_member(stmt->get_table_bit_index(table_item.table_id_));
-            sql_expr->set_tables_set(tables_set);
+            //ObBitSet<> tables_set;
+            //tables_set.add_member(stmt->get_table_bit_index(table_item.table_id_));
+            //sql_expr->set_tables_set(tables_set);
             ret = logical_plan->add_expr(sql_expr);
             if (ret != OB_SUCCESS)
             {
@@ -1921,9 +1928,11 @@ int resolve_table_columns(
     }
     else
     {
+    #if 0
       const ObColumnSchemaV2* column = NULL;
       int32_t column_size = 0;
       column = schema_checker->get_table_columns(table_item.ref_id_, column_size);
+      
       if (NULL != column && column_size > 0)
       {
         if (table_item.ref_id_ == OB_TABLES_SHOW_TID) // @FIXME !!!
@@ -1984,9 +1993,9 @@ int resolve_table_columns(
             sql_expr->set_table_id(OB_INVALID_ID);
             sql_expr->set_column_id(logical_plan->generate_column_id());
             sql_expr->set_expr(expr);
-            ObBitSet<> tables_set;
-            tables_set.add_member(stmt->get_table_bit_index(table_item.table_id_));
-            sql_expr->set_tables_set(tables_set);
+            //ObBitSet<> tables_set;
+            //tables_set.add_member(stmt->get_table_bit_index(table_item.table_id_));
+            //sql_expr->set_tables_set(tables_set);
             ret = logical_plan->add_expr(sql_expr);
             if (ret != OB_SUCCESS)
             {
@@ -2011,6 +2020,7 @@ int resolve_table_columns(
           }
         }
       }
+    #endif
     }
   }
   return ret;
@@ -2201,7 +2211,7 @@ int resolve_select_clause(
     }
 
     alias_node = NULL;
-    alias_name.assign(NULL, 0);
+    alias_name.assign(NULL);
   }
 
   return ret;
@@ -2480,7 +2490,7 @@ int resolve_select_stmt(
     }
     else
     {
-      logical_plan = new(logical_plan) ObLogicalPlan(name_pool);
+      logical_plan = new(logical_plan) ObLogicalPlan();
       result_plan->plan_tree_ = logical_plan;
     }
   }
@@ -2504,7 +2514,7 @@ int resolve_select_stmt(
 
   if (ret == OB_SUCCESS)
   {
-    select_stmt = new(select_stmt) ObSelectStmt(name_pool);
+    select_stmt = new(select_stmt) ObSelectStmt();
     query_id = logical_plan->generate_query_id();
     select_stmt->set_query_id(query_id);
     ret = logical_plan->add_query(select_stmt);
@@ -2754,7 +2764,7 @@ int resolve_delete_stmt(
     }
     else
     {
-      logical_plan = new(logical_plan) ObLogicalPlan(name_pool);
+      logical_plan = new(logical_plan) ObLogicalPlan();
       result_plan->plan_tree_ = logical_plan;
     }
   }
@@ -2775,7 +2785,7 @@ int resolve_delete_stmt(
     }
     else
     {
-      delete_stmt = new(delete_stmt) ObDeleteStmt(name_pool);
+      delete_stmt = new(delete_stmt) ObDeleteStmt();
       query_id = logical_plan->generate_query_id();
       delete_stmt->set_query_id(query_id);
       ret = logical_plan->add_query(delete_stmt);
@@ -2909,7 +2919,7 @@ int resolve_insert_values(
   OB_ASSERT(node->type_ == T_VALUE_LIST);
   int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
 
-  ObArray<uint64_t> value_row;
+  vector<uint64_t> value_row;
   for (int32_t i = 0; ret == OB_SUCCESS && i < node->num_child_; i++)
   {
     ParseNode* vector_node = node->children_[i];
@@ -2918,14 +2928,15 @@ int resolve_insert_values(
     {
       ret = resolve_independ_expr(result_plan, insert_stmt, vector_node->children_[j],
                                   expr_id, T_INSERT_LIMIT);
-      if (ret == OB_SUCCESS && (ret = value_row.push_back(expr_id)) != OB_SUCCESS)
+      if (ret == OB_SUCCESS)
       {
         snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-            "Can not add expr_id to ObArray");
+            "Can not add expr_id to vector");
       }
+      value_row.push_back(expr_id);
     }
     if (ret == OB_SUCCESS &&
-      insert_stmt->get_column_size() != value_row.count())
+      insert_stmt->get_column_size() != value_row.size())
     {
       ret = OB_ERR_COLUMN_SIZE;
       snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -2967,7 +2978,7 @@ int resolve_insert_stmt(
     }
     else
     {
-      logical_plan = new(logical_plan) ObLogicalPlan(name_pool);
+      logical_plan = new(logical_plan) ObLogicalPlan();
       result_plan->plan_tree_ = logical_plan;
     }
   }
@@ -2976,6 +2987,7 @@ int resolve_insert_stmt(
     logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_);
   }
 
+  
   if (ret == OB_SUCCESS)
   {
 
@@ -2989,10 +3001,11 @@ int resolve_insert_stmt(
     }
     else
     {
-      insert_stmt = new(insert_stmt) ObInsertStmt(name_pool);
+      insert_stmt = new(insert_stmt) ObInsertStmt();
       query_id = logical_plan->generate_query_id();
       insert_stmt->set_query_id(query_id);
       ret = logical_plan->add_query(insert_stmt);
+
       if (ret != OB_SUCCESS)
       {
         snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -3085,7 +3098,7 @@ int resolve_update_stmt(
     }
     else
     {
-      logical_plan = new(logical_plan) ObLogicalPlan(name_pool);
+      logical_plan = new(logical_plan) ObLogicalPlan();
       result_plan->plan_tree_ = logical_plan;
     }
   }
@@ -3106,7 +3119,7 @@ int resolve_update_stmt(
     }
     else
     {
-      update_stmt = new(update_stmt) ObUpdateStmt(name_pool);
+      update_stmt = new(update_stmt) ObUpdateStmt();
       query_id = logical_plan->generate_query_id();
       update_stmt->set_query_id(query_id);
       ret = logical_plan->add_query(update_stmt);

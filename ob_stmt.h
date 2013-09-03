@@ -10,6 +10,10 @@
 #include "ob_basic_stmt.h"
 #include "parse_node.h"
 
+using std::vector;
+using std::string;
+
+extern string make_string(const char* cstr);
 extern int ob_write_string(const string &src, string &dst);
 
 namespace oceanbase
@@ -69,6 +73,7 @@ namespace oceanbase
     };
   }
 
+#if 0
   namespace common
   {
     template <>
@@ -104,10 +109,11 @@ namespace oceanbase
         typedef int32_t difference_type;
       };
   }
+#endif
 
   namespace sql
   {
-    //class ObLogicalPlan;
+    class ObLogicalPlan;
     class ObStmt : public ObBasicStmt
     {
     public:
@@ -132,16 +138,16 @@ namespace oceanbase
           common::ObObjType& column_type);
       int add_column_item(
           ResultPlan& result_plan,
-          const oceanbase::string& column_name,
-          const oceanbase::string* table_name = NULL,
+          const string& column_name,
+          const string* table_name = NULL,
           ColumnItem** col_item = NULL);
       
       int add_column_item(const ColumnItem& column_item);
       ColumnItem* get_column_item(
         const string* table_name,
         const string& column_name);
-      ColumnItem* get_column_item_by_id(uint64_t table_id, uint64_t column_id) const ;
-      const ColumnItem* get_column_item(int32_t index) const 
+      ColumnItem* get_column_item_by_id(uint64_t table_id, uint64_t column_id)  ;
+      const ColumnItem* get_column_item(int32_t index)  
       {
         const ColumnItem *column_item = NULL;
         if (0 <= index && index < column_items_.size())
@@ -150,24 +156,22 @@ namespace oceanbase
         }
         return column_item;
       }
-      TableItem* get_table_item_by_id(uint64_t table_id) const;
-      TableItem& get_table_item(int32_t index) const 
+      TableItem* get_table_item_by_id(uint64_t table_id);
+      TableItem& get_table_item(int32_t index)  
       {
         OB_ASSERT(0 <= index && index < table_items_.size());
         return table_items_[index];
       }
-      uint64_t get_condition_id(int32_t index) const 
+      uint64_t get_condition_id(int32_t index)  
       {
         OB_ASSERT(0 <= index && index < where_expr_ids_.size());
         return where_expr_ids_[index];
       }
       uint64_t get_table_item(
         const string& table_name,
-        TableItem** table_item = NULL) const ;
+        TableItem** table_item = NULL)  ;
 
-#if 0      
-      int32_t get_table_bit_index(uint64_t table_id) const ;
-#endif
+      //int32_t get_table_bit_index(uint64_t table_id) const ;
       vector<uint64_t>& get_where_exprs() 
       {
         return where_expr_ids_;

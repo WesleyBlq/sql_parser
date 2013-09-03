@@ -13,7 +13,7 @@ namespace oceanbase
 {
   namespace sql
   {
-    class ObSQLSessionInfo;
+    //class ObSQLSessionInfo;
     class ObLogicalPlan
     {
     public:
@@ -43,22 +43,24 @@ namespace oceanbase
       int add_query(ObBasicStmt* stmt)
       {
         int ret = common::OB_SUCCESS;
-        if ((!stmt) || (stmts_.push_back(stmt) != common::OB_SUCCESS))
+        if (!stmt)
         {
           TBSYS_LOG(WARN, "fail to allocate space for stmt. %p", stmt);
           ret = common::OB_ERROR;
         }
+        stmts_.push_back(stmt);
         return ret;
       }
 
       int add_expr(ObSqlRawExpr* expr)
       {
         int ret = common::OB_SUCCESS;
-        if ((!expr) || (exprs_.push_back(expr) != common::OB_SUCCESS))
+        if (!expr) 
         {
           TBSYS_LOG(WARN, "fail to allocate space for expr. %p", expr);
           ret = common::OB_ERROR;
         }
+        exprs_.push_back(expr);
         return ret;
       }
 
@@ -66,11 +68,12 @@ namespace oceanbase
       int add_raw_expr(ObRawExpr* expr)
       {
         int ret = common::OB_SUCCESS;
-        if ((!expr) || (raw_exprs_store_.push_back(expr) != common::OB_SUCCESS))
+        if (!expr)
         {
           TBSYS_LOG(WARN, "fail to allocate space for raw expr. %p", expr);
           ret = common::OB_ERROR;
         }
+        raw_exprs_store_.push_back(expr);
         return ret;
       }
 

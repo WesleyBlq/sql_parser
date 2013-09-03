@@ -2,7 +2,7 @@
 #include "ob_select_stmt.h"
 #include "parse_malloc.h"
 #include <string>
-//#include "ob_logical_plan.h"
+#include "ob_logical_plan.h"
 //#include "ob_schema_checker.h"
 #include "utility.h"
 
@@ -12,7 +12,7 @@ using namespace std;
 
 string make_string(const char* cstr)
 {
-  string ret(0, static_cast<int32_t>(strlen(cstr)), const_cast<char*>(cstr));
+  string ret(const_cast<char*>(cstr),static_cast<int32_t>(strlen(cstr)));
   return ret;
 }
 
@@ -20,24 +20,9 @@ string make_string(const char* cstr)
 int ob_write_string(const string &src, string &dst)
 {
   int ret = OB_SUCCESS;
-  int32_t src_len = src.size();
-  void * ptr = NULL;
-  if (src.empty() || 0 >= src_len))
-  {
-    dst.assign(NULL, 0);
-  }
-  else if (NULL == (ptr = malloc(src_len)))
-  {
-    ret = OB_ALLOCATE_MEMORY_FAILED;
-  }
-  else
-  {
-    memcpy(ptr, src.data(), src_len);
-    dst.assign(ptr, src_len);
-  }
+  dst.assign(src);
   return ret;
 }
-
 
 
 ObStmt::ObStmt(StmtType type)
@@ -95,7 +80,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_ILLEGAL_NAME;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table '%.*s' must not alias the same name", table_name.size(), table_name.data()));
+              "table '%.*s' must not alias the same name", table_name.size(), table_name.data());
           break;
         }
         /* go through */
@@ -152,7 +137,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_TABLE_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table %.*s is ambiguous", table_name.size(), table_name.data()));
+              "table %.*s is ambiguous", table_name.size(), table_name.data());
           break;
         }
       }
@@ -163,7 +148,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_TABLE_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table %.*s is ambiguous", old_item.table_name_.size(), old_item.table_name_.data()));
+              "table %.*s is ambiguous", old_item.table_name_.size(), old_item.table_name_.data());
           break;
         }
       }
@@ -173,7 +158,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_TABLE_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table %.*s is ambiguous", table_name.size(), table_name.data()));
+              "table %.*s is ambiguous", table_name.size(), table_name.data());
           break;
         }
         if (alias_name == old_item.table_name_
@@ -181,7 +166,7 @@ int ObStmt::add_table_item(
         {
           ret = OB_ERR_TABLE_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table %.*s is ambiguous", alias_name.size(), alias_name.data()));
+              "table %.*s is ambiguous", alias_name.size(), alias_name.data());
           break;
         }
       }
@@ -193,7 +178,7 @@ int ObStmt::add_table_item(
     if ((ret = ob_write_string(table_name, item.table_name_)) != OB_SUCCESS)
     {
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Can not make space for table name %.*s", table_name.size(), table_name.data()));
+          "Can not make space for table name %.*s", table_name.size(), table_name.data());
     }
   }
   if (ret == OB_SUCCESS)
@@ -201,16 +186,14 @@ int ObStmt::add_table_item(
     if ((ret = ob_write_string(alias_name, item.alias_name_)) != OB_SUCCESS)
     {
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Can not make space for alias name %.*s", alias_name.size(), alias_name.data()));
+          "Can not make space for alias name %.*s", alias_name.size(), alias_name.data());
     }
   }
   if (ret == OB_SUCCESS)
   {
     item.type_ = type;
     item.has_scan_columns_ = false;
-    if ((ret = table_items_.push_back(item)) != OB_SUCCESS)
-      snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Add table item error");
+    table_items_.push_back(item);
   }
 
 #if 0
@@ -229,7 +212,7 @@ int ObStmt::add_table_item(
 }
 
 
-uint64_t ObStmt::get_table_item(const string& table_name, TableItem** table_item) const
+uint64_t ObStmt::get_table_item(const string& table_name, TableItem** table_item) 
 {
   // table name mustn't be empty
   int32_t num = table_items_.size();
@@ -247,7 +230,7 @@ uint64_t ObStmt::get_table_item(const string& table_name, TableItem** table_item
   return OB_INVALID_ID;
 }
 
-TableItem* ObStmt::get_table_item_by_id(uint64_t table_id) const
+TableItem* ObStmt::get_table_item_by_id(uint64_t table_id) 
 {
   TableItem *table_item = NULL;
   int32_t num = table_items_.size();
@@ -289,7 +272,7 @@ ColumnItem* ObStmt::get_column_item(
   return NULL;
 }
 
-ColumnItem* ObStmt::get_column_item_by_id(uint64_t table_id, uint64_t column_id) const
+ColumnItem* ObStmt::get_column_item_by_id(uint64_t table_id, uint64_t column_id) 
 {
   ColumnItem *column_item = NULL;
   int32_t num = column_items_.size();
@@ -315,7 +298,7 @@ int ObStmt::add_column_item(const ColumnItem& column_item)
   else
   {
     table_item->has_scan_columns_ = true;
-    ret = column_items_.push_back(column_item);
+    column_items_.push_back(column_item);
   }
   return ret;
 }
@@ -340,7 +323,7 @@ int ObStmt::add_column_item(
     {
       ret = OB_ERR_TABLE_UNKNOWN;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Unknown table name %.*s", table_name->size(), table_name->data()));
+          "Unknown table name %.*s", table_name->size(), table_name->data());
       return ret;
     }
     column_item.is_name_unique_ = false;
@@ -366,7 +349,7 @@ int ObStmt::add_column_item(
     {
       ret = OB_ERR_COLUMN_UNKNOWN;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Unknown column name %.*s", column_name.size(), column_name.data()));
+          "Unknown column name %.*s", column_name.size(), column_name.data());
       return ret;
     }
     table_item->has_scan_columns_ = true;
@@ -379,16 +362,14 @@ int ObStmt::add_column_item(
     for (int32_t i = 0; i < num; i++)
     {
       TableItem& table_item = get_table_item(i);
-      #if 0
       ret = check_table_column(result_plan, column_name, table_item, column_id, column_type);
       if (ret == OB_SUCCESS)
-      #endif  
       {
         if (column_item.table_id_ != OB_INVALID_ID)
         {
           ret = OB_ERR_COLUMN_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "Column name %.*s is ambiguous", column_name.size(), column_name.data()));
+              "Column name %.*s is ambiguous", column_name.size(), column_name.data());
           return ret;
         }
         column_item.table_id_ = table_item.table_id_;
@@ -407,7 +388,7 @@ int ObStmt::add_column_item(
     {
       ret = OB_ERR_COLUMN_UNKNOWN;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Unknown column name %.*s", column_name.size(), column_name.data()));
+          "Unknown column name %.*s", column_name.size(), column_name.data());
       return ret;
     }
   }
@@ -417,7 +398,7 @@ int ObStmt::add_column_item(
   {
     ret = OB_ERR_PARSER_MALLOC_FAILED;
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-        "Malloc column name %.*s failed", column_name.size(), column_name.data()));
+        "Malloc column name %.*s failed", column_name.size(), column_name.data());
     return ret;
   }
   // not be used now
@@ -426,14 +407,16 @@ int ObStmt::add_column_item(
 
   if (table_name)
   {
-    ret = column_items_.push_back(column_item);
+    column_items_.push_back(column_item);
+    #if 0
     if (ret != OB_SUCCESS)
     {
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Can not add column %.*s", column_name.size(), column_name.data()));
+          "Can not add column %.*s", column_name.size(), column_name.data());
       return ret;
     }
-    ret_item = column_items_.last();
+    #endif
+    ret_item = &column_items_.back();
   }
   else
   {
@@ -452,14 +435,16 @@ int ObStmt::add_column_item(
     }
     if (!bExist)
     {
-      ret = column_items_.push_back(column_item);
+      column_items_.push_back(column_item);
+      #if 0
       if (ret != OB_SUCCESS)
       {
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-            "Can not add column %.*s", column_name.size(), column_name.data()));
+            "Can not add column %.*s", column_name.size(), column_name.data());
         return ret;
       }
-      ret_item = column_items_.last();
+      #endif
+      ret_item = &column_items_.back();
     }
   }
   if (col_item != NULL)
@@ -543,7 +528,7 @@ int ObStmt::check_table_column(
             {
               ret = OB_ERR_COLUMN_DUPLICATE;
               snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                  "column %.*s is ambiguous", column_name.size(), column_name.data()));
+                  "column %.*s is ambiguous", column_name.size(), column_name.data());
               break;
             }
           }
@@ -575,7 +560,6 @@ int32_t ObStmt::get_table_bit_index(uint64_t table_id) const
 }
 #endif
 
-
 void ObStmt::print(FILE* fp, int32_t level, int32_t index)
 {
   OB_ASSERT(index >= 0);
@@ -590,9 +574,9 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
       TableItem& item = table_items_[i];
       print_indentation(fp, level + 1);
       fprintf(fp, "{Num %d, TableId:%lu, TableName:%.*s, ",
-        i, item.table_id_, item.table_name_.size(), item.table_name_.data()));
+        i, item.table_id_, item.table_name_.size(), item.table_name_.data());
       if (item.alias_name_.size() > 0)
-        fprintf(fp, "AliasName:%.*s, ", item.alias_name_.size(), item.alias_name_.data()));
+        fprintf(fp, "AliasName:%.*s, ", item.alias_name_.size(), item.alias_name_.data());
       else
         fprintf(fp, "AliasName:NULL, ");
       if (item.type_ == TableItem::BASE_TABLE)
@@ -616,7 +600,7 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
       ColumnItem& item = column_items_[i];
       print_indentation(fp, level + 1);
       fprintf(fp, "{Num %d, ColumnId:%lu, ColumnName:%.*s, TableRef:%lu}\n", i,
-        item.column_id_, item.column_name_.size(), item.column_name_.data()),
+        item.column_id_, item.column_name_.size(), item.column_name_.data(),
         item.table_id_);
     }
     print_indentation(fp, level);

@@ -443,7 +443,7 @@ void ObBinaryOpRawExpr::print(FILE* fp, int32_t level) const
 
 void ObBinaryOpRawExpr::set_op_exprs(ObRawExpr *first_expr, ObRawExpr *second_expr)
 {
-  ObItemType exchange_type = T_MIN_OP;
+  SqlItemType exchange_type = T_MIN_OP;
   switch (get_expr_type())
   {
     case T_OP_LE:

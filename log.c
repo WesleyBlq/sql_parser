@@ -130,23 +130,6 @@ static void log_msg(int logLevel, const char *msg)
 }
 
 
-void TBSYS_LOG(int logLevel,const char *fmt, ...)
-{
-    case USER_ERROR:
-    case ERROR:
-        LOG_ERROR(fmt, ...);
-        break;
-    case DEBUG:
-        LOG_DEBUG(fmt, ...);
-        break;
-    case WARN:
-        LOG_WARNING(fmt, ...);
-        break;
-    default:
-        LOG_INFO(fmt, ...);
-        break;
-}
-
 void LOG_DEBUG(const char *fmt, ...)
 {
     if (!g_bDebug_log_is_open)
@@ -225,5 +208,28 @@ void LOG_INFO(const char *fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
     log_msg(HDS_LOG_LEVEL_INFO, buf);
+}
+
+
+void TBSYS_LOG(int logLevel,const char *fmt, ...)
+{
+#if 0
+    switch(logLevel){
+    case USER_ERROR:
+    case ERROR:
+        LOG_ERROR(fmt, ...);
+        break;
+    case DEBUG:
+        LOG_DEBUG(fmt, ...);
+        break;
+    case WARN:
+        LOG_WARNING(fmt, ...);
+        break;
+    case INFO:    
+    default:
+        LOG_INFO(fmt, ...);
+        break;
+    }
+#endif    
 }
 

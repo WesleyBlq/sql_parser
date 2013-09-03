@@ -1,7 +1,7 @@
 #include "ob_select_stmt.h"
 #include "parse_malloc.h"
 #include "ob_logical_plan.h"
-#include "sql_parser.tab.h"
+//#include "sql_parser.tab.h"
 #include "ob_raw_expr.h"
 //#include "ob_schema_checker.h"
 #include "utility.h"
@@ -40,7 +40,7 @@ ObSelectStmt::~ObSelectStmt()
 
 int ObSelectStmt::check_alias_name(
     ResultPlan& result_plan,
-    const string& alias_name) const
+    const string& alias_name)
 {
   int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
   ObLogicalPlan *logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
@@ -83,7 +83,7 @@ int ObSelectStmt::check_alias_name(
         {
           ret = OB_ERR_COLUMN_DUPLICATE;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "alias name %.*s is ambiguous", alias_name.size()), alias_name.data());
+              "alias name %.*s is ambiguous", alias_name.size(), alias_name.data());
           break;
         }
       }
@@ -98,7 +98,7 @@ int ObSelectStmt::check_alias_name(
     {
       ret = OB_ERR_COLUMN_DUPLICATE;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "alias name %.*s is ambiguous", alias_name.size()), alias_name.data());
+          "alias name %.*s is ambiguous", alias_name.size(), alias_name.data());
       break;
     }
   }
@@ -125,7 +125,7 @@ int ObSelectStmt::add_select_item(
     if (ret == OB_SUCCESS)
     {
       item.type_ = type;
-      ret = select_items_.push_back(item);
+      select_items_.push_back(item);
     }
   }
   else
@@ -170,7 +170,7 @@ int ObSelectStmt::check_having_ident(
   ResultPlan& result_plan,
   string& column_name,
   TableItem* table_item,
-  ObRawExpr*& ret_expr) const
+  ObRawExpr*& ret_expr) 
 {
   ObSqlRawExpr  *sql_expr;
   ObRawExpr     *expr;
@@ -233,7 +233,7 @@ int ObSelectStmt::check_having_ident(
         {
           ret = OB_ERR_COLUMN_AMBIGOUS;
           snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "column %.*s of having clause is ambiguous", column_name.size()), column_name.data());
+              "column %.*s of having clause is ambiguous", column_name.size(), column_name.data());
           parse_free(ret_expr);
           ret_expr = NULL;
           break;
@@ -302,7 +302,7 @@ int ObSelectStmt::check_having_ident(
   {
     ret = OB_ERR_COLUMN_UNKNOWN;
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-        "Unknown %.*s in having clause", column_name.size()), column_name.data());
+        "Unknown %.*s in having clause", column_name.size(), column_name.data());
   }
   return ret;
 }
@@ -321,7 +321,7 @@ int ObSelectStmt::copy_select_items(ObSelectStmt* select_stmt)
     if (ret == OB_SUCCESS)
       ret = ob_write_string(select_item.expr_name_, new_select_item.expr_name_);
     if (ret == OB_SUCCESS)
-      ret = select_items_.push_back(new_select_item);
+      select_items_.push_back(new_select_item);
   }
   return ret;
 }
@@ -346,9 +346,9 @@ void ObSelectStmt::print(FILE* fp, int32_t level, int32_t index)
       if (i > 0)
         fprintf(fp, ", ");
       SelectItem& item = select_items_[i];
-      if (item.alias_name_.size()) > 0)
+      if (item.alias_name_.size() > 0)
         fprintf(fp, "<%lu, %.*s>", item.expr_id_,
-          item.alias_name_.size()), item.alias_name_.data());
+          item.alias_name_.size(), item.alias_name_.data());
       else
         fprintf(fp, "<%ld>", item.expr_id_);
     }
@@ -364,7 +364,7 @@ void ObSelectStmt::print(FILE* fp, int32_t level, int32_t index)
       if (item.is_joined_)
       {
         JoinedTable* joined_table = get_joined_table(item.table_id_);
-        for (int32_t j = 1; j < joined_table->table_ids_.count(); j++)
+        for (int32_t j = 1; j < joined_table->table_ids_.size(); j++)
         {
           if (j == 1)
             fprintf(fp, "<%lu> ", joined_table->table_ids_.at(j - 1));

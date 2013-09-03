@@ -1,11 +1,12 @@
 #ifndef _PARSE_NODE_H_
 #define _PARSE_NODE_H_
 
-#include "sql_item_type.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+
+#include "sql_item_type.h"
 
 #define MAX_ERROR_MSG 1024
 

@@ -66,7 +66,8 @@ namespace oceanbase
 
     inline int ObInsertStmt::add_value_row(vector<uint64_t>& value_row)
     {
-      return value_vectors_.push_back(value_row);
+      value_vectors_.push_back(value_row);
+      return common::OB_SUCCESS;
     }
 
     inline uint64_t ObInsertStmt::get_table_id() const
@@ -81,7 +82,7 @@ namespace oceanbase
 
     inline int64_t ObInsertStmt::get_value_row_size() const
     {
-      return value_vectors_.count();
+      return value_vectors_.size();
     }
 
     inline const vector<uint64_t>& ObInsertStmt::get_value_row(int64_t idx) const

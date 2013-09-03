@@ -416,11 +416,13 @@ namespace oceanbase
       return ret;
     }
 #endif
+
     void ObLogicalPlan::print(FILE* fp, int32_t level) const
     {
       int32_t i;
       fprintf(fp, "<LogicalPlan>\n");
       fprintf(fp, "    <StmtList>\n");
+
       for (i = 0; i < stmts_.size(); i ++)
       {
         ObBasicStmt* stmt = stmts_[i];

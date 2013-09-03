@@ -2,6 +2,10 @@
 #ifndef  __LOG_H__
 #define  __LOG_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 #define MAX_MSG_LEN 1024
 
@@ -15,6 +19,7 @@
 #define USER_ERROR      1
 #define WARN            2
 #define DEBUG           3
+#define INFO            4
 
 
 extern void LOG_DEBUG(const char *fmt, ...);
@@ -33,6 +38,10 @@ extern char g_bError_log_is_open;
 extern char g_bWarn_log_is_open;
 extern char g_bInfo_log_is_open;
 extern char g_bDebug_log_is_open;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /*__LOG_H__*/
 

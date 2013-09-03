@@ -1,10 +1,10 @@
 #ifndef OCEANBASE_SQL_RAWEXPR_H_
 #define OCEANBASE_SQL_RAWEXPR_H_
-//#include "common/ob_bit_set.h"
+//#include "ob_bit_set.h"
 #include "ob_obj_type.h"
 //#include "ob_sql_expression.h"
 #include "ob_define.h"
-#include "ob_item_type.h"
+#include "sql_item_type.h"
 #include "ob_object.h"
 //#include "common/ob_vector.h"
 #include <string>
@@ -24,16 +24,16 @@ namespace oceanbase
     class ObRawExpr
     {
     public:
-      explicit ObRawExpr(ObItemType expr_type = T_INVALID)
+      explicit ObRawExpr(SqlItemType expr_type = T_INVALID)
           :type_(expr_type)
       {
         result_type_ = ObMinType;
       }
       virtual ~ObRawExpr() {}
       //virtual void trace(FILE *stream, int indentNum = 0);
-      const ObItemType get_expr_type() const { return type_; }
+      const SqlItemType get_expr_type() const { return type_; }
       const common::ObObjType & get_result_type() const { return result_type_; }
-      void set_expr_type(ObItemType type) { type_ = type; }
+      void set_expr_type(SqlItemType type) { type_ = type; }
       void set_result_type(const common::ObObjType & type) { result_type_ = type; }
 
       bool is_const() const;
@@ -53,7 +53,7 @@ namespace oceanbase
       virtual void print(FILE* fp, int32_t level) const = 0;
 
     private:
-      ObItemType  type_;
+      SqlItemType  type_;
       common::ObObjType result_type_;
     };
 
@@ -63,7 +63,7 @@ namespace oceanbase
       ObConstRawExpr()
       {
       }
-      ObConstRawExpr(oceanbase::common::ObObj& val, ObItemType expr_type = T_INVALID)
+      ObConstRawExpr(oceanbase::common::ObObj& val, SqlItemType expr_type = T_INVALID)
           : ObRawExpr(expr_type), value_(val)
       {
       }
@@ -89,7 +89,7 @@ namespace oceanbase
       {
         id_ = OB_INVALID_ID;
       }
-      ObUnaryRefRawExpr(uint64_t id, ObItemType expr_type = T_INVALID)
+      ObUnaryRefRawExpr(uint64_t id, SqlItemType expr_type = T_INVALID)
           : ObRawExpr(expr_type), id_(id)
       {
       }
@@ -116,7 +116,7 @@ namespace oceanbase
         first_id_ = OB_INVALID_ID;
         second_id_ = OB_INVALID_ID;
       }
-      ObBinaryRefRawExpr(uint64_t first_id, uint64_t second_id, ObItemType expr_type = T_INVALID)
+      ObBinaryRefRawExpr(uint64_t first_id, uint64_t second_id, SqlItemType expr_type = T_INVALID)
           : ObRawExpr(expr_type), first_id_(first_id), second_id_(second_id)
       {
       }
@@ -144,7 +144,7 @@ namespace oceanbase
       {
         expr_ = NULL;
       }
-      ObUnaryOpRawExpr(ObRawExpr *expr, ObItemType expr_type = T_INVALID)
+      ObUnaryOpRawExpr(ObRawExpr *expr, SqlItemType expr_type = T_INVALID)
           : ObRawExpr(expr_type), expr_(expr)
       {
       }
@@ -169,7 +169,7 @@ namespace oceanbase
       {
       }
       ObBinaryOpRawExpr(
-          ObRawExpr *first_expr, ObRawExpr *second_expr, ObItemType expr_type = T_INVALID)
+          ObRawExpr *first_expr, ObRawExpr *second_expr, SqlItemType expr_type = T_INVALID)
           : ObRawExpr(expr_type), first_expr_(first_expr), second_expr_(second_expr)
       {
       }
@@ -200,7 +200,7 @@ namespace oceanbase
       }
       ObTripleOpRawExpr(
           ObRawExpr *first_expr, ObRawExpr *second_expr,
-          ObRawExpr *third_expr, ObItemType expr_type = T_INVALID)
+          ObRawExpr *third_expr, SqlItemType expr_type = T_INVALID)
           : ObRawExpr(expr_type),
           first_expr_(first_expr), second_expr_(second_expr),
           third_expr_(third_expr)
@@ -316,7 +316,7 @@ namespace oceanbase
         param_expr_ = NULL;
         distinct_ = false;
       }
-      ObAggFunRawExpr(ObRawExpr *param_expr, bool is_distinct, ObItemType expr_type = T_INVALID)
+      ObAggFunRawExpr(ObRawExpr *param_expr, bool is_distinct, SqlItemType expr_type = T_INVALID)
           : ObRawExpr(expr_type), param_expr_(param_expr), distinct_(is_distinct)
       {
       }

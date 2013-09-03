@@ -1,13 +1,13 @@
 #ifndef OCEANBASE_SQL_MULTIPLAN_H_
 #define OCEANBASE_SQL_MULTIPLAN_H_
+#include <vector>
 #include "ob_logical_plan.h"
-#include "common/ob_vector.h"
 
 namespace oceanbase
 {
   namespace sql
   {
-    class ObMultiLogicPlan : public oceanbase::common::ObVector<ObLogicalPlan*>
+    class ObMultiLogicPlan : public vector<ObLogicalPlan*>
     {
     public:
       ObMultiLogicPlan();

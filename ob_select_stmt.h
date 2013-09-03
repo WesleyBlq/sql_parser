@@ -44,9 +44,9 @@ namespace oceanbase
         T_INNER,
       };
 
-      int add_table_id(uint64_t tid) { return table_ids_.push_back(tid); }
-      int add_join_type(JoinType type) { return join_types_.push_back(type); }
-      int add_expr_id(uint64_t eid) { return expr_ids_.push_back(eid); }
+      int add_table_id(uint64_t tid) { table_ids_.push_back(tid); return common::OB_SUCCESS;}
+      int add_join_type(JoinType type) { join_types_.push_back(type); return common::OB_SUCCESS; }
+      int add_expr_id(uint64_t eid) { expr_ids_.push_back(eid);  return common::OB_SUCCESS;}
       void set_joined_tid(uint64_t tid) { joined_table_id_ = tid; }
 
       uint64_t   joined_table_id_;
@@ -63,7 +63,7 @@ namespace oceanbase
       bool      is_joined_;
     };
   }
-
+#if 0
   namespace common
   {
     template <>
@@ -99,7 +99,7 @@ namespace oceanbase
         typedef int32_t difference_type;
       };
   }
-
+#endif
   namespace sql
   {
     class ObSelectStmt : public ObStmt
@@ -130,7 +130,7 @@ namespace oceanbase
       void assign_set_all() { is_set_distinct_ = false; }
       void assign_left_query_id(uint64_t lid) { left_query_id_ = lid; }
       void assign_right_query_id(uint64_t rid) { right_query_id_ = rid; }
-      int check_alias_name(ResultPlan& result_plan, const string& sAlias) const;
+      int check_alias_name(ResultPlan& result_plan, const string& sAlias) ;
       uint64_t get_alias_expr_id(string& alias_name);
       uint64_t generate_joined_tid() { return gen_joined_tid_--; }
       uint64_t get_left_query_id() { return left_query_id_; }
@@ -147,37 +147,37 @@ namespace oceanbase
       SetOperator get_set_op() { return set_op_; }
       JoinedTable* get_joined_table(uint64_t table_id);
 
-      const SelectItem& get_select_item(int32_t index) const
+      const SelectItem& get_select_item(int32_t index) 
       {
         OB_ASSERT(0 <= index && index < select_items_.size());
         return select_items_[index];
       }
 
-      const FromItem& get_from_item(int32_t index) const
+      const FromItem& get_from_item(int32_t index) 
       {
         OB_ASSERT(0 <= index && index < from_items_.size());
         return from_items_[index];
       }
 
-      const OrderItem& get_order_item(int32_t index) const
+      const OrderItem& get_order_item(int32_t index) 
       {
         OB_ASSERT(0 <= index && index < order_items_.size());
         return order_items_[index];
       }
 
-      uint64_t get_group_expr_id(int32_t index) const
+      uint64_t get_group_expr_id(int32_t index) 
       {
         OB_ASSERT(0 <= index && index < group_expr_ids_.size());
         return group_expr_ids_[index];
       }
 
-      uint64_t get_agg_expr_id(int32_t index) const
+      uint64_t get_agg_expr_id(int32_t index) 
       {
         OB_ASSERT(0 <= index && index < agg_func_ids_.size());
         return agg_func_ids_[index];
       }
 
-      uint64_t get_having_expr_id(int32_t index) const
+      uint64_t get_having_expr_id(int32_t index) 
       {
         OB_ASSERT(0 <= index && index < having_expr_ids_.size());
         return having_expr_ids_[index];
@@ -190,12 +190,14 @@ namespace oceanbase
 
       int add_group_expr(uint64_t expr_id)
       {
-        return group_expr_ids_.push_back(expr_id);
+        group_expr_ids_.push_back(expr_id);
+        return common::OB_SUCCESS;
       }
 
       int add_agg_func(uint64_t expr_id)
       {
-        return agg_func_ids_.push_back(expr_id);
+        agg_func_ids_.push_back(expr_id);
+        return common::OB_SUCCESS;
       }
 
       int add_from_item(uint64_t tid, bool is_joined = false)
@@ -206,7 +208,8 @@ namespace oceanbase
           FromItem item;
           item.table_id_ = tid;
           item.is_joined_ = is_joined;
-          ret = from_items_.push_back(item);
+          from_items_.push_back(item);
+          return common::OB_SUCCESS;
         }
         else
         {
@@ -217,17 +220,20 @@ namespace oceanbase
 
       int add_order_item(OrderItem& order_item)
       {
-        return order_items_.push_back(order_item);
+        order_items_.push_back(order_item);
+        return common::OB_SUCCESS;
       }
 
       int add_joined_table(JoinedTable* pJoinedTable)
       {
-        return joined_tables_.push_back(pJoinedTable);
+        joined_tables_.push_back(pJoinedTable);
+        return common::OB_SUCCESS;
       }
 
       int add_having_expr(uint64_t expr_id)
       {
-        return having_expr_ids_.push_back(expr_id);
+        having_expr_ids_.push_back(expr_id);
+        return common::OB_SUCCESS;
       }
 
       void set_limit_offset(const uint64_t& limit, const uint64_t& offset)
@@ -245,7 +251,7 @@ namespace oceanbase
           ResultPlan& result_plan,
           string& column_name,
           TableItem* table_item,
-          ObRawExpr*& ret_expr) const;
+          ObRawExpr*& ret_expr) ;
 
       int add_select_item(
           uint64_t eid,

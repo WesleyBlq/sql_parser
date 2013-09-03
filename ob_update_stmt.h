@@ -3,7 +3,6 @@
 #include "ob_stmt.h"
 #include <stdio.h>
 #include <vector>
-#include <array>
 #include <string>
 //#include "common/ob_string_buf.h"
 
@@ -33,14 +32,14 @@ namespace oceanbase
       {
         int ret = common::OB_SUCCESS;
         if (column_id != oceanbase::common::OB_INVALID_ID)
-          ret = update_columns_.push_back(column_id);
+          update_columns_.push_back(column_id);
         return ret;
       }
       
       int get_update_column_id(int64_t idx, uint64_t &column_id)
       {
         int ret = common::OB_SUCCESS;
-        if (idx < update_columns_.count())
+        if (idx < update_columns_.size())
         {
           column_id = update_columns_.at(idx);
         }
@@ -57,14 +56,14 @@ namespace oceanbase
         if (expr_id == oceanbase::common::OB_INVALID_ID)
           ret = common::OB_ERROR;
         else
-          ret = update_exprs_.push_back(expr_id);
+          update_exprs_.push_back(expr_id);
         return ret;
       }
 
       int get_update_expr_id(int64_t idx, uint64_t &expr_id)
       {
         int ret = common::OB_SUCCESS;
-        if (idx < update_exprs_.count())
+        if (idx < update_exprs_.size())
         {
           expr_id = update_exprs_.at(idx);
         }
@@ -77,7 +76,7 @@ namespace oceanbase
      
       int64_t get_update_column_count(void)
       {
-        return update_columns_.count();
+        return update_columns_.size();
       }
 
       void print(FILE* fp, int32_t level, int32_t index);

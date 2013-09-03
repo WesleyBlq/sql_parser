@@ -21,9 +21,10 @@
 #include <unistd.h>
 #include <algorithm>
 #include <stdarg.h>
+#include <string>
 #include "ob_define.h"
 #include "ob_obj_type.h"
-#include <string>
+#include "log.h"
 
 using namespace std;
 using namespace oceanbase::common;

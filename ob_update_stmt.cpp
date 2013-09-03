@@ -26,7 +26,7 @@ namespace oceanbase
       fprintf(fp, "UPDATE ::= <%ld>\n", table_id_);
       print_indentation(fp, level + 1);
       fprintf(fp, "SET ::= ");
-      for (int64_t i = 0; i < update_columns_.count(); i++)
+      for (int64_t i = 0; i < update_columns_.size(); i++)
       {
         if (i > 0)
           fprintf(fp, ", <%ld, %ld>", update_columns_.at(i), update_exprs_.at(i));
