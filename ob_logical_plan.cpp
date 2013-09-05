@@ -430,6 +430,7 @@ namespace oceanbase
       }
       fprintf(fp, "    </StmtList>\n");
       fprintf(fp, "    <ExprList>\n");
+
       for (i = 0; i < exprs_.size(); i ++)
       {
         ObSqlRawExpr* sql_expr = exprs_[i];

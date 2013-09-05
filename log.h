@@ -6,7 +6,6 @@
 extern "C" {
 #endif
 
-
 #define MAX_MSG_LEN 1024
 
 #define HDS_LOG_LEVEL_FATAL    0
@@ -15,12 +14,16 @@ extern "C" {
 #define HDS_LOG_LEVEL_INFO     3
 #define HDS_LOG_LEVEL_DEBUG    4
 
+
+#if 1   
 #define ERROR           0
-#define USER_ERROR      1
 #define WARN            2
 #define DEBUG           3
 #define INFO            4
-
+#endif
+    
+    
+#define USER_ERROR      0xff01
 
 extern void LOG_DEBUG(const char *fmt, ...);
 extern void LOG_WARNING(const char *fmt, ...);

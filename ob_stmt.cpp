@@ -3,7 +3,6 @@
 #include "parse_malloc.h"
 #include <string>
 #include "ob_logical_plan.h"
-//#include "ob_schema_checker.h"
 #include "utility.h"
 
 using namespace oceanbase::sql;
@@ -57,11 +56,11 @@ int ObStmt::add_table_item(
   }
 
 #if 0  
-  ObSchemaChecker* schema_checker = NULL;
+  DBMetaReader* meta_reader = NULL;
   if (ret == OB_SUCCESS)
   {
-    schema_checker = static_cast<ObSchemaChecker*>(result_plan.schema_checker_);
-    if (schema_checker == NULL)
+    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader_);
+    if (meta_reader == NULL)
     {
       ret = OB_ERR_SCHEMA_UNSET;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -377,12 +376,10 @@ int ObStmt::add_column_item(
         column_item.data_type_ = column_type;
         table_item.has_scan_columns_ = true;
       }
-      #if 0
       else if (ret != OB_ERR_COLUMN_UNKNOWN)
       {
         return ret;
       }
-      #endif
     }
     if (column_item.column_id_ == OB_INVALID_ID)
     {
@@ -471,12 +468,12 @@ int ObStmt::check_table_column(
         "Wrong invocation of ObStmt::check_table_column, logical_plan must exist!!!");
   }
 
-  #if 0
-  ObSchemaChecker* schema_checker = NULL;
+  #if 1
+  DBMetaReader* meta_reader = NULL;
   if (ret == OB_SUCCESS)
   {
-    schema_checker = static_cast<ObSchemaChecker*>(result_plan.schema_checker_);
-    if (schema_checker == NULL)
+    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader_);
+    if (meta_reader == NULL)
     {
       ret = OB_ERR_SCHEMA_UNSET;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -494,13 +491,17 @@ int ObStmt::check_table_column(
       case TableItem::ALIAS_TABLE:
       {
         #if 0
-        const ObColumnSchemaV2 *col_schema = schema_checker->get_column_schema(table_item.table_name_, column_name);
+        const ObColumnSchemaV2 *col_schema = meta_reader->get_column_schema(table_item.table_name_, column_name);
         if (col_schema != NULL)
         {
           column_id = col_schema->get_id();
           column_type = col_schema->get_type();
         }
         #endif
+
+        /*qinbo: here should be confirmed*/
+        column_id = logical_plan->generate_column_id();
+        column_type = ObNullType;
         break;
       }
       case TableItem::GENERATED_TABLE:

@@ -20,7 +20,6 @@
 #include "ob_insert_stmt.h"
 #include "ob_delete_stmt.h"
 #include "ob_update_stmt.h"
-//#include "ob_schema_checker.h"
 //#include "ob_multi_logic_plan.h"
 //#include "ob_type_convertor.h"
 //#include "ob_sql_session_info.h"
@@ -111,7 +110,7 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
 {
 #if 0
   int ret = OB_SUCCESS;
-  ObSchemaChecker* schema_checker = NULL;
+  DBMetaReader* meta_reader = NULL;
   const ObTableSchema* table_schema = NULL;
   const ObColumnSchemaV2* rowkey_column_schema = NULL;
   ObRowkeyInfo rowkey_info;
@@ -127,13 +126,13 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
 
   if (ret == OB_SUCCESS)
   {
-    if (NULL == (schema_checker = static_cast<ObSchemaChecker*>(result_plan->schema_checker_)))
+    if (NULL == (meta_reader = static_cast<DBMetaReader*>(result_plan->meta_reader_)))
     {
       ret = OB_ERR_SCHEMA_UNSET;
       snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
           "Schema(s) are not set");
     }
-    else if (NULL == (table_schema = schema_checker->get_table_schema(table_id)))
+    else if (NULL == (table_schema = meta_reader->get_table_schema(table_id)))
     {
       ret = OB_ERR_TABLE_UNKNOWN;
       snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -152,7 +151,7 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
               "BUG: Unexpected primary columns.");
           break;
         }
-        else if (NULL == (rowkey_column_schema = schema_checker->get_column_schema(table_id, rowkey_column_id)))
+        else if (NULL == (rowkey_column_schema = meta_reader->get_column_schema(table_id, rowkey_column_id)))
         {
           ret = OB_ENTRY_NOT_EXIST;
           TBSYS_LOG(WARN, "fail to get table %lu column %lu", table_id, rowkey_column_id);
@@ -307,7 +306,7 @@ int resolve_expr(
   ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_);
   //stringBuf* name_pool = static_cast<stringBuf*>(result_plan->name_pool_);
 
-#if 0
+#if 1
 
   switch (node->type_)
   {
@@ -677,6 +676,7 @@ int resolve_expr(
     case T_OP_POS:
     case T_OP_NEG:
     case T_OP_NOT:
+    #if 0    
     {
       ObRawExpr* sub_expr = NULL;
       ret = resolve_expr(result_plan, stmt, node->children_[0], sql_expr, sub_expr, expr_scope_type, true);
@@ -778,6 +778,7 @@ int resolve_expr(
       }
       break;
     }
+    #endif
     case T_OP_ADD:
     case T_OP_MINUS:
     case T_OP_MUL:
@@ -798,6 +799,7 @@ int resolve_expr(
     case T_OP_IS:
     case T_OP_IS_NOT:
     case T_OP_CNN:
+     #if 0   /*qinbo*/
     {
       ObRawExpr* sub_expr1 = NULL;
       ret = resolve_expr(result_plan, stmt, node->children_[0], sql_expr, sub_expr1, expr_scope_type, true);
@@ -862,6 +864,7 @@ int resolve_expr(
       expr = b_expr;
       break;
     }
+    #endif 
     case T_OP_BTW:
       /* pass through */
     case T_OP_NOT_BTW:
@@ -1240,6 +1243,7 @@ int resolve_expr(
       break;
     }
     case T_FUN_SYS:
+    #if 0    
     {
       ObSysFunRawExpr *func_expr = NULL;
       if (CREATE_RAW_EXPR(func_expr, ObSysFunRawExpr, result_plan) == NULL)
@@ -1436,6 +1440,7 @@ int resolve_expr(
       }
       break;
     }
+    #endif
     default:
       ret = OB_ERR_PARSER_SYNTAX;
       snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -1817,11 +1822,11 @@ int resolve_table_columns(
   }
 
 #if 0
-  ObSchemaChecker* schema_checker = NULL;
+  DBMetaReader* meta_reader = NULL;
   if (ret == OB_SUCCESS)
   {
-    schema_checker = static_cast<ObSchemaChecker*>(result_plan->schema_checker_);
-    if (schema_checker == NULL)
+    meta_reader = static_cast<DBMetaReader*>(result_plan->meta_reader_);
+    if (meta_reader == NULL)
     {
       ret = OB_ERR_SCHEMA_UNSET;
       snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -1928,10 +1933,10 @@ int resolve_table_columns(
     }
     else
     {
-    #if 0
+      #if 0 
       const ObColumnSchemaV2* column = NULL;
       int32_t column_size = 0;
-      column = schema_checker->get_table_columns(table_item.ref_id_, column_size);
+      column = meta_reader->get_table_columns(table_item.ref_id_, column_size);
       
       if (NULL != column && column_size > 0)
       {
@@ -2833,24 +2838,28 @@ int resolve_insert_columns(
     OB_ASSERT(node->type_ == T_COLUMN_LIST);
     ColumnItem* column_item = NULL;
     ParseNode* column_node = NULL;
+
+    
     for (int32_t i = 0; ret == OB_SUCCESS && i < node->num_child_; i++)
     {
       column_node = node->children_[i];
       OB_ASSERT(column_node->type_ == T_IDENT);
 
       string column_name;
-      column_name.assign(
-          (char*)(column_node->str_value_),
-          static_cast<int32_t>(strlen(column_node->str_value_))
-          );
+      column_name.assign((char*)(column_node->str_value_),static_cast<int32_t>(strlen(column_node->str_value_)));
       column_item = insert_stmt->get_column_item(NULL, column_name);
       if (column_item == NULL)
       {
         if ((ret = insert_stmt->add_column_item(*result_plan, column_name)) != OB_SUCCESS)
+        {
+        
+        printf("ret is %d\n", ret);
           break;
+        }
       }
       else
       {
+        printf("3\n");
         ret = OB_ERR_COLUMN_DUPLICATE;
         snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
           "Column %s are duplicate", column_node->str_value_);
@@ -2882,14 +2891,14 @@ int resolve_insert_columns(
 
   if (OB_SUCCESS == ret)
   {
-    for (int32_t i=0;OB_SUCCESS == ret && i<insert_stmt->get_column_size();i++)
+    for (int32_t i=0; OB_SUCCESS == ret && i<insert_stmt->get_column_size();i++)
     {
       const ColumnItem* column_item = insert_stmt->get_column_item(i);
       if (NULL != column_item && column_item->table_id_ != OB_INVALID_ID)
       {
 #if 0      
-        ObSchemaChecker* schema_checker = static_cast<ObSchemaChecker*>(result_plan->schema_checker_);
-        if (schema_checker == NULL)
+        DBMetaReader* meta_reader = static_cast<DBMetaReader*>(result_plan->meta_reader_);
+        if (meta_reader == NULL)
         {
           ret = OB_ERR_SCHEMA_UNSET;
           snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -2897,7 +2906,7 @@ int resolve_insert_columns(
           break;
         }
 
-        if (schema_checker->is_join_column(column_item->table_id_, column_item->column_id_))
+        if (meta_reader->is_join_column(column_item->table_id_, column_item->column_id_))
         {
           ret = OB_ERR_INSERT_INNER_JOIN_COLUMN;
           snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -3022,6 +3031,7 @@ int resolve_insert_stmt(
         }
         if (ret == OB_SUCCESS)
           ret = resolve_table(result_plan, insert_stmt, table_node, table_id);
+        
         if (ret == OB_SUCCESS)
         {
           insert_stmt->set_insert_table(table_id);

@@ -3,7 +3,6 @@
 #include "ob_logical_plan.h"
 //#include "sql_parser.tab.h"
 #include "ob_raw_expr.h"
-//#include "ob_schema_checker.h"
 #include "utility.h"
 
 using namespace oceanbase::sql;
@@ -46,8 +45,8 @@ int ObSelectStmt::check_alias_name(
   ObLogicalPlan *logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
 
   #if 0
-  ObSchemaChecker *schema_checker = static_cast<ObSchemaChecker*>(result_plan.schema_checker_);
-  if (schema_checker == NULL)
+  DBMetaReader *meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader_);
+  if (meta_reader == NULL)
   {
     ret = OB_ERR_SCHEMA_UNSET;
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -63,7 +62,7 @@ int ObSelectStmt::check_alias_name(
       || item.type_ == TableItem::ALIAS_TABLE)
     {
     #if 0
-      if (schema_checker->column_exists(item.table_name_, alias_name))
+      if (meta_reader->column_exists(item.table_name_, alias_name))
       {
         ret = OB_ERR_COLUMN_DUPLICATE;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -185,11 +184,11 @@ int ObSelectStmt::check_having_ident(
   }
 
 #if 0
-  ObSchemaChecker* schema_checker = NULL;
+  DBMetaReader* meta_reader = NULL;
   if (ret == OB_SUCCESS)
   {
-    schema_checker = static_cast<ObSchemaChecker*>(result_plan.schema_checker_);
-    if (schema_checker == NULL)
+    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader_);
+    if (meta_reader == NULL)
     {
       ret = OB_ERR_SCHEMA_UNSET;
       snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -422,7 +421,6 @@ void ObSelectStmt::print(FILE* fp, int32_t level, int32_t index)
       }
       fprintf(fp, "\n");
     }
-
   }
   else
   {

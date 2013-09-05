@@ -20,7 +20,7 @@ typedef struct
 {
   void* plan_tree_;
   void* name_pool_; // ObStringBuf
-  void* schema_checker_; // ObSchemaChecker
+  void* meta_reader; // DBMetaReader
   ErrStat err_stat_;
   int   is_prepare_;
 } ResultPlan;

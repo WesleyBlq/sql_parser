@@ -19,6 +19,11 @@
 
 #include "ob_define.h"
 
+#include "../route/DBMetaReader.h"
+#include "../route/route.h"
+#include "../route/shard.h"
+
+
 namespace oceanbase
 {
   namespace sql

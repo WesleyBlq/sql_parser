@@ -69,6 +69,7 @@ using namespace oceanbase::common;
 
 #define STR_BOOL(b) ((b) ? "true" : "false")
 
+#ifndef htonll
 #define htonll(i) \
   ( \
   (((uint64_t)i & 0x00000000000000ff) << 56) | \
@@ -80,6 +81,7 @@ using namespace oceanbase::common;
   (((uint64_t)i & 0x00ff000000000000) >> 40) | \
   (((uint64_t)i & 0xff00000000000000) >> 56)   \
   )
+#endif
 
 #define DEFAULT_TIME_FORMAT "%Y-%m-%d %H:%M:%S"
 
