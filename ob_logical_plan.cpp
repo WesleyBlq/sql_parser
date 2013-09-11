@@ -227,10 +227,10 @@ namespace oceanbase
               break;
             }
 
-            field.cname_.assign(NULL, 0);
-            field.org_cname_.assign(NULL, 0);
-            field.tname_.assign(NULL, 0);
-            field.org_tname_.assign(NULL, 0);
+            field.cname_.assign("");
+            field.org_cname_.assign("");
+            field.tname_.assign("");
+            field.org_tname_.assign("");
             field.type_.set_type(ObMinType);
           }
           break;
@@ -301,8 +301,8 @@ namespace oceanbase
                 TBSYS_LOG(WARN, "fail to add field column to result_set. ret=%d", ret);
                 break;
               }
-              field.cname_.assign(NULL, 0);
-              field.org_cname_.assign(NULL, 0);
+              field.cname_.assign("");
+              field.org_cname_.assign("");
               field.type_.set_type(ObMinType);
             }
           }

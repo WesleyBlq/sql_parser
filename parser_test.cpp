@@ -36,15 +36,51 @@ sql_parser(char * sql)
     ParseResult result;
 
     DBMetaReader *metareader = new DBMetaReader;
+
+    #if 0
     if(metareader->DBMetaReader_init())
     {
         cout << "init success" << endl;
     }
+    #endif
 
+    metareader->add_table_schema("qinbo","persons", 100);
+    metareader->add_column_schema("qinbo","persons", "lastname", 1111, CHAR, 0);
+    metareader->add_column_schema("qinbo","persons", "address", 1112, CHAR, 0);
+    metareader->add_column_schema("qinbo","persons", "id", 1113, INT, 0);
+
+    metareader->add_table_schema("qinbo","order_list", 101);
+    metareader->add_column_schema("qinbo","order_list", "id", 1211, INT, 0);
+    metareader->add_column_schema("qinbo","order_list", "item_id", 1212, INT, 0);
+    metareader->add_column_schema("qinbo","order_list", "order_desc", 1213, CHAR, 0);
+
+    schema_table* schema_table = metareader->get_table_schema("qinbo",  "persons");
+    if (schema_table) {
+    //    cout << "get_table_id:" << schema_table->get_table_id() << endl;
+    }
+
+    schema_column* schema_column = metareader->get_column_schema("qinbo","persons", "address");
+    if (schema_column) {
+    //    cout << "address: get_column_id:" << schema_column->get_column_id() << endl;
+    }
+
+    schema_column = metareader->get_column_schema("qinbo","persons", "lastname");
+    if (schema_column) {
+    //    cout << "lastName: get_column_id:" << schema_column->get_column_id() << endl;
+    }
+
+    int a =  metareader->get_all_column_schemas("qinbo","persons").size();
+    //cout << "persons: column_num:" << a << endl;
+    
+    a =  metareader->get_all_column_schemas("qinbo","order_list").size();
+    //cout << "order_list: column_num:" << a << endl;
+    
     ResultPlan result_plan;
     result_plan.name_pool_ = NULL;
     result_plan.meta_reader = metareader;
     result_plan.plan_tree_ = NULL;
+    result_plan.db_name    = "qinbo"; 
+
 
     uint64_t query_id = OB_INVALID_ID;
 
@@ -103,6 +139,9 @@ sql_parser(char * sql)
         return 1;
     }
 
+    if (OB_SUCCESS != ret)
+        fprintf(stderr, "ERR_MSG: %s\n", result_plan.err_stat_.err_msg_);
+
     ObLogicalPlan* multi_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
     fflush(stderr);
     fprintf(stderr,"\n<<Part 3 : LOGICAL PLAN>>\n");
@@ -127,28 +166,31 @@ sql_parser(char * sql)
     printf("\n");
 }
 
+
 int main(void)
 {
-    char *sql1 = "INSERT INTO Persons (LastName, Address) VALUES ('Wilson', 'Champs-Elysees')";
-    char *sql2 = "INSERT INTO User (user_name, user_desc) VALUES ('dafenqi', 'aturtle')";
-    char *sql4 = "SELECT Customer,SUM(OrderPrice) FROM Orders \
-WHERE Customer='Bush' OR Customer='Adams' \
-GROUP BY Customer \
-HAVING SUM(OrderPrice)>1500";
+    char *sql1 = "INSERT INTO persons (lastname, address) VALUES ('Wilson', 'Champs-Elysees')";
+    char *sql2 = "SELECT * FROM persons";
+    char *sql3 = "SELECT lastname, address FROM persons \
+WHERE lastname='Bush' OR address='Adams' \
+GROUP BY lastname HAVING(count(lastname) > 10) ORDER BY lastname desc limit 100, 10";
 
-    char *sql5 = "SELECT Persons.LastName, Persons.FirstName, Orders.OrderNo \
-FROM Persons \
-INNER JOIN Orders \
-ON Persons.Id_P = Orders.Id_P \
-ORDER BY Persons.LastName";
 
-    sql_parser(sql1);
-    //sql_parser(sql2);
-    //sql_parser(sql4);
+    char *sql4 = "select lastname,address FROM persons \
+WHERE id=(select id from persons where lastname='NEW YORK')";
+
+
+    char *sql5 = "SELECT persons.lastname, persons.address, order_list.order_desc \
+FROM persons \
+JOIN order_list \
+ON persons.id = order_list.id \
+ORDER BY persons.lastname";
+
+    char *sql6 = "select id, order_desc from (select * from order_list) ooxx where id > 50";
+    
+    //sql_parser(sql5);
+    //sql_parser(sql6);
+    sql_parser(sql3);
     //sql_parser(sql5);
     return 1;
 }
-
-
-
-

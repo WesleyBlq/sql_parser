@@ -32,6 +32,7 @@
 #include "utility.h"
 #include <stdint.h>
 #include "ob_obj_type.h"
+#include "ob_expr_obj.h"
 
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
@@ -228,6 +229,7 @@ int resolve_independ_expr(
         sql_expr->set_column_id(logical_plan->generate_column_id());
       }
       sql_expr->set_expr(expr);
+      //sql_expr->print(stderr, 0, 0);
     }
   }
   return ret;
@@ -305,8 +307,6 @@ int resolve_expr(
 
   ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_);
   //stringBuf* name_pool = static_cast<stringBuf*>(result_plan->name_pool_);
-
-#if 1
 
   switch (node->type_)
   {
@@ -676,7 +676,6 @@ int resolve_expr(
     case T_OP_POS:
     case T_OP_NEG:
     case T_OP_NOT:
-    #if 0    
     {
       ObRawExpr* sub_expr = NULL;
       ret = resolve_expr(result_plan, stmt, node->children_[0], sql_expr, sub_expr, expr_scope_type, true);
@@ -778,7 +777,6 @@ int resolve_expr(
       }
       break;
     }
-    #endif
     case T_OP_ADD:
     case T_OP_MINUS:
     case T_OP_MUL:
@@ -799,7 +797,6 @@ int resolve_expr(
     case T_OP_IS:
     case T_OP_IS_NOT:
     case T_OP_CNN:
-     #if 0   /*qinbo*/
     {
       ObRawExpr* sub_expr1 = NULL;
       ret = resolve_expr(result_plan, stmt, node->children_[0], sql_expr, sub_expr1, expr_scope_type, true);
@@ -864,7 +861,6 @@ int resolve_expr(
       expr = b_expr;
       break;
     }
-    #endif 
     case T_OP_BTW:
       /* pass through */
     case T_OP_NOT_BTW:
@@ -1032,6 +1028,7 @@ int resolve_expr(
       expr = in_expr;
       break;
     }
+    #if 0
     case T_CASE:
     {
       ObCaseOpRawExpr *case_expr = NULL;
@@ -1127,6 +1124,7 @@ int resolve_expr(
       expr = case_expr;
       break;
     }
+    #endif
     case T_EXPR_LIST:
     {
       ObMultiOpRawExpr *multi_expr = NULL;
@@ -1242,8 +1240,8 @@ int resolve_expr(
       expr = col_expr;
       break;
     }
-    case T_FUN_SYS:
     #if 0    
+    case T_FUN_SYS:
     {
       ObSysFunRawExpr *func_expr = NULL;
       if (CREATE_RAW_EXPR(func_expr, ObSysFunRawExpr, result_plan) == NULL)
@@ -1447,7 +1445,6 @@ int resolve_expr(
           "Wrong type in expression");
       break;
   }
-#endif
   return ret;
 }
 
@@ -1460,7 +1457,7 @@ int resolve_agg_func(
   int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
   uint64_t expr_id = OB_INVALID_ID;
   ObSqlRawExpr* sql_expr = NULL;
-  #if 0
+
   if (node != NULL)
   {
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_);
@@ -1560,7 +1557,6 @@ int resolve_agg_func(
     snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
         "Wrong usage of aggregate function");
   }
-#endif
   if (ret == OB_SUCCESS)
     ret_sql_expr = sql_expr;
   return ret;
@@ -1704,7 +1700,7 @@ int resolve_table(
               "generated table must have alias name");
           break;
         }
-
+        
         uint64_t query_id = OB_INVALID_ID;
         ret = resolve_select_stmt(result_plan, table_node, query_id);
         if (ret == OB_SUCCESS)
@@ -1821,11 +1817,10 @@ int resolve_table_columns(
         "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
   }
 
-#if 0
   DBMetaReader* meta_reader = NULL;
   if (ret == OB_SUCCESS)
   {
-    meta_reader = static_cast<DBMetaReader*>(result_plan->meta_reader_);
+    meta_reader = static_cast<DBMetaReader*>(result_plan->meta_reader);
     if (meta_reader == NULL)
     {
       ret = OB_ERR_SCHEMA_UNSET;
@@ -1833,7 +1828,6 @@ int resolve_table_columns(
           "Schema(s) are not set");
     }
   }
-#endif  
 
   if (ret == OB_SUCCESS)
   {
@@ -1933,24 +1927,36 @@ int resolve_table_columns(
     }
     else
     {
-      #if 0 
+      /*get table columns qinbo*/
+      #if 0
       const ObColumnSchemaV2* column = NULL;
-      int32_t column_size = 0;
-      column = meta_reader->get_table_columns(table_item.ref_id_, column_size);
+      #endif
       
-      if (NULL != column && column_size > 0)
+      string db_name_tmp;
+      db_name_tmp.assign(result_plan->db_name);
+      vector<class schema_column*> schema_columns = meta_reader->get_all_column_schemas(db_name_tmp, table_item.table_name_);
+
+      int32_t column_size = schema_columns.size();
+      //column = meta_reader->get_table_columns(table_item.ref_id_, column_size);
+      
+      fprintf(stderr,"\n\n<<column_size is %d>>\n\n",column_size);
+
+      if (column_size > 0)
       {
         if (table_item.ref_id_ == OB_TABLES_SHOW_TID) // @FIXME !!!
         {
           column_size = 1;
         }
-        for (int32_t i = 0; ret == OB_SUCCESS && i < column_size && (num_columns <= 0 || i < num_columns); i++)
+
+        for (unsigned i=0; i< schema_columns.size(); i++)
+        //for (int32_t i = 0; ret == OB_SUCCESS && i < column_size && (num_columns <= 0 || i < num_columns); i++)
         {
-          new_column_item.column_id_ = column[i].get_id();
+          schema_column *schema_column_ = schema_columns.at(i);
+          new_column_item.column_id_ = schema_column_->get_column_id();
           column_item = stmt->get_column_item_by_id(table_item.table_id_, new_column_item.column_id_);
           if (column_item == NULL)
           {
-            ret = ob_write_string(make_string(column[i].get_name()),
+            ret = ob_write_string(schema_column_->get_column_name(),
                                   new_column_item.column_name_);
             if (ret != OB_SUCCESS)
             {
@@ -1964,7 +1970,7 @@ int resolve_table_columns(
             new_column_item.query_id_ = 0; // no use now, because we don't support correlated subquery
             new_column_item.is_name_unique_ = false;
             new_column_item.is_group_based_ = false;
-            new_column_item.data_type_ = column[i].get_type();
+            new_column_item.data_type_ = trans_int_type2obj_type(schema_column_->get_column_type());
             ret = stmt->add_column_item(new_column_item);
             if (ret != OB_SUCCESS)
             {
@@ -1984,7 +1990,7 @@ int resolve_table_columns(
             expr->set_first_ref_id(column_item->table_id_);
             expr->set_second_ref_id(column_item->column_id_);
             expr->set_result_type(column_item->data_type_);
-            ObSqlRawExpr* sql_expr = (ObSqlRawExpr*)parse_malloc(sizeof(ObSqlRawExpr), NULL_);
+            ObSqlRawExpr* sql_expr = (ObSqlRawExpr*)parse_malloc(sizeof(ObSqlRawExpr), NULL);
             if (sql_expr == NULL)
             {
               ret = OB_ERR_PARSER_MALLOC_FAILED;
@@ -2025,7 +2031,6 @@ int resolve_table_columns(
           }
         }
       }
-    #endif
     }
   }
   return ret;
@@ -2216,7 +2221,7 @@ int resolve_select_clause(
     }
 
     alias_node = NULL;
-    alias_name.assign(NULL);
+    alias_name.assign("");
   }
 
   return ret;
@@ -2852,14 +2857,11 @@ int resolve_insert_columns(
       {
         if ((ret = insert_stmt->add_column_item(*result_plan, column_name)) != OB_SUCCESS)
         {
-        
-        printf("ret is %d\n", ret);
           break;
         }
       }
       else
       {
-        printf("3\n");
         ret = OB_ERR_COLUMN_DUPLICATE;
         snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
           "Column %s are duplicate", column_node->str_value_);

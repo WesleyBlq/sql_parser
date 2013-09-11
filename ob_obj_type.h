@@ -51,6 +51,7 @@ namespace oceanbase
     const char* ob_obj_type_str(ObObjType type);
     // get obj type size for fixed length type
     int64_t ob_obj_type_size(ObObjType type);
+    ObObjType trans_int_type2obj_type(int type);
   }
 }
 

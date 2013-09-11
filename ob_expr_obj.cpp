@@ -15,12 +15,10 @@
  */
 #include <regex.h>
 #include <cmath>
+#include <string>
 #include "utility.h"
 #include "ob_expr_obj.h"
-//#include "ob_string_buf.h"
-//#include "ob_string_search.h"
-#include <string>
-#include "ob_malloc.h"
+//#include "ob_malloc.h"
 #include "ob_obj_cast.h"
 using namespace oceanbase::common;
 
@@ -1348,9 +1346,10 @@ inline int ObExprObj::cast_to_int(int64_t &val) const
 inline int ObExprObj::cast_to_varchar(string &varchar) const
 {
   int ret = OB_SUCCESS;
+  #if 0
   ObExprObj casted_obj;
   char max_tmp_buf[128]; // other type to varchar won't takes too much space, assume 128, should be enough
-  string tmp_str(128, 128, max_tmp_buf);
+  string tmp_str(max_tmp_buf,128);
 
   if (OB_UNLIKELY(this->get_type() == ObNullType))
   {
@@ -1369,21 +1368,31 @@ inline int ObExprObj::cast_to_varchar(string &varchar) const
           ret, this->get_type(), ObVarcharType);
       */
     }
-    else if (OB_SUCCESS != (ret = write_string(casted_obj.get_varchar(), &varchar)))
+    else
     {
-      TBSYS_LOG(WARN, "fail to allocate memory for string. ret=%d", ret);
+      const string& tmp = casted_obj.get_varchar();
+      if (OB_SUCCESS != (ret = ob_write_string(tmp, &varchar)))
+      {
+        TBSYS_LOG(WARN, "fail to allocate memory for string. ret=%d", ret);
+      }
     }
   }
-  else if (OB_UNLIKELY(OB_SUCCESS != (ret = write_string(this->get_varchar(), &varchar))))
+  else
   {
-    TBSYS_LOG(WARN, "fail to allocate memory for string. ret=%d", ret);
+      const string& tmp1 = casted_obj.get_varchar();
+      if (OB_SUCCESS != (ret = ob_write_string(tmp1, &varchar)))
+      {
+        TBSYS_LOG(WARN, "fail to allocate memory for string. ret=%d", ret);
+      }
   }
+  #endif
   return ret;
 }
 
 int ObExprObj::cast_to(int32_t dest_type, ObExprObj &result) const
 {
   int err = OB_SUCCESS;
+  #if 0
   ObObjCastParams params;
   string varchar;
   if (dest_type == ObVarcharType)
@@ -1410,6 +1419,7 @@ int ObExprObj::cast_to(int32_t dest_type, ObExprObj &result) const
   {
     err = OB_INVALID_ARGUMENT;
   }
+  #endif
   return err;
 }
 
@@ -1596,6 +1606,7 @@ int ObExprObj::negate(ObExprObj &res) const
 int ObExprObj::old_like(const ObExprObj &pattern, ObExprObj &result) const
 {
   int err = OB_SUCCESS;
+  #if 0
   if (this->get_type() == ObNullType || pattern.get_type() == ObNullType)
   {
     result.set_null();
@@ -1616,12 +1627,14 @@ int ObExprObj::old_like(const ObExprObj &pattern, ObExprObj &result) const
     int64_t pos = stringSearch::kr_search(pattern.varchar_, pattern_sign, this->varchar_);
     result.set_bool(pos >= 0);
   }
+  #endif
   return err;
 }
 
 int ObExprObj::substr(const ObExprObj &start_pos_obj, const ObExprObj &expect_length_obj, ObExprObj &result) const
 {
   int ret = OB_SUCCESS;
+  #if 0
   int64_t start_pos = 0;
   int64_t expect_length = 0;
   string varchar;
@@ -1643,10 +1656,11 @@ int ObExprObj::substr(const ObExprObj &start_pos_obj, const ObExprObj &expect_le
   {
     ret = this->substr(static_cast<int32_t>(start_pos), static_cast<int32_t>(expect_length), result);
   }
+  #endif
   return ret;
 }
 
-int ObExprObj::substr(const ObExprObj &start_pos, ObExprObj &resultf) const
+int ObExprObj::substr(const ObExprObj &start_pos, ObExprObj &result) const
 {
   ObExprObj max_guess_len;
   max_guess_len.set_int(OB_MAX_VALID_COLUMN_ID);
@@ -1658,6 +1672,7 @@ int ObExprObj::substr(const ObExprObj &start_pos, ObExprObj &resultf) const
 int ObExprObj::substr(const int32_t start_pos, const int32_t expect_length_of_str, ObExprObj &result) const
 {
   int err = OB_SUCCESS;
+  #if 0
   string varchar;
 
   if (OB_UNLIKELY(this->get_type() == ObNullType))
@@ -1673,7 +1688,7 @@ int ObExprObj::substr(const int32_t start_pos, const int32_t expect_length_of_st
     if (OB_UNLIKELY(varchar.length() <= 0 || expect_length_of_str <= 0))
     {
       // empty result string
-      varchar.assign(NULL);
+      varchar.assign("");
     }
     else
     {
@@ -1682,7 +1697,7 @@ int ObExprObj::substr(const int32_t start_pos, const int32_t expect_length_of_st
       start  = (start > 0) ? start : ((start == 0) ? 1 : start + varchar.length() + 1);
       if (OB_UNLIKELY(start <= 0 || start > varchar.length()))
       {
-        varchar.assign(NULL);
+        varchar.assign("");
       }
       else
       {
@@ -1699,15 +1714,16 @@ int ObExprObj::substr(const int32_t start_pos, const int32_t expect_length_of_st
     }
     result.set_varchar(varchar);
   }
+  #endif
   return err;
 }
 
 
 int ObExprObj::upper_case(ObExprObj &result) const
 {
-  string varchar;
   int ret = OB_SUCCESS;
-
+#if 0
+  string varchar;
   if (OB_UNLIKELY(this->get_type() == ObNullType))
   {
     result.set_null();
@@ -1728,14 +1744,15 @@ int ObExprObj::upper_case(ObExprObj &result) const
       result.set_varchar(varchar);
     }
   }
+#endif  
   return ret;
 }
 
 int ObExprObj::lower_case(ObExprObj &result) const
 {
-  string varchar;
   int ret = OB_SUCCESS;
-
+  #if 0
+  string varchar;
   if (OB_UNLIKELY(this->get_type() == ObNullType))
   {
     result.set_null();
@@ -1756,12 +1773,14 @@ int ObExprObj::lower_case(ObExprObj &result) const
       result.set_varchar(varchar);
     }
   }
+  #endif
   return ret;
 }
 
 int ObExprObj::concat(const ObExprObj &other, ObExprObj &result) const
 {
   int ret = OB_SUCCESS;
+  #if 0
   char tmp_buf[OB_MAX_VARCHAR_LENGTH];
   string this_varchar;
   string that_varchar;
@@ -1799,7 +1818,7 @@ int ObExprObj::concat(const ObExprObj &other, ObExprObj &result) const
         memcpy(tmp_buf, this_varchar.data(), this_len);
         memcpy(tmp_buf + this_len, that_varchar.data(), other_len);
         tmp_varchar.assign(tmp_buf, this_len + other_len);
-        if (OB_SUCCESS != (ret = write_string(tmp_varchar, &varchar)))
+        if (OB_SUCCESS != (ret = ob_write_string(tmp_varchar, &varchar)))
         {
           result.set_null();
           TBSYS_LOG(WARN, "fail to write string to membuf. ret=%d", ret);
@@ -1811,12 +1830,14 @@ int ObExprObj::concat(const ObExprObj &other, ObExprObj &result) const
       }
     }
   }
+  #endif
   return ret;
 }
 
 int ObExprObj::trim(const ObExprObj &trimType, const ObExprObj &trimPattern, ObExprObj &result) const
 {
   int err = OB_SUCCESS;
+  #if 0
   int64_t type = 0;
   string pattern;
   string src;
@@ -1871,6 +1892,7 @@ int ObExprObj::trim(const ObExprObj &trimType, const ObExprObj &trimPattern, ObE
   {
     result.set_null();
   }
+  #endif
   return err;
 }
 
@@ -1945,6 +1967,7 @@ int ObExprObj::rtrim(const string src, const string pattern, int32_t &end) const
 int ObExprObj::like(const ObExprObj &pattern, ObExprObj &result) const
 {
   int err = OB_SUCCESS;
+  #if 0
   if (this->get_type() == ObNullType || pattern.get_type() == ObNullType)
   {
     result.set_null();
@@ -1964,12 +1987,14 @@ int ObExprObj::like(const ObExprObj &pattern, ObExprObj &result) const
     bool b = stringSearch::is_matched(pattern.varchar_, this->varchar_);
     result.set_bool(b == true);
   }
+  #endif
   return err;
 }
 
 int ObExprObj::not_like(const ObExprObj &pattern, ObExprObj &result) const
 {
   int err = OB_SUCCESS;
+  #if 0
   if (this->get_type() == ObNullType || pattern.get_type() == ObNullType)
   {
     result.set_null();
@@ -1989,6 +2014,7 @@ int ObExprObj::not_like(const ObExprObj &pattern, ObExprObj &result) const
     bool b = stringSearch::is_matched(pattern.varchar_, this->varchar_);
     result.set_bool(b != true);
   }
+  #endif
   return err;
 }
 
@@ -2130,6 +2156,7 @@ int ObExprObj::get_decimal(char * buf, const int64_t buf_len) const
 int ObExprObj::unhex(ObExprObj &res)
 {
   int ret = OB_SUCCESS;
+  #if 0
   string result;
   ObObj obj;
   if (get_type() != ObVarcharType)
@@ -2148,7 +2175,7 @@ int ObExprObj::unhex(ObExprObj &res)
   {
     int i = 0;
     char value = 0;
-    char *buf = reinterpret_cast<char*>(malloc(varchar_.length() / 2 + 1));
+    char *buf = (char*)malloc(varchar_.length()/ 2 + 1);
     if (NULL == buf)
     {
       res.set_null();
@@ -2206,11 +2233,13 @@ int ObExprObj::unhex(ObExprObj &res)
       }
     }
   }
+  #endif
   return ret;
 }
 int ObExprObj::ip_to_int(ObExprObj &res)
 {
   int ret = OB_SUCCESS;
+  #if 0
   ObObj obj;
   if (OB_UNLIKELY(get_type() != ObVarcharType))
   {
@@ -2262,11 +2291,13 @@ int ObExprObj::ip_to_int(ObExprObj &res)
       res.assign(obj);
     }
   }
+  #endif
   return ret;
 }
 int ObExprObj::int_to_ip(ObExprObj &res)
 {
   int ret = OB_SUCCESS;
+  #if 0
   string result;
   ObObj obj;
   if (OB_UNLIKELY(get_type() != ObIntType))
@@ -2278,7 +2309,7 @@ int ObExprObj::int_to_ip(ObExprObj &res)
   else
   {
     // 255.255.255.255  共15 bit
-    char *buf = reinterpret_cast<char*>(malloc(16));
+    char *buf = (char*)malloc(16);
     if (NULL == buf)
     {
       res.set_null();
@@ -2298,18 +2329,20 @@ int ObExprObj::int_to_ip(ObExprObj &res)
       res.assign(obj);
     }
   }
+  #endif
   return ret;
 }
 int ObExprObj::hex(ObExprObj &res)
 {
   int ret = OB_SUCCESS;
+  #if 0
   int cnt = 0;
   string result;
   ObObj obj;
   if (get_type() == ObVarcharType)
   {
     int i = 0;
-    char *buf = reinterpret_cast<char*>(malloc(varchar_.length() * 2 + 1));
+    char *buf = (char*)malloc(varchar_.length() * 2 + 1);
     if (NULL == buf)
     {
       res.set_null();
@@ -2331,7 +2364,7 @@ int ObExprObj::hex(ObExprObj &res)
   }
   else if (get_type() == ObIntType)
   {
-    char *buf = reinterpret_cast<char*>(malloc(16 + 1));
+    char *buf = (char*)malloc(16 + 1);
     if (NULL == buf)
     {
       res.set_null();
@@ -2353,6 +2386,7 @@ int ObExprObj::hex(ObExprObj &res)
     res.set_null();
     TBSYS_LOG(WARN, "type not match, ret=%d", ret);
   }
+  #endif
   return ret;
 }
 int ObExprObj::varchar_length(ObExprObj &res) const

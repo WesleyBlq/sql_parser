@@ -9,20 +9,6 @@ using namespace oceanbase::sql;
 using namespace oceanbase::common;
 using namespace std;
 
-string make_string(const char* cstr)
-{
-  string ret(const_cast<char*>(cstr),static_cast<int32_t>(strlen(cstr)));
-  return ret;
-}
-
-
-int ob_write_string(const string &src, string &dst)
-{
-  int ret = OB_SUCCESS;
-  dst.assign(src);
-  return ret;
-}
-
 
 ObStmt::ObStmt(StmtType type)
   : ObBasicStmt(type)
@@ -55,11 +41,10 @@ int ObStmt::add_table_item(
               "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
   }
 
-#if 0  
   DBMetaReader* meta_reader = NULL;
   if (ret == OB_SUCCESS)
   {
-    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader_);
+    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader);
     if (meta_reader == NULL)
     {
       ret = OB_ERR_SCHEMA_UNSET;
@@ -67,41 +52,50 @@ int ObStmt::add_table_item(
               "Schema(s) are not set");
     }
   }
-#endif
 
   TableItem item;
   if (ret == OB_SUCCESS)
   {
     switch (type)
     {
-      case TableItem::ALIAS_TABLE:
+        case TableItem::ALIAS_TABLE:
         if (table_name == alias_name)
         {
-          ret = OB_ERR_ILLEGAL_NAME;
-          snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+            ret = OB_ERR_ILLEGAL_NAME;
+            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
               "table '%.*s' must not alias the same name", table_name.size(), table_name.data());
-          break;
+            break;
         }
         /* go through */
-      case TableItem::BASE_TABLE:
-
-        item.ref_id_ = 0;
-#if 0
-        if (item.ref_id_ == OB_INVALID_ID
-          || (!is_show_stmt() && IS_SHOW_TABLE(item.ref_id_)))
+        case TableItem::BASE_TABLE:
         {
-          ret = OB_ERR_TABLE_UNKNOWN;
-          snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "table '%.*s' does not exist", table_name.size(), table_name.data()));
-          break;
+            string db_name_tmp;
+            db_name_tmp.assign(result_plan.db_name);
+            schema_table *schema_table = meta_reader->get_table_schema(db_name_tmp, table_name);
+            if (NULL == schema_table)
+            {
+              ret = OB_ERR_TABLE_UNKNOWN;
+              snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                  "table '%.*s' does not exist", table_name.size(), table_name.data());
+              break;
+            }
+            item.ref_id_ = schema_table->get_table_id();
+            
+            if (item.ref_id_ == OB_INVALID_ID)
+            {
+                ret = OB_ERR_TABLE_UNKNOWN;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "table '%.*s' does not exist", table_name.size(), table_name.data());
+                break;
+            }
+            
+            if (type == TableItem::BASE_TABLE)
+              item.table_id_ = item.ref_id_;
+            else
+              item.table_id_ = logical_plan->generate_table_id();
+            break;
         }
-        if (type == TableItem::BASE_TABLE)
-          item.table_id_ = item.ref_id_;
-        else
-#endif    
-          item.table_id_ = logical_plan->generate_table_id();
-        break;
-      case TableItem::GENERATED_TABLE:
+        case TableItem::GENERATED_TABLE:
         if (ref_id == OB_INVALID_ID)
         {
           ret = OB_ERR_ILLEGAL_ID;
@@ -468,11 +462,10 @@ int ObStmt::check_table_column(
         "Wrong invocation of ObStmt::check_table_column, logical_plan must exist!!!");
   }
 
-  #if 1
   DBMetaReader* meta_reader = NULL;
   if (ret == OB_SUCCESS)
   {
-    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader_);
+    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader);
     if (meta_reader == NULL)
     {
       ret = OB_ERR_SCHEMA_UNSET;
@@ -480,7 +473,6 @@ int ObStmt::check_table_column(
           "Schema(s) are not set");
     }
   }
-  #endif
 
   if (ret == OB_SUCCESS)
   {
@@ -490,18 +482,14 @@ int ObStmt::check_table_column(
         // get through
       case TableItem::ALIAS_TABLE:
       {
-        #if 0
-        const ObColumnSchemaV2 *col_schema = meta_reader->get_column_schema(table_item.table_name_, column_name);
-        if (col_schema != NULL)
+        string db_name_tmp;
+        db_name_tmp.assign(result_plan.db_name);
+        schema_column* schema_column = meta_reader->get_column_schema(db_name_tmp, table_item.table_name_,column_name);
+        if (NULL != schema_column)
         {
-          column_id = col_schema->get_id();
-          column_type = col_schema->get_type();
+            column_id = schema_column->get_column_id();
+            column_type = trans_int_type2obj_type(schema_column->get_column_type());
         }
-        #endif
-
-        /*qinbo: here should be confirmed*/
-        column_id = logical_plan->generate_column_id();
-        column_type = ObNullType;
         break;
       }
       case TableItem::GENERATED_TABLE:

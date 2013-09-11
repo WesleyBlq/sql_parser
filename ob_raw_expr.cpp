@@ -202,6 +202,20 @@ void ObConstRawExpr::print(FILE* fp, int32_t level) const
   }
 }
 
+/**************************************************
+Funtion		:	ObConstRawExpr::to_string
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   convert expr to string
+Input		:	
+Output		:	char* buf, const int64_t buf_len
+**************************************************/
+int64_t ObConstRawExpr::to_string(char* buf, const int64_t buf_len) const
+{
+
+}
+
+
 #if 0
 int ObConstRawExpr::fill_sql_expression(
     ObSqlExpression& inter_expr,
@@ -331,6 +345,19 @@ void ObUnaryRefRawExpr::print(FILE* fp, int32_t level) const
   fprintf(fp, "%s : %lu\n", get_type_name(get_expr_type()), id_);
 }
 
+/**************************************************
+Funtion		:	ObUnaryRefRawExpr::to_string
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   convert expr to string
+Input		:	
+Output		:	char* buf, const int64_t buf_len
+**************************************************/
+int64_t ObUnaryRefRawExpr::to_string(char* buf, const int64_t buf_len) const
+{
+
+}
+
 #if 0
 int ObUnaryRefRawExpr::fill_sql_expression(
     ObSqlExpression& inter_expr,
@@ -375,6 +402,19 @@ void ObBinaryRefRawExpr::print(FILE* fp, int32_t level) const
             get_type_name(get_expr_type()), first_id_, second_id_);
 }
 
+/**************************************************
+Funtion		:	ObBinaryRefRawExpr::to_string
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   convert expr to string
+Input		:	
+Output		:	char* buf, const int64_t buf_len
+**************************************************/
+int64_t ObBinaryRefRawExpr::to_string(char* buf, const int64_t buf_len) const
+{
+
+}
+
 #if 0
 int ObBinaryRefRawExpr::fill_sql_expression(
     ObSqlExpression& inter_expr,
@@ -413,6 +453,20 @@ void ObUnaryOpRawExpr::print(FILE* fp, int32_t level) const
   expr_->print(fp, level + 1);
 }
 
+
+/**************************************************
+Funtion		:	ObUnaryOpRawExpr::to_string
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   convert expr to string
+Input		:	
+Output		:	char* buf, const int64_t buf_len
+**************************************************/
+int64_t ObUnaryOpRawExpr::to_string(char* buf, const int64_t buf_len) const
+{
+
+}
+
 #if 0
 int ObUnaryOpRawExpr::fill_sql_expression(
     ObSqlExpression& inter_expr,
@@ -439,6 +493,19 @@ void ObBinaryOpRawExpr::print(FILE* fp, int32_t level) const
   fprintf(fp, "%s\n", get_type_name(get_expr_type()));
   first_expr_->print(fp, level + 1);
   second_expr_->print(fp, level + 1);
+}
+
+/**************************************************
+Funtion		:	ObBinaryOpRawExpr::to_string
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   convert expr to string
+Input		:	
+Output		:	char* buf, const int64_t buf_len
+**************************************************/
+int64_t ObBinaryOpRawExpr::to_string(char* buf, const int64_t buf_len) const
+{
+
 }
 
 void ObBinaryOpRawExpr::set_op_exprs(ObRawExpr *first_expr, ObRawExpr *second_expr)
@@ -594,6 +661,20 @@ void ObTripleOpRawExpr::print(FILE* fp, int32_t level) const
   third_expr_->print(fp, level + 1);
 }
 
+/**************************************************
+Funtion		:	ObTripleOpRawExpr::to_string
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   convert expr to string
+Input		:	
+Output		:	char* buf, const int64_t buf_len
+**************************************************/
+int64_t ObTripleOpRawExpr::to_string(char* buf, const int64_t buf_len) const
+{
+
+}
+
+
 void ObTripleOpRawExpr::set_op_exprs(
     ObRawExpr *first_expr,
     ObRawExpr *second_expr,
@@ -639,6 +720,20 @@ void ObMultiOpRawExpr::print(FILE* fp, int32_t level) const
   }
 }
 
+
+/**************************************************
+Funtion		:	ObMultiOpRawExpr::to_string
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   convert expr to string
+Input		:	
+Output		:	char* buf, const int64_t buf_len
+**************************************************/
+int64_t ObMultiOpRawExpr::to_string(char* buf, const int64_t buf_len) const
+{
+
+}
+
 #if 0
 int ObMultiOpRawExpr::fill_sql_expression(
     ObSqlExpression& inter_expr,
@@ -662,6 +757,7 @@ int ObMultiOpRawExpr::fill_sql_expression(
 }
 #endif
 
+#if 0
 void ObCaseOpRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
@@ -684,7 +780,6 @@ void ObCaseOpRawExpr::print(FILE* fp, int32_t level) const
   }
 }
 
-#if 0
 int ObCaseOpRawExpr::fill_sql_expression(
     ObSqlExpression& inter_expr,
     ObTransformer *transformer,
@@ -731,6 +826,20 @@ void ObAggFunRawExpr::print(FILE* fp, int32_t level) const
     param_expr_->print(fp, level + 1);
 }
 
+
+/**************************************************
+Funtion		:	ObAggFunRawExpr::to_string
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   convert expr to string
+Input		:	
+Output		:	char* buf, const int64_t buf_len
+**************************************************/
+int64_t ObAggFunRawExpr::to_string(char* buf, const int64_t buf_len) const
+{
+
+}
+
 #if 0
 int ObAggFunRawExpr::fill_sql_expression(
     ObSqlExpression& inter_expr,
@@ -746,6 +855,7 @@ int ObAggFunRawExpr::fill_sql_expression(
 }
 #endif
 
+#if 0
 void ObSysFunRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
@@ -756,7 +866,6 @@ void ObSysFunRawExpr::print(FILE* fp, int32_t level) const
   }
 }
 
-#if 0
 int ObSysFunRawExpr::fill_sql_expression(
     ObSqlExpression& inter_expr,
     ObTransformer *transformer,
@@ -845,7 +954,25 @@ void ObSqlRawExpr::print(FILE* fp, int32_t level, int32_t index) const
     fprintf(fp, "(table_id : column_id) = (NULL : %lu)\n", column_id_);
   else
     fprintf(fp, "(table_id : column_id) = (%lu : %lu)\n", table_id_, column_id_);
-  expr_->print(fp, level);
+
+  if (NULL != expr_)
+    expr_->print(fp, level);
+  
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
   fprintf(fp, "<ObSqlRawExpr %d End>\n", index);
 }
+
+
+/**************************************************
+Funtion		:	ObAggFunRawExpr::to_string
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   convert expr to string
+Input		:	
+Output		:	char* buf, const int64_t buf_len
+**************************************************/
+int64_t ObSqlRawExpr::to_string(char* buf, const int64_t buf_len) const
+{
+
+}
+

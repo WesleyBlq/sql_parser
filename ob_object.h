@@ -49,8 +49,8 @@ namespace oceanbase
 
 #if 0
     class ObBatchChecksum;
-    class ObExprObj;
 #endif
+    class ObExprObj;
     class ObObj
     {
       public:
@@ -109,7 +109,7 @@ namespace oceanbase
         void print_value(FILE* fd);
         int64_t to_string(char* buffer, const int64_t length) const;
         //
-        //NEED_SERIALIZE_AND_DESERIALIZE;
+        NEED_SERIALIZE_AND_DESERIALIZE;
         /*
          *   获取列值，用户根据已知的数据类型调用相应函数，如果类型不符则返回失败
          */
@@ -177,8 +177,8 @@ namespace oceanbase
         friend class tests::common::ObjTest;
         friend class ObCompactCellWriter;
         friend class ObCompactCellIterator;
-        friend class ObExprObj;
 #endif        
+        friend class ObExprObj;
         bool is_datetime() const;
         bool can_compare(const ObObj & other) const;
         int  compare_same_type(const ObObj &other) const;
@@ -329,9 +329,24 @@ namespace oceanbase
 
     inline void ObObj::set_varchar(const string& value)
     {
+      int32_t src_len = value.length();
+      char * ptr = NULL;
+      if (OB_UNLIKELY(NULL == value.data() || 0 >= src_len))
+      {
+        return;
+      }
+      else if (NULL == (ptr = (char*)malloc(src_len)))
+      {
+          return;
+      }
+      else
+      {
+        memcpy(ptr, value.data(), src_len);
+      }
       meta_.type_ = ObVarcharType;
       meta_.op_flag_ = INVALID_OP_FLAG;
-      value_.varchar_val = value.data();
+      
+      value_.varchar_val = ptr;
       val_len_ = value.length();
     }
 

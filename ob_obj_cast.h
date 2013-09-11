@@ -15,7 +15,6 @@
  */
 #ifndef _OB_OBJ_CAST_H
 #define _OB_OBJ_CAST_H 1
-
 #include <string>
 #include "ob_object.h"
 #include "ob_expr_obj.h"

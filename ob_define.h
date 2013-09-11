@@ -583,7 +583,6 @@ namespace oceanbase
 // 完成后更新pos。如果反序列化所需数据要超出(buf+data_len)，
 // deserialize返回失败。
 
-#if 0
 #define NEED_SERIALIZE_AND_DESERIALIZE \
 int serialize(char* buf, const int64_t buf_len, int64_t& pos) const; \
   int deserialize(const char* buf, const int64_t data_len, int64_t& pos); \
@@ -617,7 +616,6 @@ virtual int serialize(char* buf, const int64_t buf_len, int64_t& pos) const = 0;
 
 #define DATABUFFER_SERIALIZE_INFO \
   data_buffer_.get_data(), data_buffer_.get_capacity(), data_buffer_.get_position()
-#endif
 
 #ifndef UNUSED
 #define UNUSED(v) ((void)(v))

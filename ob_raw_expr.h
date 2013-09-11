@@ -1,15 +1,17 @@
 #ifndef OCEANBASE_SQL_RAWEXPR_H_
 #define OCEANBASE_SQL_RAWEXPR_H_
+
+//#include "common/ob_vector.h"
+#include <string>
+//#include "common/ob_string_buf.h"
+#include <vector>
 //#include "ob_bit_set.h"
 #include "ob_obj_type.h"
 //#include "ob_sql_expression.h"
 #include "ob_define.h"
 #include "sql_item_type.h"
 #include "ob_object.h"
-//#include "common/ob_vector.h"
-#include <string>
-//#include "common/ob_string_buf.h"
-#include <vector>
+#include "utility.h"
 
 using namespace oceanbase::common;
 
@@ -51,6 +53,8 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       virtual void print(FILE* fp, int32_t level) const = 0;
+      /*added by qinbo*/
+      virtual int64_t to_string(char* buf, const int64_t buf_len) const = 0;
 
     private:
       SqlItemType  type_;
@@ -77,6 +81,8 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
+      /*added by qinbo*/
+      int64_t to_string(char* buf, const int64_t buf_len) const;
 
     private:
       oceanbase::common::ObObj value_;
@@ -102,6 +108,9 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
+      /*added by qinbo*/
+      int64_t to_string(char* buf, const int64_t buf_len) const;
+      
       int get_name(string& name) const;
 
     private:
@@ -131,7 +140,9 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
-
+      /*added by qinbo*/
+      int64_t to_string(char* buf, const int64_t buf_len) const;
+      
     private:
       uint64_t first_id_;
       uint64_t second_id_;
@@ -157,6 +168,8 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
+      /*added by qinbo*/
+      int64_t to_string(char* buf, const int64_t buf_len) const;
 
     private:
       ObRawExpr *expr_;
@@ -183,6 +196,8 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
+      /*added by qinbo*/
+      int64_t to_string(char* buf, const int64_t buf_len) const;
 
     private:
       ObRawExpr *first_expr_;
@@ -217,6 +232,8 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
+      /*added by qinbo*/
+      int64_t to_string(char* buf, const int64_t buf_len) const;
 
     private:
       ObRawExpr *first_expr_;
@@ -250,11 +267,14 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
+      /*added by qinbo*/
+      int64_t to_string(char* buf, const int64_t buf_len) const;
 
     private:
       vector<ObRawExpr*> exprs_;
     };
 
+#if 0
     class ObCaseOpRawExpr : public ObRawExpr
     {
     public:
@@ -307,6 +327,7 @@ namespace oceanbase
       vector<ObRawExpr*> then_exprs_;
       ObRawExpr *default_expr_;
     };
+#endif
 
     class ObAggFunRawExpr : public ObRawExpr
     {
@@ -331,6 +352,8 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
+      /*added by qinbo*/
+      int64_t to_string(char* buf, const int64_t buf_len) const;
 
     private:
       // NULL means '*'
@@ -338,6 +361,7 @@ namespace oceanbase
       bool     distinct_;
     };
 
+#if 0
     class ObSysFunRawExpr : public ObRawExpr
     {
     public:
@@ -369,6 +393,7 @@ namespace oceanbase
       string func_name_;
       vector<ObRawExpr*> exprs_;
     };
+#endif
 
     class ObSqlRawExpr
     {
@@ -406,6 +431,8 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level, int32_t index = 0) const;
+      /*added by qinbo*/
+      int64_t to_string(char* buf, const int64_t buf_len) const;
 
     private:
       uint64_t  expr_id_;

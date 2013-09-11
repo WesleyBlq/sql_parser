@@ -66,6 +66,9 @@ using namespace oceanbase::common;
 #define UINT64_MAX              (18446744073709551615ULL)
 #endif
 
+extern string make_string(const char* cstr);
+extern int ob_write_string(const string &src, string &dst);
+
 
 #define STR_BOOL(b) ((b) ? "true" : "false")
 

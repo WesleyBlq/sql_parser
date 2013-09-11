@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-
 #include "sql_item_type.h"
 
 #define MAX_ERROR_MSG 1024
@@ -23,6 +22,7 @@ typedef struct
   void* meta_reader; // DBMetaReader
   ErrStat err_stat_;
   int   is_prepare_;
+  char* db_name;   //record current db name
 } ResultPlan;
 
 struct _ParseNode;

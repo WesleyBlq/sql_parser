@@ -41,6 +41,8 @@ OBJS_SQL =  \
 	ob_object.o \
 	ob_obj_type.o \
 	ob_raw_expr.o \
+	ob_obj_cast.o \
+	ob_expr_obj.o \
 	ob_stmt.o \
 	ob_delete_stmt.o \
 	ob_insert_stmt.o  \
@@ -53,6 +55,7 @@ OBJS_SQL =  \
 #libsql.a
 libsql.a: $(OBJS_SQL)
 	ar rv libsql.a ${OBJS_SQL}
+	g++  -Wl,-rpath -Wl,LIBDIR $(CCFLAGS_test) $(CPPFLAGS) -o parser_test parser_test.cpp $(LDLIBS)
 
 
 parser_test: parser_test.cpp

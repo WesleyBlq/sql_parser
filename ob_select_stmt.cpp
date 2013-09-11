@@ -44,15 +44,13 @@ int ObSelectStmt::check_alias_name(
   int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
   ObLogicalPlan *logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
 
-  #if 0
-  DBMetaReader *meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader_);
+  DBMetaReader *meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader);
   if (meta_reader == NULL)
   {
     ret = OB_ERR_SCHEMA_UNSET;
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
         "Schema(s) are not set");
   }
-  #endif
 
   for (int32_t i = 0; ret == OB_SUCCESS && i < table_items_.size(); i++)
   {
@@ -61,15 +59,16 @@ int ObSelectStmt::check_alias_name(
     if (item.type_ == TableItem::BASE_TABLE
       || item.type_ == TableItem::ALIAS_TABLE)
     {
-    #if 0
-      if (meta_reader->column_exists(item.table_name_, alias_name))
+      string db_name_tmp;
+      db_name_tmp.assign(result_plan.db_name);
+      schema_column* schema_column = meta_reader->get_column_schema(db_name_tmp, item.table_name_,alias_name);
+      if (NULL == schema_column)
       {
         ret = OB_ERR_COLUMN_DUPLICATE;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-            "alias name %.*s is ambiguous", alias_name.size()), alias_name.data());
+            "alias name %.*s is ambiguous", alias_name.size(), alias_name.data());
         break;
       }
-    #endif  
     }
     else if (item.type_ == TableItem::GENERATED_TABLE)
     {
@@ -183,19 +182,6 @@ int ObSelectStmt::check_having_ident(
               "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
   }
 
-#if 0
-  DBMetaReader* meta_reader = NULL;
-  if (ret == OB_SUCCESS)
-  {
-    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader_);
-    if (meta_reader == NULL)
-    {
-      ret = OB_ERR_SCHEMA_UNSET;
-      snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "Schema(s) are not set");
-    }
-  }
-#endif  
 
   for (int32_t i = 0; ret == OB_SUCCESS && i < select_items_.size(); i++)
   {

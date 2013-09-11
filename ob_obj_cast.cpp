@@ -15,6 +15,7 @@
  */
 #include "ob_obj_cast.h"
 #include <time.h>
+#include <string>
 
 namespace oceanbase
 {
@@ -80,9 +81,11 @@ namespace oceanbase
       {
         va_list args;
         va_start(args, format);
-        int length = vsnprintf(varchar.data(), varchar.length(), format, args);
+        int length = vsnprintf((char*)varchar.data(), varchar.length(), format, args);
         va_end(args);
-        string varchar2(length, varchar.data(),varchar.length());
+        /*qinbo*/
+        //string varchar2(varchar.length(), length, varchar.data());
+        string varchar2(varchar);
         out.set_varchar(varchar2);
       }
       return ret;
@@ -897,11 +900,11 @@ namespace oceanbase
       string varchar;
       if (in.get_bool())
       {
-        varchar.assign(const_cast<char*>("true"), sizeof("true")-1);
+        varchar.assign("true");
       }
       else
       {
-        varchar.assign(const_cast<char*>("false"), sizeof("false")-1);
+        varchar.assign("false");
       }
       out.set_varchar(varchar);
       return OB_SUCCESS;
@@ -1030,8 +1033,8 @@ namespace oceanbase
       }
       else
       {
-        int64_t length = in.get_decimal().to_string(varchar.data(), varchar.length());
-        string varchar2(varchar.length(), static_cast<int32_t>(length), varchar.data());
+        int64_t length = in.get_decimal().to_string((char*)varchar.data(), varchar.length());
+        string varchar2(varchar);
         out.set_varchar(varchar2);
       }
       return ret;
@@ -1272,7 +1275,7 @@ namespace oceanbase
     int obj_cast(ObObj &cell, const ObObjType expected_type, string &cast_buffer)
     {
       int64_t used_buf_len = 0;
-      return obj_cast(cell, expected_type, cast_buffer.data(), cast_buffer.length(), used_buf_len);
+      return obj_cast(cell, expected_type, (char*)cast_buffer.data(), cast_buffer.length(), used_buf_len);
     }
   } // end namespace common
 } // end namespace oceanbase

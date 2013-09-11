@@ -13,9 +13,6 @@
 using std::vector;
 using std::string;
 
-extern string make_string(const char* cstr);
-extern int ob_write_string(const string &src, string &dst);
-
 namespace oceanbase
 {
   namespace sql
@@ -62,7 +59,7 @@ namespace oceanbase
     struct ColumnItem
     {
       uint64_t    column_id_;
-      string    column_name_;
+      string      column_name_;
       uint64_t    table_id_;
       uint64_t    query_id_;
       // This attribute is used by resolver, to mark if the column name is unique of all from tables

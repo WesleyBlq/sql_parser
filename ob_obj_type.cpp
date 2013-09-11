@@ -16,6 +16,7 @@
 
 #include "ob_define.h"
 #include "ob_obj_type.h"
+#include "../global.h"
 
 namespace oceanbase
 {
@@ -104,6 +105,25 @@ namespace oceanbase
           break;
       }
       return size;
+    }
+
+
+    ObObjType trans_int_type2obj_type(int type)
+    {
+        switch(type)
+        {
+        case NONE_TYPE:
+            return ObMinType;
+        case INT:
+            return ObIntType;
+        case CHAR:
+            return ObVarcharType;
+        case FLOAT:
+            return ObFloatType;
+        default:
+            return ObMinType;
+        }
+
     }
   } // common
 } // oceanbase
