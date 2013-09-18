@@ -61,6 +61,9 @@ typedef struct _ParseResult
 extern "C" {
 #endif
 
+extern const char* get_type_name(int type);
+extern const char* get_type_symbol(int type);
+
 extern int parse_init(ParseResult* p);
 
 extern int parse_terminate(ParseResult* p);

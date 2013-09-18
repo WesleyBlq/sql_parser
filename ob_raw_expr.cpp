@@ -1,8 +1,11 @@
 #include "ob_raw_expr.h"
 //#include "ob_transformer.h"
-#include "type_name.c"
+#include "parse_node.h"
 //#include "ob_prepare.h"
 //#include "ob_result_set.h"
+#include "ob_select_stmt.h"
+#include "ob_logical_plan.h"
+
 
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
@@ -133,6 +136,8 @@ int ObConstRawExpr::set_value_and_type(const common::ObObj& val)
 void ObConstRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+  fprintf(fp, "ObConstRawExpr\n");
+  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
   fprintf(fp, "%s : ", get_type_name(get_expr_type()));
   switch(get_expr_type())
   {
@@ -210,9 +215,28 @@ Description	:   convert expr to string
 Input		:	
 Output		:	char* buf, const int64_t buf_len
 **************************************************/
-int64_t ObConstRawExpr::to_string(char* buf, const int64_t buf_len) const
+int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {
-
+    int64_t pos = 0;
+    int64_t ret = OB_SUCCESS;
+    char buf_tmp[256] = {0};
+    
+    switch(get_expr_type())
+    {
+        case T_STRING:
+        case T_BINARY:
+        {
+            databuff_printf(buf, buf_len, pos, "\"");
+            value_.to_string(buf_tmp, 256);
+            databuff_printf(buf, buf_len, pos, buf_tmp);
+            databuff_printf(buf, buf_len, pos, "\"");
+            break;
+        }
+        default:
+            value_.to_string(buf_tmp, 256);
+            databuff_printf(buf, buf_len, pos, buf_tmp);
+            break;
+    }
 }
 
 
@@ -342,6 +366,8 @@ int ObConstRawExpr::fill_sql_expression(
 void ObUnaryRefRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+  fprintf(fp, "ObUnaryRefRawExpr\n");
+  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
   fprintf(fp, "%s : %lu\n", get_type_name(get_expr_type()), id_);
 }
 
@@ -353,9 +379,40 @@ Description	:   convert expr to string
 Input		:	
 Output		:	char* buf, const int64_t buf_len
 **************************************************/
-int64_t ObUnaryRefRawExpr::to_string(char* buf, const int64_t buf_len) const
+int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {
+    int64_t pos = 0;
+    int64_t ret = OB_SUCCESS;
+    char buf_tmp[2048] = {0};
+    uint64_t id = 0;
+    
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
+    if (logical_plan == NULL)
+    {
+        ret = OB_ERR_LOGICAL_PLAN_FAILD;
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+          "Wrong invocation of ObStmt::check_table_column, logical_plan must exist!!!");
+        return ret;
+    }
 
+    databuff_printf(buf, buf_len, pos, "(");
+    id = get_ref_id();
+    
+    ObSelectStmt *sub_select = dynamic_cast<ObSelectStmt *>(logical_plan->get_query(id));
+    
+    if (!sub_select)
+    {
+        ret = OB_ERR_PARSER_SYNTAX;
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+          "Sub-query of In operator is not select statment");
+        return ret;
+    }
+
+    sub_select->make_stmt_string(result_plan, buf_tmp, 2048);
+    databuff_printf(buf, buf_len, pos, buf_tmp);
+    databuff_printf(buf, buf_len, pos, ")");
+
+    return ret;
 }
 
 #if 0
@@ -394,6 +451,8 @@ int ObUnaryRefRawExpr::fill_sql_expression(
 void ObBinaryRefRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+  fprintf(fp, "ObBinaryRefRawExpr\n");
+  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
   if (first_id_ == OB_INVALID_ID)
     fprintf(fp, "%s : [table_id, column_id] = [NULL, %lu]\n",
             get_type_name(get_expr_type()), second_id_);
@@ -410,9 +469,79 @@ Description	:   convert expr to string
 Input		:	
 Output		:	char* buf, const int64_t buf_len
 **************************************************/
-int64_t ObBinaryRefRawExpr::to_string(char* buf, const int64_t buf_len) const
+int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {
+    int64_t pos = 0;
+    int64_t ret = OB_SUCCESS;
+    char tmp_str[256] = {0};
+    
+    DBMetaReader* meta_reader = NULL;
+    ObSqlRawExpr* sql_expr = NULL;
 
+    if (first_id_ == OB_INVALID_ID)
+    {
+        ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
+        if (logical_plan == NULL)
+        {
+            ret = OB_ERR_LOGICAL_PLAN_FAILD;
+            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+              "Wrong invocation of ObStmt::check_table_column, logical_plan must exist!!!");
+            return ret;
+        }
+        
+        sql_expr = logical_plan->get_expr_by_ref_column_id(second_id_);
+        if (NULL == sql_expr)
+        {
+            ret = OB_ERR_LOGICAL_PLAN_FAILD;
+            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                      "having expr name error!!!");
+            return ret;
+        }
+        
+        memset(tmp_str, 0,256);
+        sql_expr->to_string(result_plan, tmp_str, 256);
+        databuff_printf(buf, buf_len, pos, tmp_str);
+        
+    }
+    else
+    {
+        meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader);
+        if (meta_reader == NULL)
+        {
+            ret = OB_ERR_SCHEMA_UNSET;
+            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Schema(s) are not set");
+            return ret;
+        }
+
+        if (T_REF_COLUMN == get_expr_type())
+        {
+            string db_name_tmp;
+            db_name_tmp.assign(result_plan.db_name);
+            schema_table*   table_schema = meta_reader->get_table_schema_by_id(db_name_tmp, first_id_);
+            if (NULL == table_schema)
+            {
+                ret = OB_ERR_SCHEMA_UNSET;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                    "Schema(s) are not set");
+                return ret;
+            }
+
+            schema_column*  column_schema= table_schema->get_column_from_table_by_id(second_id_);
+            if (column_schema == NULL)
+            {
+              ret = OB_ERR_SCHEMA_UNSET;
+              snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                  "Schema(s) are not set");
+              return ret;
+            }
+
+            //databuff_printf(buf, 256, pos, table_schema->get_table_name().data());
+            databuff_printf(buf, 256, pos, column_schema->get_column_name().data());
+        }
+    }
+
+    return ret;
 }
 
 #if 0
@@ -449,6 +578,8 @@ int ObBinaryRefRawExpr::fill_sql_expression(
 void ObUnaryOpRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+  fprintf(fp, "ObUnaryOpRawExpr\n");
+  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
   fprintf(fp, "%s\n", get_type_name(get_expr_type()));
   expr_->print(fp, level + 1);
 }
@@ -462,9 +593,17 @@ Description	:   convert expr to string
 Input		:	
 Output		:	char* buf, const int64_t buf_len
 **************************************************/
-int64_t ObUnaryOpRawExpr::to_string(char* buf, const int64_t buf_len) const
-{
+int64_t ObUnaryOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+{   
+    int64_t pos = 0;
+    int64_t ret = OB_SUCCESS;
+    char buf_tmp[256] = {0};
 
+    databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
+    databuff_printf(buf, buf_len, pos, "(");
+    expr_->to_string(result_plan, buf_tmp, 256);
+    databuff_printf(buf, buf_len, pos, buf_tmp);
+    databuff_printf(buf, buf_len, pos, ")");
 }
 
 #if 0
@@ -490,6 +629,8 @@ int ObUnaryOpRawExpr::fill_sql_expression(
 void ObBinaryOpRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+  fprintf(fp, "ObBinaryOpRawExpr\n");
+  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
   fprintf(fp, "%s\n", get_type_name(get_expr_type()));
   first_expr_->print(fp, level + 1);
   second_expr_->print(fp, level + 1);
@@ -503,9 +644,18 @@ Description	:   convert expr to string
 Input		:	
 Output		:	char* buf, const int64_t buf_len
 **************************************************/
-int64_t ObBinaryOpRawExpr::to_string(char* buf, const int64_t buf_len) const
+int64_t ObBinaryOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {
-
+    int64_t pos = 0;
+    int64_t ret = OB_SUCCESS;
+    char buf1[256] = {0};
+    char buf2[256] = {0};
+    
+    first_expr_->to_string(result_plan, buf1, 256);
+    databuff_printf(buf, buf_len, pos, buf1);
+    databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
+    second_expr_->to_string(result_plan, buf2, 256);
+    databuff_printf(buf, buf_len, pos, buf2);
 }
 
 void ObBinaryOpRawExpr::set_op_exprs(ObRawExpr *first_expr, ObRawExpr *second_expr)
@@ -655,6 +805,8 @@ int ObBinaryOpRawExpr::fill_sql_expression(
 void ObTripleOpRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+  fprintf(fp, "ObTripleOpRawExpr\n");
+  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
   fprintf(fp, "%s\n", get_type_name(get_expr_type()));
   first_expr_->print(fp, level + 1);
   second_expr_->print(fp, level + 1);
@@ -669,9 +821,24 @@ Description	:   convert expr to string
 Input		:	
 Output		:	char* buf, const int64_t buf_len
 **************************************************/
-int64_t ObTripleOpRawExpr::to_string(char* buf, const int64_t buf_len) const
+int64_t ObTripleOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {
-
+    int64_t pos = 0;
+    int64_t ret = OB_SUCCESS;
+    char buf1[256] = {0};
+    char buf2[256] = {0};
+    char buf3[256] = {0};
+    
+    first_expr_->to_string(result_plan, buf1, 256);
+    databuff_printf(buf, buf_len, pos, buf1);
+    databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
+    second_expr_->to_string(result_plan, buf2, 256);
+    databuff_printf(buf, buf_len, pos, buf2);
+    databuff_printf(buf, buf_len, pos, " ");
+    databuff_printf(buf, buf_len, pos, "AND ");
+    third_expr_->to_string(result_plan, buf3, 256);
+    databuff_printf(buf, buf_len, pos, buf3);
+    databuff_printf(buf, buf_len, pos, " ");
 }
 
 
@@ -713,6 +880,8 @@ int ObTripleOpRawExpr::fill_sql_expression(
 void ObMultiOpRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+  fprintf(fp, "ObMultiOpRawExpr\n");
+  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
   fprintf(fp, "%s\n", get_type_name(get_expr_type()));
   for (int32_t i = 0; i < exprs_.size(); i++)
   {
@@ -729,9 +898,26 @@ Description	:   convert expr to string
 Input		:	
 Output		:	char* buf, const int64_t buf_len
 **************************************************/
-int64_t ObMultiOpRawExpr::to_string(char* buf, const int64_t buf_len) const
+int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {
+    int64_t pos = 0;
+    int64_t ret = OB_SUCCESS;
+    char buf_tmp[256] = {0};
 
+    databuff_printf(buf, buf_len, pos, "(");
+    
+    for (int32_t i = 0; i < exprs_.size(); i++)
+    {
+        memset(buf_tmp, 256, 0);  
+        exprs_[i]->to_string(result_plan, buf_tmp, 256);
+        databuff_printf(buf, buf_len, pos, buf_tmp);
+
+        if (i != exprs_.size()-1)
+        {
+            databuff_printf(buf, buf_len, pos, ",");
+        }
+    }
+    databuff_printf(buf, buf_len, pos, ")");
 }
 
 #if 0
@@ -816,6 +1002,8 @@ int ObCaseOpRawExpr::fill_sql_expression(
 void ObAggFunRawExpr::print(FILE* fp, int32_t level) const
 {
   for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+  fprintf(fp, "ObAggFunRawExpr\n");
+  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
   fprintf(fp, "%s\n", get_type_name(get_expr_type()));
   if (distinct_)
   {
@@ -835,9 +1023,24 @@ Description	:   convert expr to string
 Input		:	
 Output		:	char* buf, const int64_t buf_len
 **************************************************/
-int64_t ObAggFunRawExpr::to_string(char* buf, const int64_t buf_len) const
+int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {
+    int64_t pos = 0;
+    int64_t ret = OB_SUCCESS;
+    char buf_tmp[256] = {0};
 
+    databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
+    if (distinct_)
+    {
+        databuff_printf(buf, buf_len, pos, "DISTINCT");
+    }
+    if (param_expr_)
+    {
+        databuff_printf(buf, buf_len, pos, "(");
+        param_expr_->to_string(result_plan, buf_tmp, 256);
+        databuff_printf(buf, buf_len, pos, buf_tmp);
+        databuff_printf(buf, buf_len, pos, ")");
+    }
 }
 
 #if 0
@@ -945,34 +1148,35 @@ int ObSqlRawExpr::fill_sql_expression(
 
 void ObSqlRawExpr::print(FILE* fp, int32_t level, int32_t index) const
 {
-  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
-  fprintf(fp, "<ObSqlRawExpr %d Begin>\n", index);
-  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
-  fprintf(fp, "expr_id = %lu\n", expr_id_);
-  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
-  if (table_id_ == OB_INVALID_ID)
-    fprintf(fp, "(table_id : column_id) = (NULL : %lu)\n", column_id_);
-  else
-    fprintf(fp, "(table_id : column_id) = (%lu : %lu)\n", table_id_, column_id_);
-
-  if (NULL != expr_)
-    expr_->print(fp, level);
-  
-  for(int i = 0; i < level; ++i) fprintf(fp, "    ");
-  fprintf(fp, "<ObSqlRawExpr %d End>\n", index);
+    for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+    fprintf(fp, "<ObSqlRawExpr %d Begin>\n", index);
+    for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+    fprintf(fp, "expr_id = %lu\n", expr_id_);
+    for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+    if (table_id_ == OB_INVALID_ID)
+      fprintf(fp, "(table_id : column_id) = (NULL : %lu)\n", column_id_);
+    else
+      fprintf(fp, "(table_id : column_id) = (%lu : %lu)\n", table_id_, column_id_);
+    
+    if (NULL != expr_)
+      expr_->print(fp, level);
+    
+    for(int i = 0; i < level; ++i) fprintf(fp, "    ");
+    fprintf(fp, "<ObSqlRawExpr %d End>\n", index);
 }
 
 
 /**************************************************
-Funtion		:	ObAggFunRawExpr::to_string
+Funtion		:	ObSqlRawExpr::to_string
 Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
 Output		:	char* buf, const int64_t buf_len
 **************************************************/
-int64_t ObSqlRawExpr::to_string(char* buf, const int64_t buf_len) const
+int64_t ObSqlRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {
-
+    if (NULL != expr_)
+      expr_->to_string(result_plan, buf, buf_len);
 }
 

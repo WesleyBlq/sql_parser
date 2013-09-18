@@ -262,6 +262,9 @@ namespace oceanbase
 
       int copy_select_items(ObSelectStmt* select_stmt);
       void print(FILE* fp, int32_t level, int32_t index = 0);
+      int64_t make_stmt_string( ResultPlan& result_plan,
+                                char* buf, 
+                                const int64_t buf_len) ;
 
     private:
       /* These fields are only used by normal select */

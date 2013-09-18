@@ -471,3 +471,318 @@ void ObSelectStmt::print(FILE* fp, int32_t level, int32_t index)
   print_indentation(fp, level);
   fprintf(fp, "ObSelectStmt %d End\n", index);
 }
+
+/**************************************************
+Funtion     :   make_stmt_string
+Author      :   qinbo
+Date        :   2013.9.10
+Description :   make select sql
+Input       :   ResultPlan& result_plan,
+                char* buf, 
+                const int64_t buf_len
+Output      :   
+**************************************************/
+int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
+                                        char* buf, 
+                                        const int64_t buf_len)
+{
+    int32_t i = 0;
+    int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+    int64_t pos = 0;
+    char tmp_str[255] = {0};
+    ObSqlRawExpr* sql_expr = NULL;
+    
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
+    if (logical_plan == NULL)
+    {
+      ret = OB_ERR_LOGICAL_PLAN_FAILD;
+      snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
+    }
+
+    if (set_op_ == NONE)
+    {
+      if (is_distinct_)
+        databuff_printf(buf, buf_len, pos, "SELECT DISTINCT ");
+      else
+        databuff_printf(buf, buf_len, pos, "SELECT ");
+
+
+      for (i = 0; i < select_items_.size(); i++)
+      {
+        SelectItem& item = select_items_[i];
+
+        if (item.alias_name_.size() > 0)
+        {            
+            sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
+            if (NULL == sql_expr)
+            {
+                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                          "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
+                return ret;
+            }
+            
+            memset(tmp_str, 0,255);
+            sql_expr->to_string(result_plan, tmp_str, 255);
+            databuff_printf(buf, buf_len, pos, tmp_str);
+
+            if (true == item.is_real_alias_)
+            {
+                databuff_printf(buf, buf_len, pos, " AS ");
+                databuff_printf(buf, buf_len, pos, item.alias_name_.data());
+                databuff_printf(buf, buf_len, pos, " ");
+            }
+            
+            if (i < select_items_.size()-1)
+            {
+                databuff_printf(buf, buf_len, pos, ", ");
+            }
+            else
+            {
+                databuff_printf(buf, buf_len, pos, " ");
+            }
+            
+        }
+        else
+        {
+           databuff_printf(buf, buf_len, pos, item.expr_name_.data());
+           databuff_printf(buf, buf_len, pos, " ");
+           
+           sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
+           if (NULL == sql_expr)
+           {
+               ret = OB_ERR_LOGICAL_PLAN_FAILD;
+               snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                         "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
+               return ret;
+           }
+           
+           memset(tmp_str, 0,255);
+           sql_expr->to_string(result_plan, tmp_str, 255);
+           databuff_printf(buf, buf_len, pos, tmp_str);
+           if (i < select_items_.size()-1)
+           {
+               databuff_printf(buf, buf_len, pos, ", ");
+           }
+           else
+           {
+               databuff_printf(buf, buf_len, pos, " ");
+           }
+        }
+      }
+
+      databuff_printf(buf, buf_len, pos, "FROM ");
+      for (i = 0; i < from_items_.size(); i++)
+      {
+        FromItem& item = from_items_[i];
+        if (item.is_joined_)
+        {
+          JoinedTable* joined_table = get_joined_table(item.table_id_);
+          for (int32_t j = 1; j < joined_table->table_ids_.size(); j++)
+          {
+            if (j == 1)
+              fprintf(stderr, "<%lu> ", joined_table->table_ids_.at(j - 1));
+    
+            switch (joined_table->join_types_.at(j - 1))
+            {
+              case JoinedTable::T_FULL:
+                databuff_printf(buf, buf_len, pos, "FULL JOIN ");
+                break;
+              case JoinedTable::T_LEFT:
+                databuff_printf(buf, buf_len, pos, "LEFT JOIN ");
+                break;
+              case JoinedTable::T_RIGHT:
+                databuff_printf(buf, buf_len, pos, "RIGHT JOIN ");
+                break;
+              case JoinedTable::T_INNER:
+                databuff_printf(buf, buf_len, pos, "INNER JOIN ");
+                break;
+              default:
+                break;
+            }
+            fprintf(stderr, "<%lu> ", joined_table->table_ids_.at(j));
+            fprintf(stderr, "ON <%lu>", joined_table->expr_ids_.at(j - 1));
+          }
+        }
+        else
+        {
+          databuff_printf(buf, buf_len, pos, ObStmt::get_table_item_by_id(item.table_id_)->table_name_.data());
+          databuff_printf(buf, buf_len, pos, " ");
+        }
+      }
+
+      /*BEGIN: Added by qinbo*/
+      vector<uint64_t>& where_exprs = ObStmt::get_where_exprs();
+
+      if (where_exprs.size()>0 )
+      {
+        databuff_printf(buf, buf_len, pos, "WHERE ");
+        for (i = 0; i < where_exprs.size(); i++)
+        {
+            sql_expr = logical_plan->get_expr_by_id(where_exprs[i]);
+            if (NULL == sql_expr)
+            {
+                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                          "group by expr name error!!!");
+                return ret;
+            }
+            
+            memset(tmp_str, 0,255);
+            sql_expr->to_string(result_plan, tmp_str, 255);
+            databuff_printf(buf, buf_len, pos, tmp_str);
+            databuff_printf(buf, buf_len, pos, " ");
+        }
+      }
+      /*END: Added by qinbo*/
+        
+      if (group_expr_ids_.size() > 0)
+      {
+        databuff_printf(buf, buf_len, pos, "GROUP BY ");
+        for (i = 0; i < group_expr_ids_.size(); i++)
+        {
+          sql_expr = logical_plan->get_expr_by_id(group_expr_ids_[i]);
+          if (NULL == sql_expr)
+          {
+              ret = OB_ERR_LOGICAL_PLAN_FAILD;
+              snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "group by expr name error!!!");
+              return ret;
+          }
+
+          memset(tmp_str, 0,255);
+          sql_expr->to_string(result_plan, tmp_str, 255);
+          databuff_printf(buf, buf_len, pos, tmp_str);
+          databuff_printf(buf, buf_len, pos, " ");
+        }
+      }
+    
+      if (having_expr_ids_.size() > 0)
+      {
+        databuff_printf(buf, buf_len, pos, "HAVING ");
+        for (i = 0; i < having_expr_ids_.size(); i++)
+        {
+          sql_expr = logical_plan->get_expr_by_id(having_expr_ids_[i]);
+          if (NULL == sql_expr)
+          {
+              ret = OB_ERR_LOGICAL_PLAN_FAILD;
+              snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "having expr name error!!!");
+              return ret;
+          }
+
+          memset(tmp_str, 0,255);
+          sql_expr->to_string(result_plan, tmp_str, 255);
+          databuff_printf(buf, buf_len, pos, tmp_str);
+          databuff_printf(buf, buf_len, pos, " ");
+        }
+      }
+    }
+    else
+    {
+      fprintf(stderr, "LEFTQUERY ::= <%lu>\n", left_query_id_);
+    
+      switch(set_op_)
+      {
+        case UNION:
+          fprintf(stderr, "<UNION ");
+          break;
+        #if 0  /*mysql does not support*/
+        case INTERSECT:
+          fprintf(fp, "<INTERSECT ");
+          break;
+        case EXCEPT:
+          fprintf(fp, "<EXCEPT ");
+          break;
+        #endif  
+        default:
+          break;
+      }
+    
+      if (is_set_distinct_)
+        fprintf(stderr, "DISTINCT>\n");
+      else
+        fprintf(stderr, "ALL>\n");
+    
+      fprintf(stderr, "RIGHTQUERY ::= <%lu>\n", right_query_id_);
+    }
+
+
+
+    
+    for (i = 0; i < order_items_.size(); i++)
+    {
+      if (i == 0)
+      {
+        databuff_printf(buf, buf_len, pos, "ORDER BY ");
+      }
+
+      OrderItem& item = order_items_[i];
+      
+      sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
+      if (NULL == sql_expr)
+      {
+          ret = OB_ERR_LOGICAL_PLAN_FAILD;
+          snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                    "having expr name error!!!");
+          return ret;
+      }
+      
+      memset(tmp_str, 0,255);
+      sql_expr->to_string(result_plan, tmp_str, 255);
+      databuff_printf(buf, buf_len, pos, tmp_str);
+      databuff_printf(buf, buf_len, pos, " ");
+      databuff_printf(buf, buf_len, pos, item.order_type_ == OrderItem::ASC ? "ASC " : "DESC ");
+    }
+    
+    if (has_limit())
+    {
+        databuff_printf(buf, buf_len, pos, "LIMIT ");
+        
+        if (limit_offset_id_ == OB_INVALID_ID)
+        {
+            //fprintf(stderr, "NULL>\n");
+        }
+        else
+        {
+            sql_expr = logical_plan->get_expr_by_id(limit_offset_id_);
+            if (NULL == sql_expr)
+            {
+                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                          "having expr name error!!!");
+                return ret;
+            }
+            
+            memset(tmp_str, 0,255);
+            sql_expr->to_string(result_plan, tmp_str, 255);
+            databuff_printf(buf, buf_len, pos, tmp_str);
+        }
+        
+        if (limit_count_id_ == OB_INVALID_ID)
+        {
+            //fprintf(stderr, "NULL, ");
+        }
+        else
+        {
+            sql_expr = logical_plan->get_expr_by_id(limit_count_id_);
+            if (NULL == sql_expr)
+            {
+                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                          "having expr name error!!!");
+                return ret;
+            }
+
+            if (limit_offset_id_ != OB_INVALID_ID)
+            {
+                databuff_printf(buf, buf_len, pos, ", ");
+            }
+            memset(tmp_str, 0,255);
+            sql_expr->to_string(result_plan, tmp_str, 255);
+            databuff_printf(buf, buf_len, pos, tmp_str);
+        }
+    }
+}
+

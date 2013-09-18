@@ -26,6 +26,12 @@ namespace oceanbase
       print_indentation(fp, level);
       fprintf(fp, "ObDeleteStmt %d End\n", index);
     }
-
+    
+    int64_t ObDeleteStmt::make_stmt_string( ResultPlan& result_plan,
+                         char* buf, 
+                         const int64_t buf_len)
+    {
+  
+    }
   }
 }

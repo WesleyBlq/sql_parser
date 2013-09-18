@@ -36,6 +36,12 @@ using namespace std;
 #define T_AGG_LIMIT       6
 #define T_VARIABLE_VALUE_LIMIT 7
 
+extern int resolve(
+    ResultPlan* result_plan, 
+    ParseNode* node);
+extern int resolve_multi_stmt(
+    ResultPlan* result_plan, 
+    ParseNode* node);
 extern int resolve_select_stmt(
     ResultPlan* result_plan,
     ParseNode* node,

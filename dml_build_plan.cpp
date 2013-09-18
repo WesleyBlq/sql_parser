@@ -33,12 +33,12 @@
 #include <stdint.h>
 #include "ob_obj_type.h"
 #include "ob_expr_obj.h"
+#include "ob_multi_logic_plan.h"
 
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
 using namespace std;
 
-extern const char* get_type_name(int type);
 
 int resolve_expr(
     ResultPlan * result_plan,
@@ -2477,6 +2477,54 @@ int resolve_for_update_clause(
   return ret;
 }
 
+
+int resolve_multi_stmt(ResultPlan* result_plan, ParseNode* node)
+{
+  int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
+  OB_ASSERT(node && node->type_ == T_STMT_LIST);
+  if(node->num_child_ == 0)
+  {
+    ret = OB_ERROR;
+  }
+  else
+  {
+    result_plan->plan_tree_ = NULL;
+    ObMultiLogicPlan* multi_plan = (ObMultiLogicPlan*)parse_malloc(sizeof(ObMultiLogicPlan), result_plan->name_pool_);
+    if (multi_plan != NULL)
+    {
+      multi_plan = new(multi_plan) ObMultiLogicPlan;
+      for(int32_t i = 0; i < node->num_child_; ++i)
+      {
+        ParseNode* child_node = node->children_[i];
+        if (child_node == NULL)
+          continue;
+
+        if ((ret = resolve(result_plan, child_node)) != OB_SUCCESS)
+        {
+          multi_plan->~ObMultiLogicPlan();
+          parse_free(multi_plan);
+          multi_plan = NULL;
+          break;
+        }
+        if(result_plan->plan_tree_ == NULL)
+          continue;
+
+        multi_plan->push_back((ObLogicalPlan*)(result_plan->plan_tree_));
+        
+        result_plan->plan_tree_ = NULL;
+      }
+      result_plan->plan_tree_ = multi_plan;
+    }
+    else
+    {
+      ret = OB_ERR_PARSER_MALLOC_FAILED;
+      snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+          "Can not malloc space for ObMultiLogicPlan");
+    }
+  }
+  return ret;
+}
+
 int resolve_select_stmt(
     ResultPlan* result_plan,
     ParseNode* node,
@@ -3209,3 +3257,80 @@ int resolve_update_stmt(
   }
   return ret;
 }
+
+
+
+////////////////////////////////////////////////////////////////
+int resolve(ResultPlan* result_plan, ParseNode* node)
+{
+  if (!result_plan)
+  {
+    TBSYS_LOG(ERROR, "null result_plan");
+    return OB_ERR_RESOLVE_SQL;
+  }
+  int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
+  if (ret == OB_SUCCESS && result_plan->meta_reader == NULL)
+  {
+    ret = OB_ERR_RESOLVE_SQL;
+    TBSYS_LOG(ERROR, "meta_reader must be set");
+  }
+
+
+  uint64_t query_id = OB_INVALID_ID;
+  if (ret == OB_SUCCESS && node != NULL)
+  {
+    switch (node->type_)
+    {
+      case T_STMT_LIST:
+      {
+        ret = resolve_multi_stmt(result_plan, node);
+        break;
+      }
+      case T_SELECT:
+      {
+        ret = resolve_select_stmt(result_plan, node, query_id);
+        break;
+      }
+      case T_DELETE:
+      {
+        ret = resolve_delete_stmt(result_plan, node, query_id);
+        break;
+      }
+      case T_INSERT:
+      {
+        ret = resolve_insert_stmt(result_plan, node, query_id);
+        break;
+      }
+      case T_UPDATE:
+      {
+        ret = resolve_update_stmt(result_plan, node, query_id);
+        break;
+      }
+      default:
+        TBSYS_LOG(ERROR, "unknown top node type=%d", node->type_);
+        ret = OB_ERR_UNEXPECTED;
+        break;
+    };
+  }
+
+  #if 0
+  if (ret == OB_SUCCESS && node->type_ != T_STMT_LIST && node->type_ != T_PREPARE)
+  {
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_);
+    if (logical_plan != NULL && logical_plan->get_question_mark_size() > 0)
+    {
+      ret = OB_ERR_PARSE_SQL;
+      TBSYS_LOG(ERROR, "Uknown column '?'");
+    }
+  }
+ #endif
+  if (ret != OB_SUCCESS && result_plan->plan_tree_ != NULL)
+  {
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_);
+    logical_plan->~ObLogicalPlan();
+    parse_free(result_plan->plan_tree_);
+    result_plan->plan_tree_ = NULL;
+  }
+  return ret;
+}
+

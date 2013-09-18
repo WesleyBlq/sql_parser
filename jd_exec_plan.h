@@ -12,12 +12,17 @@
 #ifndef _JD_EXEC_PLAN_H
 #define _JD_EXEC_PLAN_H
 
-#include <errno.h>
-#include <vector>
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstdlib>
+
+
 #include "parse_malloc.h"
 #include "parse_node.h"
 #include "utility.h"
@@ -29,14 +34,12 @@
 #include "ob_update_stmt.h"
 #include "dml_build_plan.h"
 #include "ob_multi_logic_plan.h"
-#include "log.h"
-#include "ob_define.h"
 
-#include "../route/shard.h"
+
+#if 0
 
 using std::vector;
 using std::string;
-
 
 class SqlParser
 {
@@ -54,7 +57,7 @@ class  ExecPlanUnit
 {
     private:
         string sql;
-        TABLET_INFO *db_info;
+        //TABLET_INFO *db_info;
     public:
         void set_exec_unit_sql(string &sql);
         //void set_exec_uint_db_info(TABLET_INFO *db_info)
@@ -68,10 +71,10 @@ class ExecPlan
         bool    is_first_plan;
         char    parent_sql_type;        /**if need to be reparsed*/
     public:
-        bool get_parent_sql_type();
-        void set_parent_sql_type(uint8 parent_sql_type);
-        void set_first_plan_true();
-        void is_first_plan();
+        bool    get_parent_sql_type();
+        void    set_parent_sql_type(uint8 parent_sql_type);
+        void    set_first_plan_true();
+        void    is_first_plan();
 }
 
 
@@ -87,7 +90,7 @@ class QueryPlan
 
 
 /*用于操作执行计划的动作的class*/
-class Query
+class QueryActuator
 {
   public:
     /**
@@ -114,13 +117,13 @@ class Query
     bool is_all_plan_done;
     bool is_next_plan_list_reparsed;
   private:
-    ObSql(){}
-    ~ObSql(){}
+    QueryActuator(){}
+    QueryActuator(){}
     // disallow copy
-    ObSql(const ObSql &other);
-    static int generate_logical_plan(const string &stmt, ResultPlan  &logical_plan);
+    QueryActuator(const QueryActuator &other);
+    //static int generate_logical_plan(const string &stmt, ResultPlan  &logical_plan);
     void generate_exec_plans(string &sql);       /*generate the whole exec_plan*/
-    void releas_exec_plans();
+    void release_exec_plans();
     
     ExecPlan* popActuator();
     void pushActuator(ExecPlan* exec_plan);
@@ -133,5 +136,6 @@ class Query
   private:
     // data members
 };
-
+#endif
 #endif /* _JD_EXEC_PLAN_H */
+

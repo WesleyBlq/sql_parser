@@ -28,6 +28,9 @@ namespace oceanbase
       const vector<uint64_t>& get_value_row(int64_t idx) const;
 
       void print(FILE* fp, int32_t level, int32_t index);
+      int64_t make_stmt_string( ResultPlan& result_plan,
+                                char* buf, 
+                                const int64_t buf_len);
 
     private:
       uint64_t   table_id_;

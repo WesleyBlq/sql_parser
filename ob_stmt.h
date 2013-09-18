@@ -187,6 +187,9 @@ namespace oceanbase
       }
 
       virtual void print(FILE* fp, int32_t level, int32_t index = 0);
+      virtual int64_t make_stmt_string( ResultPlan& result_plan,
+                                        char* buf, 
+                                        const int64_t buf_len);
 
     protected:
       //stringBuf* name_pool_;

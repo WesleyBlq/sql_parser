@@ -7115,7 +7115,7 @@ void yyerror(YYLTYPE* yylloc, ParseResult* p, char* s, ...)
 int parse_init(ParseResult* p)
 {
   int ret = 0;  // can not include C++ file "ob_define.h"
-  if (!p || !p->malloc_pool_)
+  if (!p)
   {
     ret = -1;
     if (p)

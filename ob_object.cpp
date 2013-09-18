@@ -806,6 +806,7 @@ int64_t ObObj::to_string(char* buffer, const int64_t length) const
   int32_t type = meta_.type_;
   int64_t pos = 0;
 
+#if 0
   if (type > ObMinType && type < ObMaxType)
   {
     databuff_printf(buffer, length, pos, "%s:", obj_type_name[meta_.type_]);
@@ -814,6 +815,7 @@ int64_t ObObj::to_string(char* buffer, const int64_t length) const
   {
     databuff_printf(buffer, length, pos, "%s", "unknown");
   }
+#endif
 
   {
     switch(meta_.type_)

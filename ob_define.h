@@ -22,6 +22,9 @@
 #include <stdlib.h>
 #include <openssl/md5.h>
 #include "log.h"
+#include "../route/DBMetaReader.h"
+#include "../route/route.h"
+#include "../route/shard.h"
 
 
 /* Limits of integral types. */

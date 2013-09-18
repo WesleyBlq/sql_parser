@@ -439,5 +439,73 @@ namespace oceanbase
       fprintf(fp, "    </ExprList>\n");
       fprintf(fp, "</LogicalPlan>\n");
     }
+
+    /**************************************************
+    Funtion     :   get_expr_by_id
+    Author      :   qinbo
+    Date        :   2013.9.10
+    Description :   get expr by expr_id
+    Input       :   int64_t expr_id
+    Output      :   ObSqlRawExpr* 
+    **************************************************/
+    ObSqlRawExpr* ObLogicalPlan::get_expr_by_id(uint64_t expr_id)
+    {
+        uint32_t i;
+        for (i = 0; i < exprs_.size(); i ++)
+        {
+            ObSqlRawExpr* sql_expr = exprs_[i];
+            if (expr_id == sql_expr->get_expr_id())
+            {
+                return sql_expr;
+            }
+        }
+        return NULL;
+    }
+
+    /**************************************************
+    Funtion     :   get_expr_by_ref_column_id
+    Author      :   qinbo
+    Date        :   2013.9.10
+    Description :   get expr by ref_column_id
+    Input       :   int64_t expr_id
+    Output      :   ObSqlRawExpr* 
+    **************************************************/
+    ObSqlRawExpr* ObLogicalPlan::get_expr_by_ref_column_id(uint64_t column_id)
+    {
+        uint32_t i;
+        for (i = 0; i < exprs_.size(); i ++)
+        {
+            ObSqlRawExpr* sql_expr = exprs_[i];
+            if (column_id == sql_expr->get_column_id())
+            {
+                return sql_expr;
+            }
+        }
+        return NULL;
+    }
+
+    /**************************************************
+    Funtion     :   make_stmt_string
+    Author      :   qinbo
+    Date        :   2013.9.10
+    Description :   make stmt string
+    Input       :   ResultPlan& result_plan,
+                    char* buf, 
+                    const int64_t buf_len
+    Output      :   ObSqlRawExpr* 
+    **************************************************/
+    void ObLogicalPlan::make_stmt_string( ResultPlan& result_plan,
+                                          char* buf, 
+                                          const int64_t buf_len)
+    {
+        uint32_t i;
+        for (i = 0; i < stmts_.size(); i ++)
+        {
+            ObBasicStmt* stmt = stmts_[i];
+            stmt->make_stmt_string( result_plan, buf, buf_len);
+            fprintf(stderr, "%s\n",buf);
+            memset(buf, 0, buf_len);
+        }
+    }
   }
 }

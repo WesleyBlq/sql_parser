@@ -12,6 +12,7 @@
 #include "sql_item_type.h"
 #include "ob_object.h"
 #include "utility.h"
+#include "parse_node.h"
 
 using namespace oceanbase::common;
 
@@ -54,7 +55,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       virtual void print(FILE* fp, int32_t level) const = 0;
       /*added by qinbo*/
-      virtual int64_t to_string(char* buf, const int64_t buf_len) const = 0;
+      virtual int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const = 0;
 
     private:
       SqlItemType  type_;
@@ -82,7 +83,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
-      int64_t to_string(char* buf, const int64_t buf_len) const;
+      int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
 
     private:
       oceanbase::common::ObObj value_;
@@ -109,7 +110,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
-      int64_t to_string(char* buf, const int64_t buf_len) const;
+      int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
       
       int get_name(string& name) const;
 
@@ -141,7 +142,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
-      int64_t to_string(char* buf, const int64_t buf_len) const;
+      int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
       
     private:
       uint64_t first_id_;
@@ -169,7 +170,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
-      int64_t to_string(char* buf, const int64_t buf_len) const;
+      int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
 
     private:
       ObRawExpr *expr_;
@@ -197,7 +198,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
-      int64_t to_string(char* buf, const int64_t buf_len) const;
+      int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
 
     private:
       ObRawExpr *first_expr_;
@@ -233,7 +234,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
-      int64_t to_string(char* buf, const int64_t buf_len) const;
+      int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
 
     private:
       ObRawExpr *first_expr_;
@@ -268,7 +269,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
-      int64_t to_string(char* buf, const int64_t buf_len) const;
+      int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
 
     private:
       vector<ObRawExpr*> exprs_;
@@ -353,7 +354,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
-      int64_t to_string(char* buf, const int64_t buf_len) const;
+      int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
 
     private:
       // NULL means '*'
@@ -432,7 +433,7 @@ namespace oceanbase
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level, int32_t index = 0) const;
       /*added by qinbo*/
-      int64_t to_string(char* buf, const int64_t buf_len) const;
+      int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
 
     private:
       uint64_t  expr_id_;

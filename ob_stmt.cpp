@@ -605,3 +605,11 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
     fprintf(fp, "\n");
   }
 }
+
+int64_t ObStmt::make_stmt_string( ResultPlan& result_plan,
+                                  char* buf, 
+                                  const int64_t buf_len)
+{
+
+}
+

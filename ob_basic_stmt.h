@@ -18,11 +18,7 @@
 #define OCEANBASE_SQL_OB_BASIC_STMT_H_
 
 #include "ob_define.h"
-
-#include "../route/DBMetaReader.h"
-#include "../route/route.h"
-#include "../route/shard.h"
-
+#include "parse_node.h"
 
 namespace oceanbase
 {
@@ -97,6 +93,10 @@ namespace oceanbase
       bool is_show_stmt() const;
 
       virtual void print(FILE* fp, int32_t level, int32_t index) = 0;
+      virtual int64_t make_stmt_string( ResultPlan& result_plan,
+                                        char* buf, 
+                                        const int64_t buf_len) = 0;
+      
     protected:
       void print_indentation(FILE* fp, int32_t level) const;
 

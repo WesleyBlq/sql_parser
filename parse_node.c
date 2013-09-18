@@ -193,6 +193,57 @@ const char* get_type_name(int type)
 	}
 }
 
+
+
+const char* get_type_symbol(int type)
+{
+	switch(type){
+    case T_OP_EQ : 
+        return " = ";      /* 2. Bool operators */
+    case T_OP_LE : 
+        return " <= ";
+    case T_OP_LT : 
+        return " < ";
+    case T_OP_GE : 
+        return " >= ";
+    case T_OP_GT : 
+        return " > ";
+    case T_OP_NE : 
+        return " != ";
+    case T_OP_NOT:
+        return " ! ";
+    case T_OP_BTW:
+        return " BETWEEN ";
+    case T_OP_NOT_BTW:
+        return " NOT BETWEEN ";
+    case T_FUN_MAX : 
+        return " MAX ";
+    case T_FUN_MIN : 
+        return " MIN ";
+    case T_FUN_SUM : 
+        return " SUM ";
+    case T_FUN_COUNT : 
+        return " COUNT ";
+    case T_FUN_AVG : 
+        return " AVG ";
+    case T_OP_IN:
+        return " IN ";
+    case T_OP_NOT_IN:
+        return " NOT IN ";
+    case T_OP_OR:
+        return " OR ";
+    case T_OP_AND:
+        return " AND ";
+    case T_OP_EXISTS:
+        return " EXIST ";
+    case T_OP_POS:
+    case T_OP_NEG:
+    default:
+        return " Unknown ";
+    }
+}
+
+
 void destroy_tree(ParseNode* root)
 {
   int i;

@@ -29,6 +29,16 @@ namespace oceanbase
       }
     }
     
+    void ObMultiLogicPlan::make_stmt_string( ResultPlan& result_plan,
+                          char* buf, 
+                          const int64_t buf_len)
+    {
+        for(int32_t i = 0; i < size(); ++i)
+        {
+            at(i)->make_stmt_string(result_plan, buf, buf_len );
+            fprintf(stderr, "\n");
+        }
+    }
   }
 }
 

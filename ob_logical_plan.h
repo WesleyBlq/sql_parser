@@ -129,7 +129,38 @@ namespace oceanbase
         return stmts_.at(index);
       }
       void print(FILE* fp = stderr, int32_t level = 0) const;
-
+      /**************************************************
+      Funtion     :   get_expr_by_id
+      Author      :   qinbo
+      Date        :   2013.9.10
+      Description :   get expr by expr_id
+      Input       :   int64_t expr_id
+      Output      :   ObSqlRawExpr* 
+      **************************************************/
+      ObSqlRawExpr* get_expr_by_id(uint64_t expr_id);
+      
+      /**************************************************
+      Funtion     :   get_expr_by_ref_column_id
+      Author      :   qinbo
+      Date        :   2013.9.10
+      Description :   get expr by ref_column_id
+      Input       :   int64_t expr_id
+      Output      :   ObSqlRawExpr* 
+      **************************************************/
+      ObSqlRawExpr* get_expr_by_ref_column_id(uint64_t column_id);
+      /**************************************************
+      Funtion     :   make_stmt_string
+      Author      :   qinbo
+      Date        :   2013.9.10
+      Description :   make stmt string
+      Input       :   ResultPlan& result_plan,
+                      char* buf, 
+                      const int64_t buf_len
+      Output      :   ObSqlRawExpr* 
+      **************************************************/
+      void make_stmt_string( ResultPlan& result_plan,
+                                      char* buf, 
+                                      const int64_t buf_len);
 #if 0
     protected:
       oceanbase::common::ObStringBuf* name_pool_;

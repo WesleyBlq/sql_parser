@@ -60,3 +60,12 @@ void ObInsertStmt::print(FILE* fp, int32_t level, int32_t index)
   print_indentation(fp, level);
   fprintf(fp, "<ObInsertStmt %d End>\n", index);
 }
+
+int64_t ObInsertStmt::make_stmt_string( ResultPlan& result_plan,
+                                        char* buf, 
+                                        const int64_t buf_len)
+{
+
+}
+
+

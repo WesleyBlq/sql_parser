@@ -44,6 +44,7 @@ sql_parser(char * sql)
     }
     #endif
 
+    metareader->add_DB_schema("qinbo");
     metareader->add_table_schema("qinbo","persons", 100);
     metareader->add_column_schema("qinbo","persons", "lastname", 1111, CHAR, 0);
     metareader->add_column_schema("qinbo","persons", "address", 1112, CHAR, 0);
@@ -56,17 +57,17 @@ sql_parser(char * sql)
 
     schema_table* schema_table = metareader->get_table_schema("qinbo",  "persons");
     if (schema_table) {
-    //    cout << "get_table_id:" << schema_table->get_table_id() << endl;
+        cout << "get_table_id:" << schema_table->get_table_id() << endl;
     }
 
     schema_column* schema_column = metareader->get_column_schema("qinbo","persons", "address");
     if (schema_column) {
-    //    cout << "address: get_column_id:" << schema_column->get_column_id() << endl;
+        cout << "address: get_column_id:" << schema_column->get_column_id() << endl;
     }
 
     schema_column = metareader->get_column_schema("qinbo","persons", "lastname");
     if (schema_column) {
-    //    cout << "lastName: get_column_id:" << schema_column->get_column_id() << endl;
+        cout << "lastName: get_column_id:" << schema_column->get_column_id() << endl;
     }
 
     int a =  metareader->get_all_column_schemas("qinbo","persons").size();
@@ -88,6 +89,7 @@ sql_parser(char * sql)
     if(parse_init(&result))
     {
         printf("parse_init error!!!\n");
+        return 1;
     }
 
     fprintf(stderr,"<<Part 1 : SQL STRING>>\n%s\n",sql);
@@ -139,13 +141,16 @@ sql_parser(char * sql)
         return 1;
     }
 
-    if (OB_SUCCESS != ret)
-        fprintf(stderr, "ERR_MSG: %s\n", result_plan.err_stat_.err_msg_);
+    //if (OB_SUCCESS != ret)
+    fprintf(stderr, "RESULT_PLAN: %s\n", result_plan.err_stat_.err_msg_);
 
     ObLogicalPlan* multi_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
     fflush(stderr);
     fprintf(stderr,"\n<<Part 3 : LOGICAL PLAN>>\n");
     multi_plan->print();
+    char str[2048] = {0};
+    multi_plan->make_stmt_string(result_plan, str, 2048);
+    fprintf(stderr, "\nstmt_string: %s\n", str);
 
     if(result_plan.plan_tree_ != NULL)
     {
@@ -171,12 +176,13 @@ int main(void)
 {
     char *sql1 = "INSERT INTO persons (lastname, address) VALUES ('Wilson', 'Champs-Elysees')";
     char *sql2 = "SELECT * FROM persons";
-    char *sql3 = "SELECT lastname, address FROM persons \
-WHERE lastname='Bush' OR address='Adams' \
-GROUP BY lastname HAVING(count(lastname) > 10) ORDER BY lastname desc limit 100, 10";
+    char *sql3 = "SELECT COUNT(lastname), address AS addr FROM persons WHERE id IN (select id from order_list) GROUP BY lastname";
 
+    char *sql4 = "SELECT lastname, address FROM persons \
+    WHERE lastname='Bush' OR address='Adams' \
+    GROUP BY lastname HAVING(count(lastname) > 10) ORDER BY lastname desc limit 100, 10";
 
-    char *sql4 = "select lastname,address FROM persons \
+    char *sql7 = "select lastname,address FROM persons \
 WHERE id=(select id from persons where lastname='NEW YORK')";
 
 
@@ -187,10 +193,19 @@ ON persons.id = order_list.id \
 ORDER BY persons.lastname";
 
     char *sql6 = "select id, order_desc from (select * from order_list) ooxx where id > 50";
-    
+
+    char *sql9 = "SELECT id FROM persons    \
+UNION   \
+SELECT id FROM order_list";
+
+    char *sql8 = "SELECT id FROM persons    \
+UNION ALL   \
+SELECT id FROM order_list";
+
     //sql_parser(sql5);
     //sql_parser(sql6);
-    sql_parser(sql3);
-    //sql_parser(sql5);
+    sql_parser(sql4);
+    //sql_parser(sql9);
+    //sql_parser(sql8);
     return 1;
 }

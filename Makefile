@@ -50,7 +50,8 @@ OBJS_SQL =  \
 	ob_select_stmt.o \
 	ob_logical_plan.o\
 	dml_build_plan.o \
-	ob_multi_logic_plan.o
+	ob_multi_logic_plan.o \
+	jd_exec_plan.o
 
 #libsql.a
 libsql.a: $(OBJS_SQL)

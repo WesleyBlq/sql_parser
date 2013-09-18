@@ -13,6 +13,9 @@ namespace oceanbase
       ObMultiLogicPlan();
       ~ObMultiLogicPlan();
       void print(FILE* fp = stderr);
+      void make_stmt_string( ResultPlan& result_plan,
+                            char* buf, 
+                            const int64_t buf_len);
     };
   }
 }

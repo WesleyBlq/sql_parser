@@ -38,6 +38,13 @@ namespace oceanbase
       fprintf(fp, "ObUpdateStmt %d End\n", index);
     }
 
+    int64_t ObUpdateStmt::make_stmt_string( ResultPlan& result_plan,
+                                            char* buf, 
+                                            const int64_t buf_len)
+    {
+  
+    }
+
 
   }
 }
