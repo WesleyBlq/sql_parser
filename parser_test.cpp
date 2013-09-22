@@ -202,9 +202,9 @@ SELECT id FROM order_list";
 UNION ALL   \
 SELECT id FROM order_list";
 
-    //sql_parser(sql5);
+    sql_parser(sql5);
     //sql_parser(sql6);
-    sql_parser(sql4);
+    //sql_parser(sql4);
     //sql_parser(sql9);
     //sql_parser(sql8);
     return 1;

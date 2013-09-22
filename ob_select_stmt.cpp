@@ -5,6 +5,8 @@
 #include "ob_raw_expr.h"
 #include "utility.h"
 
+#define BUF_SIZE 512
+
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
 
@@ -489,7 +491,7 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
     int32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     int64_t pos = 0;
-    char tmp_str[255] = {0};
+    char tmp_str[BUF_SIZE] = {0};
     ObSqlRawExpr* sql_expr = NULL;
     
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
@@ -523,8 +525,8 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
                 return ret;
             }
             
-            memset(tmp_str, 0,255);
-            sql_expr->to_string(result_plan, tmp_str, 255);
+            memset(tmp_str, 0,BUF_SIZE);
+            sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
             databuff_printf(buf, buf_len, pos, tmp_str);
 
             if (true == item.is_real_alias_)
@@ -558,8 +560,8 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
                return ret;
            }
            
-           memset(tmp_str, 0,255);
-           sql_expr->to_string(result_plan, tmp_str, 255);
+           memset(tmp_str, 0,BUF_SIZE);
+           sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
            databuff_printf(buf, buf_len, pos, tmp_str);
            if (i < select_items_.size()-1)
            {
@@ -581,28 +583,45 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
           JoinedTable* joined_table = get_joined_table(item.table_id_);
           for (int32_t j = 1; j < joined_table->table_ids_.size(); j++)
           {
+            
             if (j == 1)
-              fprintf(stderr, "<%lu> ", joined_table->table_ids_.at(j - 1));
+            {
+                databuff_printf(buf, buf_len, pos, ObStmt::get_table_item_by_id(joined_table->table_ids_.at(j-1))->table_name_.data());
+            }
     
             switch (joined_table->join_types_.at(j - 1))
             {
               case JoinedTable::T_FULL:
-                databuff_printf(buf, buf_len, pos, "FULL JOIN ");
+                databuff_printf(buf, buf_len, pos, " FULL JOIN ");
                 break;
               case JoinedTable::T_LEFT:
-                databuff_printf(buf, buf_len, pos, "LEFT JOIN ");
+                databuff_printf(buf, buf_len, pos, " LEFT JOIN ");
                 break;
               case JoinedTable::T_RIGHT:
-                databuff_printf(buf, buf_len, pos, "RIGHT JOIN ");
+                databuff_printf(buf, buf_len, pos, " RIGHT JOIN ");
                 break;
               case JoinedTable::T_INNER:
-                databuff_printf(buf, buf_len, pos, "INNER JOIN ");
+                databuff_printf(buf, buf_len, pos, " JOIN ");
                 break;
               default:
                 break;
             }
-            fprintf(stderr, "<%lu> ", joined_table->table_ids_.at(j));
-            fprintf(stderr, "ON <%lu>", joined_table->expr_ids_.at(j - 1));
+
+            databuff_printf(buf, buf_len, pos, ObStmt::get_table_item_by_id(joined_table->table_ids_.at(j))->table_name_.data());
+            databuff_printf(buf, buf_len, pos, " ON ");
+            
+            sql_expr = logical_plan->get_expr_by_id(joined_table->expr_ids_.at(j - 1));
+            if (NULL == sql_expr)
+            {
+                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                          "group by expr name error!!!");
+                return ret;
+            }
+            memset(tmp_str, 0,BUF_SIZE);
+            sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
+            databuff_printf(buf, buf_len, pos, tmp_str);
+            databuff_printf(buf, buf_len, pos, " ");
           }
         }
         else
@@ -629,8 +648,8 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
                 return ret;
             }
             
-            memset(tmp_str, 0,255);
-            sql_expr->to_string(result_plan, tmp_str, 255);
+            memset(tmp_str, 0,BUF_SIZE);
+            sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
             databuff_printf(buf, buf_len, pos, tmp_str);
             databuff_printf(buf, buf_len, pos, " ");
         }
@@ -651,8 +670,8 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
               return ret;
           }
 
-          memset(tmp_str, 0,255);
-          sql_expr->to_string(result_plan, tmp_str, 255);
+          memset(tmp_str, 0,BUF_SIZE);
+          sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
           databuff_printf(buf, buf_len, pos, tmp_str);
           databuff_printf(buf, buf_len, pos, " ");
         }
@@ -672,8 +691,8 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
               return ret;
           }
 
-          memset(tmp_str, 0,255);
-          sql_expr->to_string(result_plan, tmp_str, 255);
+          memset(tmp_str, 0,BUF_SIZE);
+          sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
           databuff_printf(buf, buf_len, pos, tmp_str);
           databuff_printf(buf, buf_len, pos, " ");
         }
@@ -729,8 +748,8 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
           return ret;
       }
       
-      memset(tmp_str, 0,255);
-      sql_expr->to_string(result_plan, tmp_str, 255);
+      memset(tmp_str, 0,BUF_SIZE);
+      sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
       databuff_printf(buf, buf_len, pos, tmp_str);
       databuff_printf(buf, buf_len, pos, " ");
       databuff_printf(buf, buf_len, pos, item.order_type_ == OrderItem::ASC ? "ASC " : "DESC ");
@@ -755,8 +774,8 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
                 return ret;
             }
             
-            memset(tmp_str, 0,255);
-            sql_expr->to_string(result_plan, tmp_str, 255);
+            memset(tmp_str, 0, BUF_SIZE);
+            sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
             databuff_printf(buf, buf_len, pos, tmp_str);
         }
         
@@ -779,8 +798,8 @@ int64_t ObSelectStmt::make_stmt_string( ResultPlan& result_plan,
             {
                 databuff_printf(buf, buf_len, pos, ", ");
             }
-            memset(tmp_str, 0,255);
-            sql_expr->to_string(result_plan, tmp_str, 255);
+            memset(tmp_str, 0, BUF_SIZE);
+            sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
             databuff_printf(buf, buf_len, pos, tmp_str);
         }
     }

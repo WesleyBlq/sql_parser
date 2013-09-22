@@ -6,6 +6,7 @@
 #include "ob_select_stmt.h"
 #include "ob_logical_plan.h"
 
+#define BUF_SIZE 512
 
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
@@ -219,7 +220,7 @@ int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, char* buf, const int6
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[256] = {0};
+    char buf_tmp[BUF_SIZE] = {0};
     
     switch(get_expr_type())
     {
@@ -227,13 +228,13 @@ int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, char* buf, const int6
         case T_BINARY:
         {
             databuff_printf(buf, buf_len, pos, "\"");
-            value_.to_string(buf_tmp, 256);
+            value_.to_string(buf_tmp, BUF_SIZE);
             databuff_printf(buf, buf_len, pos, buf_tmp);
             databuff_printf(buf, buf_len, pos, "\"");
             break;
         }
         default:
-            value_.to_string(buf_tmp, 256);
+            value_.to_string(buf_tmp, BUF_SIZE);
             databuff_printf(buf, buf_len, pos, buf_tmp);
             break;
     }
@@ -473,7 +474,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char tmp_str[256] = {0};
+    char tmp_str[BUF_SIZE] = {0};
     
     DBMetaReader* meta_reader = NULL;
     ObSqlRawExpr* sql_expr = NULL;
@@ -498,8 +499,8 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
             return ret;
         }
         
-        memset(tmp_str, 0,256);
-        sql_expr->to_string(result_plan, tmp_str, 256);
+        memset(tmp_str, 0,BUF_SIZE);
+        sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
         databuff_printf(buf, buf_len, pos, tmp_str);
         
     }
@@ -536,8 +537,8 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
               return ret;
             }
 
-            //databuff_printf(buf, 256, pos, table_schema->get_table_name().data());
-            databuff_printf(buf, 256, pos, column_schema->get_column_name().data());
+            //databuff_printf(buf, BUF_SIZE, pos, table_schema->get_table_name().data());
+            databuff_printf(buf, BUF_SIZE, pos, column_schema->get_column_name().data());
         }
     }
 
@@ -597,11 +598,11 @@ int64_t ObUnaryOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const in
 {   
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[256] = {0};
+    char buf_tmp[BUF_SIZE] = {0};
 
     databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
     databuff_printf(buf, buf_len, pos, "(");
-    expr_->to_string(result_plan, buf_tmp, 256);
+    expr_->to_string(result_plan, buf_tmp, BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf_tmp);
     databuff_printf(buf, buf_len, pos, ")");
 }
@@ -648,13 +649,13 @@ int64_t ObBinaryOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const i
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf1[256] = {0};
-    char buf2[256] = {0};
+    char buf1[BUF_SIZE] = {0};
+    char buf2[BUF_SIZE] = {0};
     
-    first_expr_->to_string(result_plan, buf1, 256);
+    first_expr_->to_string(result_plan, buf1, BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf1);
     databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
-    second_expr_->to_string(result_plan, buf2, 256);
+    second_expr_->to_string(result_plan, buf2, BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf2);
 }
 
@@ -825,18 +826,18 @@ int64_t ObTripleOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const i
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf1[256] = {0};
-    char buf2[256] = {0};
-    char buf3[256] = {0};
+    char buf1[BUF_SIZE] = {0};
+    char buf2[BUF_SIZE] = {0};
+    char buf3[BUF_SIZE] = {0};
     
-    first_expr_->to_string(result_plan, buf1, 256);
+    first_expr_->to_string(result_plan, buf1, BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf1);
     databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
-    second_expr_->to_string(result_plan, buf2, 256);
+    second_expr_->to_string(result_plan, buf2, BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf2);
     databuff_printf(buf, buf_len, pos, " ");
     databuff_printf(buf, buf_len, pos, "AND ");
-    third_expr_->to_string(result_plan, buf3, 256);
+    third_expr_->to_string(result_plan, buf3, BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf3);
     databuff_printf(buf, buf_len, pos, " ");
 }
@@ -902,14 +903,14 @@ int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const in
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[256] = {0};
+    char buf_tmp[BUF_SIZE] = {0};
 
     databuff_printf(buf, buf_len, pos, "(");
     
     for (int32_t i = 0; i < exprs_.size(); i++)
     {
-        memset(buf_tmp, 256, 0);  
-        exprs_[i]->to_string(result_plan, buf_tmp, 256);
+        memset(buf_tmp, BUF_SIZE, 0);  
+        exprs_[i]->to_string(result_plan, buf_tmp, BUF_SIZE);
         databuff_printf(buf, buf_len, pos, buf_tmp);
 
         if (i != exprs_.size()-1)
@@ -1027,7 +1028,7 @@ int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, char* buf, const int
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[256] = {0};
+    char buf_tmp[BUF_SIZE] = {0};
 
     databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
     if (distinct_)
@@ -1037,7 +1038,7 @@ int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, char* buf, const int
     if (param_expr_)
     {
         databuff_printf(buf, buf_len, pos, "(");
-        param_expr_->to_string(result_plan, buf_tmp, 256);
+        param_expr_->to_string(result_plan, buf_tmp, BUF_SIZE);
         databuff_printf(buf, buf_len, pos, buf_tmp);
         databuff_printf(buf, buf_len, pos, ")");
     }
