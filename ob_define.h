@@ -22,8 +22,8 @@
 #include <stdlib.h>
 #include <openssl/md5.h>
 #include "log.h"
-#include "../route/DBMetaReader.h"
-#include "../route/route.h"
+#include "../route/meta_reader.h"
+#include "../route/router.h"
 #include "../route/shard.h"
 
 
@@ -63,6 +63,11 @@
 #ifndef UINT64_MAX
 #define UINT64_MAX              (18446744073709551615ULL)
 #endif
+
+
+#define RAW_EXPR_BUF_SIZE   512
+#define STMT_BUF_SIZE       1024
+
 
 namespace oceanbase
 {
@@ -336,6 +341,12 @@ namespace oceanbase
     const int OB_ERR_TOO_MANY_PS = -5061;
     const int OB_ERR_NOT_IN_TRANS = -5062;
     const int OB_ERR_HINT_UNKNOWN = -5063;
+
+
+
+    const int JD_ERR_LOGICAL_TREE_WRONG = -5070;
+
+
 
     const int OB_ERR_SQL_END = -5999;
 #define IS_SQL_ERR(e) (OB_ERR_SQL_END >= e && OB_ERR_SQL_START <= e)

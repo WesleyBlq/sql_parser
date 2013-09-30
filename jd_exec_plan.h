@@ -12,45 +12,17 @@
 #ifndef _JD_EXEC_PLAN_H
 #define _JD_EXEC_PLAN_H
 
-#include <cstdlib>
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstdlib>
 
-
-#include "parse_malloc.h"
-#include "parse_node.h"
 #include "utility.h"
 #include "ob_define.h"
-#include "ob_logical_plan.h"
-#include "ob_select_stmt.h"
-#include "ob_delete_stmt.h"
-#include "ob_insert_stmt.h"
-#include "ob_update_stmt.h"
-#include "dml_build_plan.h"
-#include "ob_multi_logic_plan.h"
 
-
-#if 0
-
-using std::vector;
-using std::string;
-
-class SqlParser
-{
-    private:
-        uint32_t sql_length;
-        
-    public:
-        ParseNode* parse(char *sql);
-        uint32_t get_sql_length();
-};
-
+using namespace oceanbase::common;
+using namespace oceanbase::sql;
 
 /*对执行单元的封装*/
 class  ExecPlanUnit
@@ -61,81 +33,114 @@ class  ExecPlanUnit
     public:
         void set_exec_unit_sql(string &sql);
         //void set_exec_uint_db_info(TABLET_INFO *db_info)
-}
+};
 
 /*对执行计划的封装*/
-class ExecPlan
+class SameLevelExecPlan
 {
     private:
-        vector<ExecPlanUnit*> exec_plan;
-        bool    is_first_plan;
+        vector<ExecPlanUnit*> exec_plan_units;
+        bool    is_1st_plan;
         char    parent_sql_type;        /**if need to be reparsed*/
     public:
         bool    get_parent_sql_type();
-        void    set_parent_sql_type(uint8 parent_sql_type);
+        void    set_parent_sql_type(uint8_t parent_sql_type);
         void    set_first_plan_true();
         void    is_first_plan();
-}
+};
 
 
 /*执行计划本身的class*/
-class QueryPlan
+class FinalExecPlan
 {
     private:
-        vector<ExecPlan*> exec_plan;
+        vector<SameLevelExecPlan*> exec_plan;
 
     public:
        //friend class Optimizor;
-}
+};
 
 
 /*用于操作执行计划的动作的class*/
 class QueryActuator
-{
-  public:
-    /**
-     * execute the SQL statement directly
-     *
-     * @param stmt [in]
-     * @param result [out]
-     *
-     * @return oceanbase error code defined in ob_define.h
-     */
-    static int direct_execute(const string &stmt);
-    /**
-     * prepare the SQL statement for later execution
-     * @see stmt_execute()
-     * @param stmt [in]
-     * @param result [out]
-     * @param context [out]
-     *
-     * @return oceanbase error code defined in ob_define.h
-     */
-    static int stmt_prepare(const string &stmt);
+{    
+    public:
+        QueryActuator();
+        virtual ~QueryActuator();
+        FinalExecPlan* popActuator();
+        void pushActuator(FinalExecPlan* exec_plan);
+        
+        bool is_all_plan_done();
+        void set_all_plan_done();
+        void set_next_plan_reparsed();
+        bool get_next_plan_reparsed();
+        void reparse_next_plan();
+
+        int generate_exec_plan(
+                ResultPlan& result_plan,
+                FinalExecPlan*&  physical_plan,
+                ErrStat& err_stat,
+                const uint64_t& query_id = oceanbase::common::OB_INVALID_ID,
+                int32_t* index = NULL);
   private:
-    // types and constants
-    bool is_all_plan_done;
-    bool is_next_plan_list_reparsed;
-  private:
-    QueryActuator(){}
-    QueryActuator(){}
-    // disallow copy
-    QueryActuator(const QueryActuator &other);
-    //static int generate_logical_plan(const string &stmt, ResultPlan  &logical_plan);
-    void generate_exec_plans(string &sql);       /*generate the whole exec_plan*/
-    void release_exec_plans();
-    
-    ExecPlan* popActuator();
-    void pushActuator(ExecPlan* exec_plan);
-    
-    bool is_all_plan_done();
-    void set_all_plan_done();
-    void set_next_plan_reparsed();
-    bool is_next_plan_reparsed();
-    void reparse_next_plan(QueryPlan* exec_query_plan);
-  private:
-    // data members
+        // types and constants
+        bool is_plan_done;
+        bool is_next_plan_reparsed;
+
+
+
+        /*internal functions*/
+        int generate_select_plan_single_table(
+            ResultPlan& result_plan,
+            FinalExecPlan* physical_plan,
+            ErrStat& err_stat,
+            const uint64_t& query_id,
+            int32_t* index);
+        int generate_select_plan_multi_table(
+            ResultPlan& result_plan,
+            FinalExecPlan* physical_plan,
+            ErrStat& err_stat,
+            const uint64_t& query_id,
+            int32_t* index);
+        int gen_exec_plan_update(
+            ResultPlan& result_plan,
+            FinalExecPlan* physical_plan,
+            ErrStat& err_stat,
+            const uint64_t& query_id,
+            int32_t* index);
+        int gen_exec_plan_replace(
+            ResultPlan& result_plan,
+            FinalExecPlan* physical_plan,
+            ErrStat& err_stat,
+            const uint64_t& query_id,
+            int32_t* index);
+        int gen_exec_plan_delete(
+            ResultPlan& result_plan,
+            FinalExecPlan* physical_plan,
+            ErrStat& err_stat,
+            const uint64_t& query_id,
+            int32_t* index);
+        int gen_exec_plan_select(
+            ResultPlan& result_plan,
+            FinalExecPlan* physical_plan,
+            ErrStat& err_stat,
+            const uint64_t& query_id,
+            int32_t* index);
+        int gen_exec_plan_insert(
+            ResultPlan& result_plan,
+            FinalExecPlan* physical_plan,
+            ErrStat& err_stat,
+            const uint64_t& query_id,
+            int32_t* index);
+
+        template <class T>
+        int get_stmt(
+            ObLogicalPlan *logical_plan,
+            ErrStat& err_stat,
+            const uint64_t& query_id,
+            T *& stmt);
 };
-#endif
+
+
 #endif /* _JD_EXEC_PLAN_H */
 

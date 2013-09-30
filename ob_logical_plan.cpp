@@ -463,20 +463,20 @@ namespace oceanbase
     }
 
     /**************************************************
-    Funtion     :   get_expr_by_ref_column_id
+    Funtion     :   get_expr_by_ref_sql_expr_raw_id
     Author      :   qinbo
     Date        :   2013.9.10
-    Description :   get expr by ref_column_id
+    Description :   get expr by sql_expr_raw_id
     Input       :   int64_t expr_id
     Output      :   ObSqlRawExpr* 
     **************************************************/
-    ObSqlRawExpr* ObLogicalPlan::get_expr_by_ref_column_id(uint64_t column_id)
+    ObSqlRawExpr* ObLogicalPlan::get_expr_by_ref_sql_expr_raw_id(uint64_t sql_expr_raw_id)
     {
         uint32_t i;
         for (i = 0; i < exprs_.size(); i ++)
         {
             ObSqlRawExpr* sql_expr = exprs_[i];
-            if (column_id == sql_expr->get_column_id())
+            if (sql_expr_raw_id == sql_expr->get_expr_id())
             {
                 return sql_expr;
             }

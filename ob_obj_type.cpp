@@ -16,7 +16,7 @@
 
 #include "ob_define.h"
 #include "ob_obj_type.h"
-#include "../global.h"
+#include "../tc_global.h"
 
 namespace oceanbase
 {

@@ -18,11 +18,11 @@ typedef struct
 typedef struct
 {
   void* plan_tree_;
-  void* name_pool_; // ObStringBuf
-  void* meta_reader; // DBMetaReader
+  void* name_pool_;     // ObStringBuf
+  void* route_info;     // route info
   ErrStat err_stat_;
   int   is_prepare_;
-  char* db_name;   //record current db name
+  char* db_name;        //record current db name
 } ResultPlan;
 
 struct _ParseNode;

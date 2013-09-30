@@ -20,6 +20,9 @@ namespace oceanbase
       string     alias_name_;
       string     expr_name_;
       common::ObObjType type_;
+
+      string      raw_select_item_name;
+      SqlItemType aggr_fun_type; /*added by qinbo*/
     };
 
     struct OrderItem
@@ -32,7 +35,28 @@ namespace oceanbase
 
       uint64_t   expr_id_;
       OrderType  order_type_;
+      string order_column;
     };
+
+    struct GroupItem
+    {
+      enum GroupType
+      {
+        ASC,
+        DESC
+      };
+
+      uint64_t  expr_id_;
+      GroupType group_type_;
+      string    group_column_;
+    };
+    
+    struct WhereSubElem
+    {
+        uint64_t   expr_id_;
+
+    };
+    /*END: added by qinbo*/
 
     struct JoinedTable
     {
@@ -62,6 +86,12 @@ namespace oceanbase
       // true: it is the joined table id
       bool      is_joined_;
     };
+
+        typedef struct st_select_tpl {
+            string str;
+            string table_name;
+            string real_table_name;
+        } select_tpl;
   }
 #if 0
   namespace common
@@ -218,6 +248,21 @@ namespace oceanbase
         return ret;
       }
 
+        /*BEGIN: added by qinbo*/
+        bool is_from_item_with_join( )
+        {
+            for (int32_t i = 0; i < from_items_.size(); i++)
+            {
+                FromItem& item = from_items_[i];
+                if (item.is_joined_)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        /*END: added by qinbo*/
+        
       int add_order_item(OrderItem& order_item)
       {
         order_items_.push_back(order_item);
@@ -262,10 +307,36 @@ namespace oceanbase
 
       int copy_select_items(ObSelectStmt* select_stmt);
       void print(FILE* fp, int32_t level, int32_t index = 0);
+
+      /*BEGIN: added by qinbo*/
       int64_t make_stmt_string( ResultPlan& result_plan,
                                 char* buf, 
                                 const int64_t buf_len) ;
 
+      int64_t make_select_item_string( ResultPlan& result_plan,
+                                char* buf, 
+                                const int64_t buf_len) ;
+      int64_t make_where_string( ResultPlan& result_plan,
+                                char* buf, 
+                                const int64_t buf_len,
+                                WhereSubElem &where_sub_elems);
+      
+      int64_t make_group_by_string( ResultPlan& result_plan,
+                                char* buf, 
+                                const int64_t buf_len) ;
+
+      int64_t make_order_by_string( ResultPlan& result_plan,
+                                char* buf, 
+                                const int64_t buf_len) ;
+
+      int64_t make_having_string( ResultPlan& result_plan,
+                                char* buf, 
+                                const int64_t buf_len) ;
+      
+      int64_t make_limit_string( ResultPlan& result_plan,
+                                char* buf, 
+                                const int64_t buf_len) ;
+      /*END: added by qinbo*/
     private:
       /* These fields are only used by normal select */
       bool    is_distinct_;
@@ -276,6 +347,9 @@ namespace oceanbase
       vector<uint64_t>     having_expr_ids_;
       vector<uint64_t>     agg_func_ids_;
 
+      /*BEGIN: added by qinbo*/
+      vector<WhereSubElem>   where_sub_elem;
+      /*END: added by qinbo*/
       /* These fields are only used by set select */
       SetOperator set_op_;
       bool        is_set_distinct_;
@@ -293,6 +367,44 @@ namespace oceanbase
       bool      for_update_;
 
       uint64_t    gen_joined_tid_;
+      
+      /* for tangchao@jd.com, optimize select */
+    public:
+        vector<string> fetch_tables_from_tree(ResultPlan& result_plan);
+        vector<SelectItem> fetch_select_from_tree(ResultPlan& result_plan, string table_name);
+        vector<string> fetch_where_from_tree(ResultPlan& result_plan, string table_name);
+        vector<GroupItem> fetch_group_from_tree(ResultPlan& result_plan, string table_name);
+        vector<OrderItem> fetch_order_from_tree(ResultPlan& result_plan, string table_name);
+        void set_follow_order(bool f){
+            follow_order = f;
+        }
+        void set_follow_group(bool f){
+            follow_group = f;
+        }
+        void set_follow_agg(bool f){
+            follow_agg = f;
+        }
+        void set_order_by_primary(bool f)
+        {
+            order_by_primary = f;
+        }
+        
+        void update_ultimate(string str, string table_name, string real_table_name)
+        {
+            select_tpl tpl;
+            tpl.str = str;
+            tpl.table_name = table_name;
+            tpl.real_table_name = real_table_name;
+            ultimate_query.push_back(tpl);      
+        }
+        
+        private:
+            bool follow_order;
+            bool follow_group;
+            bool follow_agg;
+            bool order_by_primary;
+            vector<select_tpl>  ultimate_query;
+            vector<string> op_tables;    
     };
   }
 }

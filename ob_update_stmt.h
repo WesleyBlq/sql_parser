@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include "ob_raw_expr.h"
 //#include "common/ob_string_buf.h"
 
 namespace oceanbase

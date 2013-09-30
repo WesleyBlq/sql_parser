@@ -39,9 +39,6 @@ using namespace std;
 extern int resolve(
     ResultPlan* result_plan, 
     ParseNode* node);
-extern int resolve_multi_stmt(
-    ResultPlan* result_plan, 
-    ParseNode* node);
 extern int resolve_select_stmt(
     ResultPlan* result_plan,
     ParseNode* node,

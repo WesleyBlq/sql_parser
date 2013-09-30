@@ -33,11 +33,12 @@
 #include <stdint.h>
 #include "ob_obj_type.h"
 #include "ob_expr_obj.h"
-#include "ob_multi_logic_plan.h"
 
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
 using namespace std;
+
+extern meta_reader* g_metareader;
 
 
 int resolve_expr(
@@ -111,7 +112,6 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
 {
 #if 0
   int ret = OB_SUCCESS;
-  DBMetaReader* meta_reader = NULL;
   const ObTableSchema* table_schema = NULL;
   const ObColumnSchemaV2* rowkey_column_schema = NULL;
   ObRowkeyInfo rowkey_info;
@@ -127,13 +127,7 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
 
   if (ret == OB_SUCCESS)
   {
-    if (NULL == (meta_reader = static_cast<DBMetaReader*>(result_plan->meta_reader_)))
-    {
-      ret = OB_ERR_SCHEMA_UNSET;
-      snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Schema(s) are not set");
-    }
-    else if (NULL == (table_schema = meta_reader->get_table_schema(table_id)))
+    if (NULL == (table_schema = g_metareader->get_table_schema(table_id)))
     {
       ret = OB_ERR_TABLE_UNKNOWN;
       snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -152,7 +146,7 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
               "BUG: Unexpected primary columns.");
           break;
         }
-        else if (NULL == (rowkey_column_schema = meta_reader->get_column_schema(table_id, rowkey_column_id)))
+        else if (NULL == (rowkey_column_schema = g_metareader->get_column_schema(table_id, rowkey_column_id)))
         {
           ret = OB_ENTRY_NOT_EXIST;
           TBSYS_LOG(WARN, "fail to get table %lu column %lu", table_id, rowkey_column_id);
@@ -245,6 +239,7 @@ int resolve_and_exprs(
   int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
   if (node)
   {
+    /*when OP is AND, left and right expr is both uniquely stored, else stored as whole*/
     if (node->type_ != T_OP_AND)
     {
       uint64_t expr_id = OB_INVALID_ID;
@@ -272,6 +267,8 @@ int resolve_and_exprs(
 #define CREATE_RAW_EXPR(expr, type_name, result_plan)    \
 ({    \
   ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_); \
+  string current_db_name;   \
+  current_db_name.assign(result_plan->db_name); \
   expr = (type_name*)parse_malloc(sizeof(type_name), NULL);   \
   if (expr != NULL) \
   { \
@@ -280,6 +277,10 @@ int resolve_and_exprs(
     { \
       expr = NULL;  /* no memory leak, bulk dealloc */ \
     } \
+    else \
+    {   \
+      expr->set_db_name(current_db_name); \
+    }   \
   } \
   if (expr == NULL)  \
   { \
@@ -527,6 +528,7 @@ int resolve_expr(
         b_expr->set_result_type(column_item->data_type_);
         b_expr->set_first_ref_id(column_item->table_id_);
         b_expr->set_second_ref_id(column_item->column_id_);
+        b_expr->set_op_name_field(); /*added by qinbo*/
         expr = b_expr;
         //sql_expr->get_tables_set().add_member(stmt->get_table_bit_index(column_item->table_id_));
       }
@@ -1234,9 +1236,11 @@ int resolve_expr(
 
       col_expr->set_first_ref_id(ret_sql_expr->get_table_id());
       col_expr->set_second_ref_id(ret_sql_expr->get_column_id());
+      col_expr->set_related_sql_raw_id(ret_sql_expr->get_expr_id());
       // add invalid table bit index, avoid aggregate function expressions are used as filter
       //sql_expr->get_tables_set().add_member(0);
       sql_expr->set_contain_aggr(true);
+      sql_expr->set_contain_aggr_type(node->type_);
       expr = col_expr;
       break;
     }
@@ -1547,6 +1551,7 @@ int resolve_agg_func(
 
       sql_expr->set_expr(agg_expr);
       sql_expr->set_contain_aggr(true);
+      sql_expr->set_contain_aggr_type(node->type_);
       // add invalid table bit index, avoid aggregate function expressions are used as filters
       //sql_expr->get_tables_set().add_member(0);
     }
@@ -1814,20 +1819,9 @@ int resolve_table_columns(
   {
     ret = OB_ERR_LOGICAL_PLAN_FAILD;
     snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-        "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
+        "logical_plan must exist!!!");
   }
 
-  DBMetaReader* meta_reader = NULL;
-  if (ret == OB_SUCCESS)
-  {
-    meta_reader = static_cast<DBMetaReader*>(result_plan->meta_reader);
-    if (meta_reader == NULL)
-    {
-      ret = OB_ERR_SCHEMA_UNSET;
-      snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Schema(s) are not set");
-    }
-  }
 
   if (ret == OB_SUCCESS)
   {
@@ -1934,10 +1928,10 @@ int resolve_table_columns(
       
       string db_name_tmp;
       db_name_tmp.assign(result_plan->db_name);
-      vector<class schema_column*> schema_columns = meta_reader->get_all_column_schemas(db_name_tmp, table_item.table_name_);
+      vector<class schema_column*> schema_columns = g_metareader->get_all_column_schemas(db_name_tmp, table_item.table_name_);
 
       int32_t column_size = schema_columns.size();
-      //column = meta_reader->get_table_columns(table_item.ref_id_, column_size);
+      //column = g_metareader->get_table_columns(table_item.ref_id_, column_size);
       
       fprintf(stderr,"\n\n<<column_size is %d>>\n\n",column_size);
 
@@ -2477,54 +2471,6 @@ int resolve_for_update_clause(
   return ret;
 }
 
-
-int resolve_multi_stmt(ResultPlan* result_plan, ParseNode* node)
-{
-  int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
-  OB_ASSERT(node && node->type_ == T_STMT_LIST);
-  if(node->num_child_ == 0)
-  {
-    ret = OB_ERROR;
-  }
-  else
-  {
-    result_plan->plan_tree_ = NULL;
-    ObMultiLogicPlan* multi_plan = (ObMultiLogicPlan*)parse_malloc(sizeof(ObMultiLogicPlan), result_plan->name_pool_);
-    if (multi_plan != NULL)
-    {
-      multi_plan = new(multi_plan) ObMultiLogicPlan;
-      for(int32_t i = 0; i < node->num_child_; ++i)
-      {
-        ParseNode* child_node = node->children_[i];
-        if (child_node == NULL)
-          continue;
-
-        if ((ret = resolve(result_plan, child_node)) != OB_SUCCESS)
-        {
-          multi_plan->~ObMultiLogicPlan();
-          parse_free(multi_plan);
-          multi_plan = NULL;
-          break;
-        }
-        if(result_plan->plan_tree_ == NULL)
-          continue;
-
-        multi_plan->push_back((ObLogicalPlan*)(result_plan->plan_tree_));
-        
-        result_plan->plan_tree_ = NULL;
-      }
-      result_plan->plan_tree_ = multi_plan;
-    }
-    else
-    {
-      ret = OB_ERR_PARSER_MALLOC_FAILED;
-      snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Can not malloc space for ObMultiLogicPlan");
-    }
-  }
-  return ret;
-}
-
 int resolve_select_stmt(
     ResultPlan* result_plan,
     ParseNode* node,
@@ -2947,8 +2893,8 @@ int resolve_insert_columns(
       if (NULL != column_item && column_item->table_id_ != OB_INVALID_ID)
       {
 #if 0      
-        DBMetaReader* meta_reader = static_cast<DBMetaReader*>(result_plan->meta_reader_);
-        if (meta_reader == NULL)
+        DBMetaReader* g_metareader = static_cast<DBMetaReader*>(result_plan->meta_reader_);
+        if (g_metareader == NULL)
         {
           ret = OB_ERR_SCHEMA_UNSET;
           snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -2956,7 +2902,7 @@ int resolve_insert_columns(
           break;
         }
 
-        if (meta_reader->is_join_column(column_item->table_id_, column_item->column_id_))
+        if (g_metareader->is_join_column(column_item->table_id_, column_item->column_id_))
         {
           ret = OB_ERR_INSERT_INNER_JOIN_COLUMN;
           snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -2987,13 +2933,14 @@ int resolve_insert_values(
     {
       ret = resolve_independ_expr(result_plan, insert_stmt, vector_node->children_[j],
                                   expr_id, T_INSERT_LIMIT);
-      if (ret == OB_SUCCESS)
+      if (ret != OB_SUCCESS)
       {
         snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
             "Can not add expr_id to vector");
       }
       value_row.push_back(expr_id);
     }
+    
     if (ret == OB_SUCCESS &&
       insert_stmt->get_column_size() != value_row.size())
     {
@@ -3269,11 +3216,6 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
     return OB_ERR_RESOLVE_SQL;
   }
   int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
-  if (ret == OB_SUCCESS && result_plan->meta_reader == NULL)
-  {
-    ret = OB_ERR_RESOLVE_SQL;
-    TBSYS_LOG(ERROR, "meta_reader must be set");
-  }
 
 
   uint64_t query_id = OB_INVALID_ID;
@@ -3283,7 +3225,7 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
     {
       case T_STMT_LIST:
       {
-        ret = resolve_multi_stmt(result_plan, node);
+        //ret = resolve_multi_stmt(result_plan, node);
         break;
       }
       case T_SELECT:

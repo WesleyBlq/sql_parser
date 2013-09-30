@@ -6,10 +6,13 @@
 #include "ob_select_stmt.h"
 #include "ob_logical_plan.h"
 
-#define BUF_SIZE 512
 
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
+
+
+extern meta_reader *g_metareader;
+
 
 bool ObRawExpr::is_const() const
 {
@@ -20,6 +23,73 @@ bool ObRawExpr::is_column() const
 {
   return (type_ == T_REF_COLUMN);
 }
+
+/**************************************************
+Funtion     :   set_db_name
+Author      :   qinbo
+Date        :   2013.9.11
+Description :   store current db name
+Input       :   
+Output      :   
+**************************************************/
+void ObRawExpr::set_db_name(string db_name)
+{
+    this->current_db_name = db_name;
+}
+
+/**************************************************
+Funtion     :   get_db_name
+Author      :   qinbo
+Date        :   2013.9.11
+Description :   get current db name
+Input       :   
+Output      :   
+**************************************************/
+string ObRawExpr::get_db_name() const
+{
+    return current_db_name;
+}
+
+/**************************************************
+Funtion     :   is_column_and_sharding_key
+Author      :   qinbo
+Date        :   2013.9.25
+Description :   this expr is sharding column
+Input       :   
+Output      :   
+**************************************************/
+bool ObRawExpr::is_column_and_sharding_key( ) const
+{
+    if (!is_column())
+    {
+        return false;
+    }
+    
+    ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *>(const_cast<ObRawExpr *>(this));
+    
+    string db_name_tmp = get_db_name();
+    
+    schema_table*   table_schema = g_metareader->get_table_schema_by_id(db_name_tmp, binary_ref_raw_expr->get_first_ref_id());
+    if (NULL == table_schema)
+    {
+        return false;
+    }
+
+    schema_column*  column_schema= table_schema->get_column_from_table_by_id(binary_ref_raw_expr->get_second_ref_id());
+    if (column_schema == NULL)
+    {
+      return false;
+    }
+
+    if (column_schema->is_sharding_key())
+    {
+        return true;
+    }
+    
+    return false;
+    
+}
+
 
 bool ObRawExpr::is_equal_filter() const
 {
@@ -34,6 +104,121 @@ bool ObRawExpr::is_equal_filter() const
   return false;
 }
 
+
+/**************************************************
+Funtion     :   is_equal_filter_with_route
+Author      :   qinbo
+Date        :   2013.9.25
+Description :   this expr is need to get route or not
+Input       :   
+Output      :   
+**************************************************/
+bool ObRawExpr::is_equal_filter_need_route() const
+{
+    bool ret = false;
+    if (type_ == T_OP_EQ || type_ == T_OP_IS)
+    {
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *>(const_cast<ObRawExpr *>(this));
+        if (((binary_expr->get_first_op_expr()->is_const())
+            &&binary_expr->get_second_op_expr()->is_column_and_sharding_key())
+          || (binary_expr->get_second_op_expr()->is_const())
+            &&(binary_expr->get_first_op_expr()->is_column_and_sharding_key()))
+        {
+            ret = true;
+        }
+    }
+    return ret;
+}
+
+/**************************************************
+Funtion		:	is_contain_filter
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   is T_OP_IN/T_OP_NOT_IN or not
+Input		:	
+Output		:	
+**************************************************/
+bool ObRawExpr::is_contain_filter() const
+{
+    bool        ret = false;
+    int32_t     expr_size = 0;
+    ObRawExpr*  raw_expr = NULL;   
+    
+    if ((type_ == T_OP_IN)||(type_ == T_OP_NOT_IN))
+    {
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *>(const_cast<ObRawExpr *>(this));
+        
+        ObMultiOpRawExpr *multi_expr = dynamic_cast<ObMultiOpRawExpr *>(const_cast<ObRawExpr *>(binary_expr->get_second_op_expr()));
+        expr_size = multi_expr->get_expr_size();
+        
+        for (int32_t i = 0; i < expr_size; i++)
+        {
+            raw_expr = multi_expr->get_op_expr(i);
+            if (raw_expr->is_const())
+            {
+                ret = true;
+            }
+            else
+            {
+                ret = false;
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+
+/**************************************************
+Funtion     :   is_contain_filter_with_route
+Author      :   qinbo
+Date        :   2013.9.25
+Description :   this expr is need to get route or not
+Input       :   
+Output      :   
+**************************************************/
+bool ObRawExpr::is_contain_filter_need_route() const
+{
+    bool        ret = false;
+    int32_t     expr_size = 0;
+    ObRawExpr*  raw_expr = NULL;        
+    if ((type_ == T_OP_IN)||(type_ == T_OP_NOT_IN))
+    {
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *>(const_cast<ObRawExpr *>(this));
+        ObMultiOpRawExpr *multi_expr = dynamic_cast<ObMultiOpRawExpr *>(const_cast<ObRawExpr *>(binary_expr->get_second_op_expr()));
+        expr_size = multi_expr->get_expr_size();
+        
+        for (int32_t i = 0; i < expr_size; i++)
+        {
+            raw_expr = multi_expr->get_op_expr(i);
+            if (raw_expr->is_const())
+            {
+                ret = true;
+            }
+            else
+            {
+                ret = false;
+                return ret;
+            }
+        }
+
+        if (binary_expr->get_first_op_expr()->is_column_and_sharding_key())
+        {
+            return true;
+        }
+    }
+    return ret;
+}
+
+
+/**************************************************
+Funtion     :   is_range_filter
+Author      :   qinbo
+Date        :   2013.9.25
+Description :   this expr is range filter
+Input       :   
+Output      :   
+**************************************************/
 bool ObRawExpr::is_range_filter() const
 {
   bool ret = false;
@@ -52,6 +237,42 @@ bool ObRawExpr::is_range_filter() const
       ret = true;
   }
   return ret;
+}
+
+
+/**************************************************
+Funtion     :   is_range_filter_with_route
+Author      :   qinbo
+Date        :   2013.9.25
+Description :   this expr is need to get route or not
+Input       :   
+Output      :   
+**************************************************/
+bool ObRawExpr::is_range_filter_need_route() const
+{
+    bool ret = false;
+    if (type_ >= T_OP_LE && type_ <= T_OP_GT)
+    {
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *>(const_cast<ObRawExpr *>(this));
+        if (((binary_expr->get_first_op_expr()->is_const())
+        &&binary_expr->get_second_op_expr()->is_column_and_sharding_key())
+        || (binary_expr->get_second_op_expr()->is_const())
+        &&(binary_expr->get_first_op_expr()->is_column_and_sharding_key()))
+        {
+            ret = true;
+        }
+    }
+    else if (type_ == T_OP_BTW)
+    {
+        ObTripleOpRawExpr *triple_expr = dynamic_cast<ObTripleOpRawExpr *>(const_cast<ObRawExpr *>(this));
+        if (triple_expr->get_first_op_expr()->is_column_and_sharding_key()
+        && triple_expr->get_second_op_expr()->is_const()
+        && triple_expr->get_third_op_expr()->is_const())
+        {
+            ret = true;
+        }
+    }
+    return ret;
 }
 
 bool ObRawExpr::is_join_cond() const
@@ -73,6 +294,27 @@ bool ObRawExpr::is_aggr_fun() const
   if (type_ >= T_FUN_MAX && type_ <= T_FUN_AVG)
     ret = true;
   return ret;
+}
+
+
+/**************************************************
+Funtion		:	is_need_to_get_route
+Author		:	qinbo
+Date		:	2013.9.11
+Description	:   this expr is need to get route or not
+Input		:	
+Output		:	
+**************************************************/
+bool ObRawExpr::is_need_to_get_route() const
+{
+    if (is_equal_filter_need_route()||
+        is_contain_filter_need_route()||
+        is_range_filter_need_route())
+    {
+        return true;
+    }
+    return false;
+
 }
 
 int ObConstRawExpr::set_value_and_type(const common::ObObj& val)
@@ -220,7 +462,7 @@ int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, char* buf, const int6
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[BUF_SIZE] = {0};
+    char buf_tmp[RAW_EXPR_BUF_SIZE] = {0};
     
     switch(get_expr_type())
     {
@@ -228,13 +470,13 @@ int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, char* buf, const int6
         case T_BINARY:
         {
             databuff_printf(buf, buf_len, pos, "\"");
-            value_.to_string(buf_tmp, BUF_SIZE);
+            value_.to_string(buf_tmp, RAW_EXPR_BUF_SIZE);
             databuff_printf(buf, buf_len, pos, buf_tmp);
             databuff_printf(buf, buf_len, pos, "\"");
             break;
         }
         default:
-            value_.to_string(buf_tmp, BUF_SIZE);
+            value_.to_string(buf_tmp, RAW_EXPR_BUF_SIZE);
             databuff_printf(buf, buf_len, pos, buf_tmp);
             break;
     }
@@ -392,7 +634,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const i
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Wrong invocation of ObStmt::check_table_column, logical_plan must exist!!!");
+            "logical_plan must exist!!!");
         return ret;
     }
 
@@ -474,9 +716,8 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char tmp_str[BUF_SIZE] = {0};
+    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     
-    DBMetaReader* meta_reader = NULL;
     ObSqlRawExpr* sql_expr = NULL;
 
     if (first_id_ == OB_INVALID_ID)
@@ -486,28 +727,29 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "Wrong invocation of ObStmt::check_table_column, logical_plan must exist!!!");
+                "logical_plan must exist!!!");
             return ret;
         }
         
-        sql_expr = logical_plan->get_expr_by_ref_column_id(second_id_);
+        sql_expr = logical_plan->get_expr_by_ref_sql_expr_raw_id(related_sql_raw_id);
         if (NULL == sql_expr)
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                      "having expr name error!!!");
+                      "ref column error!!!");
             return ret;
         }
-        
-        memset(tmp_str, 0,BUF_SIZE);
-        sql_expr->to_string(result_plan, tmp_str, BUF_SIZE);
+
+        memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
+        sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
         databuff_printf(buf, buf_len, pos, tmp_str);
         
     }
     else
     {
-        meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader);
-        if (meta_reader == NULL)
+        string db_name_tmp = get_db_name();
+        schema_table*   table_schema = g_metareader->get_table_schema_by_id(db_name_tmp, first_id_);
+        if (NULL == table_schema)
         {
             ret = OB_ERR_SCHEMA_UNSET;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -515,30 +757,24 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
             return ret;
         }
 
-        if (T_REF_COLUMN == get_expr_type())
+        schema_column*  column_schema= table_schema->get_column_from_table_by_id(second_id_);
+        if (column_schema == NULL)
         {
-            string db_name_tmp;
-            db_name_tmp.assign(result_plan.db_name);
-            schema_table*   table_schema = meta_reader->get_table_schema_by_id(db_name_tmp, first_id_);
-            if (NULL == table_schema)
-            {
-                ret = OB_ERR_SCHEMA_UNSET;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Schema(s) are not set");
-                return ret;
-            }
+          ret = OB_ERR_SCHEMA_UNSET;
+          snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+              "Schema(s) are not set");
+          return ret;
+        }
 
-            schema_column*  column_schema= table_schema->get_column_from_table_by_id(second_id_);
-            if (column_schema == NULL)
-            {
-              ret = OB_ERR_SCHEMA_UNSET;
-              snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                  "Schema(s) are not set");
-              return ret;
-            }
-
-            //databuff_printf(buf, BUF_SIZE, pos, table_schema->get_table_name().data());
-            databuff_printf(buf, BUF_SIZE, pos, column_schema->get_column_name().data());
+        if (true == is_op_name_field)
+        {
+            databuff_printf(buf, RAW_EXPR_BUF_SIZE, pos, table_schema->get_table_name().data());
+            databuff_printf(buf, RAW_EXPR_BUF_SIZE, pos, ".");
+            databuff_printf(buf, RAW_EXPR_BUF_SIZE, pos, column_schema->get_column_name().data());
+        }
+        else
+        {
+            databuff_printf(buf, RAW_EXPR_BUF_SIZE, pos, column_schema->get_column_name().data());
         }
     }
 
@@ -596,13 +832,14 @@ Output		:	char* buf, const int64_t buf_len
 **************************************************/
 int64_t ObUnaryOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {   
+    /*T_OP_NOT, no need to get route*/
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[BUF_SIZE] = {0};
+    char buf_tmp[RAW_EXPR_BUF_SIZE] = {0};
 
     databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
     databuff_printf(buf, buf_len, pos, "(");
-    expr_->to_string(result_plan, buf_tmp, BUF_SIZE);
+    expr_->to_string(result_plan, buf_tmp, RAW_EXPR_BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf_tmp);
     databuff_printf(buf, buf_len, pos, ")");
 }
@@ -649,13 +886,13 @@ int64_t ObBinaryOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const i
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf1[BUF_SIZE] = {0};
-    char buf2[BUF_SIZE] = {0};
+    char buf1[RAW_EXPR_BUF_SIZE] = {0};
+    char buf2[RAW_EXPR_BUF_SIZE] = {0};
     
-    first_expr_->to_string(result_plan, buf1, BUF_SIZE);
+    first_expr_->to_string(result_plan, buf1, RAW_EXPR_BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf1);
     databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
-    second_expr_->to_string(result_plan, buf2, BUF_SIZE);
+    second_expr_->to_string(result_plan, buf2, RAW_EXPR_BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf2);
 }
 
@@ -826,18 +1063,18 @@ int64_t ObTripleOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const i
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf1[BUF_SIZE] = {0};
-    char buf2[BUF_SIZE] = {0};
-    char buf3[BUF_SIZE] = {0};
+    char buf1[RAW_EXPR_BUF_SIZE] = {0};
+    char buf2[RAW_EXPR_BUF_SIZE] = {0};
+    char buf3[RAW_EXPR_BUF_SIZE] = {0};
     
-    first_expr_->to_string(result_plan, buf1, BUF_SIZE);
+    first_expr_->to_string(result_plan, buf1, RAW_EXPR_BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf1);
     databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
-    second_expr_->to_string(result_plan, buf2, BUF_SIZE);
+    second_expr_->to_string(result_plan, buf2, RAW_EXPR_BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf2);
     databuff_printf(buf, buf_len, pos, " ");
     databuff_printf(buf, buf_len, pos, "AND ");
-    third_expr_->to_string(result_plan, buf3, BUF_SIZE);
+    third_expr_->to_string(result_plan, buf3, RAW_EXPR_BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf3);
     databuff_printf(buf, buf_len, pos, " ");
 }
@@ -903,14 +1140,14 @@ int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const in
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[BUF_SIZE] = {0};
+    char buf_tmp[RAW_EXPR_BUF_SIZE] = {0};
 
     databuff_printf(buf, buf_len, pos, "(");
     
     for (int32_t i = 0; i < exprs_.size(); i++)
     {
-        memset(buf_tmp, BUF_SIZE, 0);  
-        exprs_[i]->to_string(result_plan, buf_tmp, BUF_SIZE);
+        memset(buf_tmp, RAW_EXPR_BUF_SIZE, 0);  
+        exprs_[i]->to_string(result_plan, buf_tmp, RAW_EXPR_BUF_SIZE);
         databuff_printf(buf, buf_len, pos, buf_tmp);
 
         if (i != exprs_.size()-1)
@@ -1028,8 +1265,8 @@ int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, char* buf, const int
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[BUF_SIZE] = {0};
-
+    char buf_tmp[RAW_EXPR_BUF_SIZE] = {0};
+    
     databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
     if (distinct_)
     {
@@ -1038,7 +1275,7 @@ int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, char* buf, const int
     if (param_expr_)
     {
         databuff_printf(buf, buf_len, pos, "(");
-        param_expr_->to_string(result_plan, buf_tmp, BUF_SIZE);
+        param_expr_->to_string(result_plan, buf_tmp, RAW_EXPR_BUF_SIZE);
         databuff_printf(buf, buf_len, pos, buf_tmp);
         databuff_printf(buf, buf_len, pos, ")");
     }

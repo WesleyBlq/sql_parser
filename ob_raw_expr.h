@@ -16,6 +16,7 @@
 
 using namespace oceanbase::common;
 
+
 namespace oceanbase
 {
   namespace sql
@@ -41,13 +42,99 @@ namespace oceanbase
 
       bool is_const() const;
       bool is_column() const;
+      /**************************************************
+      Funtion     :   is_column_and_sharding_key
+      Author      :   qinbo
+      Date        :   2013.9.25
+      Description :   this expr is sharding column
+      Input       :   
+      Output      :   
+      **************************************************/
+      bool is_column_and_sharding_key( ) const;
+      /**************************************************
+      Funtion     :   is_contain_filter
+      Author      :   qinbo
+      Date        :   2013.9.11
+      Description :   is T_OP_IN/T_OP_NOT_IN or not
+      Input       :   
+      Output      :   
+      **************************************************/
+      // Format like "C1 IN "5, 6,7"
+      bool is_contain_filter() const; 
+
+      /**************************************************
+      Funtion     :   is_contain_filter_need_route
+      Author      :   qinbo
+      Date        :   2013.9.11
+      Description :   this expr is need to get route or not
+      Input       :   
+      Output      :   
+      **************************************************/
+      // Format like "C1 IN "5, 6,7"
+      bool is_contain_filter_need_route() const; 
+
+      
+      /**************************************************
+      Funtion     :   is_need_to_get_route
+      Author      :   qinbo
+      Date        :   2013.9.11
+      Description :   this expr is need to get route or not
+      Input       :   
+      Output      :   
+      **************************************************/
+      bool is_need_to_get_route() const;
       // Format like "C1 = 5"
       bool is_equal_filter() const;
+
+      /**************************************************
+      Funtion     :   is_equal_filter_need_route
+      Author      :   qinbo
+      Date        :   2013.9.11
+      Description :   this expr is need to get route or not
+      Input       :   
+      Output      :   
+      **************************************************/
+      // Format like "C1 IN "5, 6,7"
+      bool is_equal_filter_need_route() const; 
+      
       // Format like "C1 between 5 and 10"
       bool is_range_filter() const;
+      
+      /**************************************************
+      Funtion     :   is_range_filter_need_route
+      Author      :   qinbo
+      Date        :   2013.9.11
+      Description :   this expr is need to get route or not
+      Input       :   
+      Output      :   
+      **************************************************/
+      // Format like "C1 IN "5, 6,7"
+      bool is_range_filter_need_route() const; 
+
+      
       // Only format like "T1.c1 = T2.c1", not "T1.c1 - T2.c1 = 0"
       bool is_join_cond() const;
       bool is_aggr_fun() const;
+
+      /**************************************************
+      Funtion     :   set_db_name
+      Author      :   qinbo
+      Date        :   2013.9.11
+      Description :   store current db name
+      Input       :   
+      Output      :   
+      **************************************************/
+      void set_db_name(string db_name); 
+
+      /**************************************************
+      Funtion     :   get_db_name
+      Author      :   qinbo
+      Date        :   2013.9.11
+      Description :   get current db name
+      Input       :   
+      Output      :   
+      **************************************************/
+      string get_db_name() const;
       /*virtual int fill_sql_expression(
           ObSqlExpression& inter_expr,
           ObTransformer *transformer = NULL,
@@ -60,6 +147,7 @@ namespace oceanbase
     private:
       SqlItemType  type_;
       common::ObObjType result_type_;
+      string       current_db_name; //added by qinbo, store current db name
     };
 
     class ObConstRawExpr : public ObRawExpr
@@ -125,6 +213,8 @@ namespace oceanbase
       {
         first_id_ = OB_INVALID_ID;
         second_id_ = OB_INVALID_ID;
+        related_sql_raw_id = OB_INVALID_ID;
+        is_op_name_field = false;
       }
       ObBinaryRefRawExpr(uint64_t first_id, uint64_t second_id, SqlItemType expr_type = T_INVALID)
           : ObRawExpr(expr_type), first_id_(first_id), second_id_(second_id)
@@ -143,10 +233,30 @@ namespace oceanbase
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
       int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
+      void set_op_name_field()
+      {
+          is_op_name_field = true;
+      }
       
+      bool get_op_name_field()
+      {
+          return is_op_name_field;
+      }
+
+      void set_related_sql_raw_id(uint64_t sql_raw_id)
+      {
+          related_sql_raw_id = sql_raw_id;
+      }
+
+      uint64_t get_related_sql_raw_id()
+      {
+          return related_sql_raw_id;
+      }
     private:
       uint64_t first_id_;
       uint64_t second_id_;
+      uint64_t related_sql_raw_id;
+      bool     is_op_name_field;
     };
 
     class ObUnaryOpRawExpr : public ObRawExpr
@@ -418,6 +528,10 @@ namespace oceanbase
       void set_contain_aggr(bool contain_aggr) { contain_aggr_ = contain_aggr; }
       void set_contain_alias(bool contain_alias) { contain_alias_ = contain_alias; }
       void set_columnlized(bool is_columnlized) { is_columnlized_ = is_columnlized; }
+      /*BEGIN: added by qinbo*/
+      void set_contain_aggr_type(SqlItemType aggr_type) { contain_aggr_type_ = aggr_type; }
+      SqlItemType get_contain_aggr_type() { return contain_aggr_type_;}
+      /*END: added by qinbo*/
       bool is_apply() const { return is_apply_; }
       bool is_contain_aggr() const { return contain_aggr_; }
       bool is_contain_alias() const { return contain_alias_; }
@@ -432,17 +546,19 @@ namespace oceanbase
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
       void print(FILE* fp, int32_t level, int32_t index = 0) const;
-      /*added by qinbo*/
+      /*BEGIN: added by qinbo*/
       int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
-
+      /*END: added by qinbo*/
     private:
       uint64_t  expr_id_;
       uint64_t  table_id_;
       uint64_t  column_id_;
+      SqlItemType contain_aggr_type_;
       bool      is_apply_;
       bool      contain_aggr_;
       bool      contain_alias_;
       bool      is_columnlized_;
+      
       //common::ObBitSet<>  tables_set_;
       ObRawExpr*  expr_;
     };

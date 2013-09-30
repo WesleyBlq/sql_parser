@@ -9,6 +9,8 @@ using namespace oceanbase::sql;
 using namespace oceanbase::common;
 using namespace std;
 
+extern meta_reader* g_metareader;
+
 
 ObStmt::ObStmt(StmtType type)
   : ObBasicStmt(type)
@@ -38,20 +40,9 @@ int ObStmt::add_table_item(
   {
     ret = OB_ERR_LOGICAL_PLAN_FAILD;
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "Wrong invocation of ObStmt::add_table_item, logical_plan must exist!!!");
+            "logical_plan must exist!!!");
   }
 
-  DBMetaReader* meta_reader = NULL;
-  if (ret == OB_SUCCESS)
-  {
-    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader);
-    if (meta_reader == NULL)
-    {
-      ret = OB_ERR_SCHEMA_UNSET;
-      snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-              "Schema(s) are not set");
-    }
-  }
 
   TableItem item;
   if (ret == OB_SUCCESS)
@@ -71,7 +62,7 @@ int ObStmt::add_table_item(
         {
             string db_name_tmp;
             db_name_tmp.assign(result_plan.db_name);
-            schema_table *schema_table = meta_reader->get_table_schema(db_name_tmp, table_name);
+            schema_table *schema_table = g_metareader->get_table_schema(db_name_tmp, table_name);
             if (NULL == schema_table)
             {
               ret = OB_ERR_TABLE_UNKNOWN;
@@ -459,20 +450,9 @@ int ObStmt::check_table_column(
   {
     ret = OB_ERR_LOGICAL_PLAN_FAILD;
     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-        "Wrong invocation of ObStmt::check_table_column, logical_plan must exist!!!");
+            "logical_plan must exist!!!");
   }
 
-  DBMetaReader* meta_reader = NULL;
-  if (ret == OB_SUCCESS)
-  {
-    meta_reader = static_cast<DBMetaReader*>(result_plan.meta_reader);
-    if (meta_reader == NULL)
-    {
-      ret = OB_ERR_SCHEMA_UNSET;
-      snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-          "Schema(s) are not set");
-    }
-  }
 
   if (ret == OB_SUCCESS)
   {
@@ -484,7 +464,7 @@ int ObStmt::check_table_column(
       {
         string db_name_tmp;
         db_name_tmp.assign(result_plan.db_name);
-        schema_column* schema_column = meta_reader->get_column_schema(db_name_tmp, table_item.table_name_,column_name);
+        schema_column* schema_column = g_metareader->get_column_schema(db_name_tmp, table_item.table_name_,column_name);
         if (NULL != schema_column)
         {
             column_id = schema_column->get_column_id();

@@ -13,20 +13,22 @@ SYSLIBS_test = -Wl,-rpath -Wl,LIBDIR -lglog
 
 	
 CPPFLAGS = \
-	-I/usr/local/mysql-cpp-connector/mysql-connector-c++-1.1.3-linux-glibc2.3-x86-64bit/include \
-	-I/usr/local/include
+	#-I/usr/local/mysql-cpp-connector/mysql-connector-c++-1.1.3-linux-glibc2.3-x86-64bit/include \
+	#-I/usr/local/include
 	
 	
 USERLIBS_test = $(SYSLIBS_test) \
-	-L/usr/local/mysql/lib \
-	-L/usr/local/mysql-cpp-connector/mysql-connector-c++-1.1.3-linux-glibc2.3-x86-64bit/lib
+	#-L/usr/local/mysql/lib \
+	#-L/usr/local/mysql-cpp-connector/mysql-connector-c++-1.1.3-linux-glibc2.3-x86-64bit/lib
 
 LDLIBS = $(USERLIBS_test)  \
 	../optimizer/libopt.a ../acl/libacl.a \
 	../log/libjlog.a ../conf/libconf.a \
 	../connector/libconn.a ../base/libbase.a \
 	../sql/libsql.a ../route/libroute.a -lcrypto \
-	/usr/local/lib/libzookeeper_mt.a -lmysqlcppconn-static -lmysqlclient
+	/usr/local/lib/libzookeeper_mt.a \
+	/usr/local/lib/libjson_linux-gcc-4.1.2_libmt.a \
+	-lmysqlcppconn-static -lmysqlclient 
 	
 ##libsql.a
 OBJS_SQL =  \
@@ -50,7 +52,6 @@ OBJS_SQL =  \
 	ob_select_stmt.o \
 	ob_logical_plan.o\
 	dml_build_plan.o \
-	ob_multi_logic_plan.o \
 	jd_exec_plan.o
 
 #libsql.a
