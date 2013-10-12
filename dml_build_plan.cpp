@@ -2125,13 +2125,14 @@ int resolve_select_clause(
     if (project_node->type_ == T_ALIAS)
     {
       OB_ASSERT(project_node->num_child_ == 2);
+      alias_node = project_node->children_[1];
+      project_node = project_node->children_[0];
+      is_real_alias = true;
+
       expr_name.assign(
                    const_cast<char*>(project_node->str_value_),
                    static_cast<int32_t>(strlen(project_node->str_value_))
                    );
-      alias_node = project_node->children_[1];
-      project_node = project_node->children_[0];
-      is_real_alias = true;
 
       /* check if the alias name is legal */
       OB_ASSERT(alias_node->type_ == T_IDENT);
@@ -2150,7 +2151,9 @@ int resolve_select_clause(
     else
     {
       if (project_node->type_ == T_IDENT)
+      {
         alias_node = project_node;
+      }
       else if (project_node->type_ == T_OP_NAME_FIELD)
       {
         expr_name.assign(
@@ -3275,4 +3278,5 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
   }
   return ret;
 }
+
 

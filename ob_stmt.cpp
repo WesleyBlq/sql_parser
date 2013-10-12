@@ -63,6 +63,7 @@ int ObStmt::add_table_item(
             string db_name_tmp;
             db_name_tmp.assign(result_plan.db_name);
             schema_table *schema_table = g_metareader->get_table_schema(db_name_tmp, table_name);
+
             if (NULL == schema_table)
             {
               ret = OB_ERR_TABLE_UNKNOWN;

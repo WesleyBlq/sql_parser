@@ -78,5 +78,6 @@ extern int resolve_table_columns(
     oceanbase::sql::TableItem& table_item,
     int64_t num_columns = -1);
 
+
 #endif //DML_BUILD_PLAN_H_
 

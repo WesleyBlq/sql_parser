@@ -1,4 +1,3 @@
-
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -9,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstdlib>
-
 
 #include "parse_malloc.h"
 #include "parse_node.h"
@@ -87,7 +85,7 @@ sql_parser(char * sql)
     result_plan.name_pool_  = NULL;
     result_plan.route_info  = (void*)route_info;
     result_plan.plan_tree_  = NULL;
-    result_plan.db_name     = "qinbo"; 
+    result_plan.db_name     = "qinbo";
 
     route_info->test();
 
@@ -168,16 +166,26 @@ sql_parser(char * sql)
     logic_plan->make_stmt_string(result_plan, str, 2048);
     fprintf(stderr, "\nstmt_string: %s\n", str);
 
-#if 1
+
     QueryActuator query_actuator;
+
+    ObSelectStmt *select;
+    if(!query_actuator.get_stmt_instance(result_plan, select))
+    {
+        return 1;
+    }
+    
+    fprintf(stderr, "get_stmt_instance OK\n");
+    
     FinalExecPlan* final_exec_plan = NULL;
     ErrStat err_stat;
     if (OB_SUCCESS != (ret = query_actuator.generate_exec_plan(result_plan, final_exec_plan, err_stat)))
     {
-      TBSYS_LOG(WARN, "failed to transform to physical plan");
-      ret = OB_ERR_GEN_PLAN;
+        fprintf(stderr, "failed to transform to physical plan\n");
+        ret = OB_ERR_GEN_PLAN;
+        return ret;
     }
-#endif
+
 
     if(result_plan.plan_tree_ != NULL)
     {
@@ -237,6 +245,7 @@ SELECT address,lastname FROM persons";
     char *sql14 = "DELETE FROM persons  WHERE address = 'beijing'";
 
     char *sql15 = "SELECT COUNT(lastname), address AS addr FROM persons WHERE id IN (10,11,12)";
+    char *sqls = "select t.id, s.name from persons t join persons s on t.id = s.id";
 
     //sql_parser(sql4);
     //sql_parser(sql6);

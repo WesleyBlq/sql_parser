@@ -82,12 +82,35 @@ class QueryActuator
                 ErrStat& err_stat,
                 const uint64_t& query_id = oceanbase::common::OB_INVALID_ID,
                 int32_t* index = NULL);
+        /**************************************************
+        Funtion     :   get_stmt_instance
+        Author      :   qinbo
+        Date        :   2013.10.9
+        Description :   generate exec plan
+        Input       :   ResultPlan& result_plan,
+                        T *& stmt
+        Output      :   
+        **************************************************/
+        template <class T>
+        bool get_stmt_instance(
+            ResultPlan& result_plan,
+            T *& stmt)
+        {
+            ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
+            
+            /* get statement */
+            stmt = dynamic_cast<T*>(logical_plan->get_main_stmt());
+            
+            if (stmt == NULL)
+            {
+                return false;
+            }
+            return true;
+        }
   private:
         // types and constants
         bool is_plan_done;
         bool is_next_plan_reparsed;
-
-
 
         /*internal functions*/
         int generate_select_plan_single_table(
@@ -139,6 +162,7 @@ class QueryActuator
             ErrStat& err_stat,
             const uint64_t& query_id,
             T *& stmt);
+        
 };
 
 

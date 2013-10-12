@@ -27,6 +27,8 @@
 #include "ob_logical_plan.h"
 #include "jd_exec_plan.h"
 
+extern meta_reader *g_metareader;
+
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
 
@@ -293,6 +295,7 @@ int QueryActuator::generate_select_plan_single_table(
 
     vector<string>      where_items;
     string              where_item;
+    string              db_name;
     
     /* get statement */
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
@@ -317,40 +320,37 @@ int QueryActuator::generate_select_plan_single_table(
     table_name = table_names.at(0);
     select_items = select_stmt->fetch_select_from_tree(result_plan, table_name);
     where_items = select_stmt->fetch_where_from_tree(result_plan, table_name);
+        
+    db_name.assign(result_plan.db_name);
+
+    cout << "db name get " << db_name << endl;
+    
+    schema_db* db_schema = g_metareader->get_DB_schema(db_name);
+    schema_table* table_schema = db_schema->get_table_from_db(table_name);
+
+
+    int get_replicas_num();
+    vector<string> get_relation_table();
+    void set_sharding_key(map<string, int> sharding_key);
+    map<string, int> get_sharding_key();
+    string get_partition_by();
+    string get_primary_key();
+
+    /*this table is not distributed table*/
+    if (table_schema->get_is_distributed_table())
+    {
+
+    }
+    /*this table is distributed table*/
+    else
+    {
+        
+    }
     
 #if 0
-    sql_select_from_t *from = sql_cmd_select->query->from;
-    sql_item_linked_t *table_ref_list = from->table_reference_list;
-    sql_item_plain_table_factor_t *table_factor
-        = (sql_item_plain_table_factor_t *)table_ref_list->data;
-
-    char *table_name = table_factor->table_name;
-    table_info *a_table_info = (table_info *)g_hash_table_lookup(sd->nsc->tables, table_name);
-    if (a_table_info == NULL) {
-        log_error(logger, "Can't find table_info instance by table name: %s", table_name);
-
-        return -1;
-    }
-
-    if ( ! allow_to_read(a_table_info)) {
-        log_error(logger, "allow_to_read() failed! table name: %s", a_table_info->table_name);
-
-        return -1;
-    }
 
     if ( ! a_table_info->is_distributed) {
         tablet_t *tablet = a_table_info->single_tablet;
-
-        if (tablet->is_truncated) {
-            log_debug(logger, "Has truncated!");
-
-            return -1;
-        }
-        if ( ! tablet->is_open || ! tablet->allow_to_read) {
-            log_error(logger, "Not allowed to read!");
-
-            return -1;
-        }
 
         sql_decomposer_elem_t *elem = (sql_decomposer_elem_t *)calloc(1,
                 sizeof(sql_decomposer_elem_t));
@@ -393,13 +393,7 @@ int QueryActuator::generate_select_plan_single_table(
         }
 
         g_ptr_array_add(result, elem);
-
         return 0;
-
-free_elem:
-        sql_decomposer_elem_destroy(elem);
-
-        return -1;
     } else {
         sql_item_t *where_condition = from->where_condition;
         sql_item_linked_t *group_by_item = from->group_by_list;
@@ -818,12 +812,6 @@ int QueryActuator::gen_exec_plan_insert(
             "Can not get stmt");
         return ret;
     }
-    
-    
-        
-    
 }
-
-
 
 

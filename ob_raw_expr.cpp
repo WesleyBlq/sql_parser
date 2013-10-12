@@ -719,7 +719,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
     char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     
     ObSqlRawExpr* sql_expr = NULL;
-
+    
     if (first_id_ == OB_INVALID_ID)
     {
         ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
@@ -743,7 +743,6 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
         memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
         sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
         databuff_printf(buf, buf_len, pos, tmp_str);
-        
     }
     else
     {
@@ -1272,6 +1271,7 @@ int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, char* buf, const int
     {
         databuff_printf(buf, buf_len, pos, "DISTINCT");
     }
+    
     if (param_expr_)
     {
         databuff_printf(buf, buf_len, pos, "(");

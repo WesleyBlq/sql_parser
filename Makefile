@@ -55,6 +55,13 @@ OBJS_SQL =  \
 	jd_exec_plan.o
 
 #libsql.a
+
+%o: %c
+	gcc -g -c -o  $@ $<
+
+%o: %cpp
+	g++ -g -c -o  $@ $<
+	
 libsql.a: $(OBJS_SQL)
 	ar rv libsql.a ${OBJS_SQL}
 	g++  -Wl,-rpath -Wl,LIBDIR $(CCFLAGS_test) $(CPPFLAGS) -o parser_test parser_test.cpp $(LDLIBS)
