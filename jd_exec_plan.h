@@ -12,14 +12,34 @@
 #ifndef _JD_EXEC_PLAN_H
 #define _JD_EXEC_PLAN_H
 
+#include <stdint.h>
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <map>
 #include <string>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstdlib>
+#include <map>  
 
+#include "parse_malloc.h"
+#include "parse_node.h"
 #include "utility.h"
 #include "ob_define.h"
+#include "ob_obj_type.h"
+#include "ob_expr_obj.h"
+
+#include "ob_logical_plan.h"
+#include "ob_select_stmt.h"
+#include "ob_delete_stmt.h"
+#include "ob_insert_stmt.h"
+#include "ob_update_stmt.h"
+#include "dml_build_plan.h"
+#include "ob_logical_plan.h"
+
 
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
@@ -29,10 +49,10 @@ class  ExecPlanUnit
 {
     private:
         string sql;
-        //TABLET_INFO *db_info;
+        schema_shard* shard_info;
     public:
-        void set_exec_unit_sql(string &sql);
-        //void set_exec_uint_db_info(TABLET_INFO *db_info)
+        void set_exec_unit_sql(string sql);
+        void set_exec_uint_shard_info(schema_shard* shard_info);
 };
 
 /*对执行计划的封装*/
@@ -47,6 +67,7 @@ class SameLevelExecPlan
         void    set_parent_sql_type(uint8_t parent_sql_type);
         void    set_first_plan_true();
         void    is_first_plan();
+        void    add_exec_plan_unit(ExecPlanUnit* exec_plan_unit);
 };
 
 
@@ -163,6 +184,77 @@ class QueryActuator
             const uint64_t& query_id,
             T *& stmt);
         
+        /**************************************************
+        Funtion     :   reparse_where_items_with_route
+        Author      :   qinbo
+        Date        :   2013.10.17
+        Description :   reparse distributed where conditions items
+        Input       :   ResultPlan& result_plan,
+                        schema_table table_info,
+                        vector<vector<ObRawExpr*> > un_opt_raw_exprs,
+                        vector<vector<ObRawExpr*> > opted_raw_exprs
+        Output      :   
+        **************************************************/
+        bool reparse_where_items_with_route( 
+                                ResultPlan& result_plan,
+                                schema_table* table_info,
+                                vector<vector<ObRawExpr*> > un_opt_raw_exprs,
+                                multimap<schema_shard* , vector<ObRawExpr*> > &opted_raw_exprs);
+        
+        /**************************************************
+        Funtion     :   search_partition_sql_exprs_for_one_table
+        Author      :   qinbo
+        Date        :   2013.10.18
+        Description :   find all expr that need to be partitioned
+        Input       :   vector<ObRawExpr*>  atomic_exprs,
+                        vector<ObRawExpr*>  &partition_sql_exprs
+        Output      :   
+        **************************************************/
+        int search_partition_sql_exprs_for_one_table(
+                                vector<ObRawExpr*>  atomic_exprs,
+                                vector<ObRawExpr*>  &partition_sql_exprs);
+
+        /**************************************************
+        Funtion     :   build_shard_exprs_array_with_route
+        Author      :   qinbo
+        Date        :   2013.10.17
+        Description :   generate distributed where conditions items
+        Input       :   ResultPlan& result_plan,
+                        string &sql
+                        vector<vector<ObRawExpr*> > partition_sql_exprs
+                        vector<vector<ObRawExpr*> > atomic_exprs,
+                        multimap<schema_shard* , vector<ObRawExpr*> > &opted_raw_exprs
+        Output      :   
+        **************************************************/
+        int build_shard_exprs_array_with_route( 
+                                ResultPlan& result_plan,
+                                schema_table* table_info,
+                                vector<ObRawExpr*>  partition_sql_exprs,
+                                vector<ObRawExpr*>  atomic_exprs,
+                                multimap<schema_shard* , vector<ObRawExpr*> > &opted_raw_exprs);
+        
+        /**************************************************
+        Funtion     :   generate_distributed_where_items
+        Author      :   qinbo
+        Date        :   2013.10.17
+        Description :   generate distributed where conditions items
+        Input       :   ObRawExpr* sql_expr
+        Output      :   
+        **************************************************/
+        vector<vector<ObRawExpr*> > decompose_where_items(ObRawExpr* sql_expr);
+        /**************************************************
+        Funtion     :   append_distributed_where_items
+        Author      :   qinbo
+        Date        :   2013.10.17
+        Description :   generate distributed where conditions items
+        Input       :   ResultPlan& result_plan,
+                        string &sql
+                        vector<vector<ObRawExpr*> > &atomic_exprs_array
+        Output      :   
+        **************************************************/
+        void append_distributed_where_items(ResultPlan& result_plan,
+                                           string &sql, 
+                                           vector<vector<ObRawExpr*> > &atomic_exprs_array);
 };
 
 

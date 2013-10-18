@@ -67,7 +67,7 @@
 
 #define RAW_EXPR_BUF_SIZE   512
 #define STMT_BUF_SIZE       1024
-
+#define SQL_PLAN_BUF_SIZE   4096
 
 namespace oceanbase
 {
@@ -345,7 +345,7 @@ namespace oceanbase
 
 
     const int JD_ERR_LOGICAL_TREE_WRONG = -5070;
-
+    const int JD_ERR_SHARD_NUM_WRONG    = -5071;
 
 
     const int OB_ERR_SQL_END = -5999;

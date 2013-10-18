@@ -1,3 +1,4 @@
+#include <string.h>
 #include "ob_raw_expr.h"
 //#include "ob_transformer.h"
 #include "parse_node.h"
@@ -16,39 +17,41 @@ extern meta_reader *g_metareader;
 
 bool ObRawExpr::is_const() const
 {
-  return (type_ >= T_INT && type_ <= T_NULL);
+    return (type_ >= T_INT && type_ <= T_NULL);
 }
+
 
 bool ObRawExpr::is_column() const
 {
-  return (type_ == T_REF_COLUMN);
+    return (type_ == T_REF_COLUMN);
 }
 
 /**************************************************
-Funtion     :   set_db_name
+Funtion     :   is_or_expr
 Author      :   qinbo
-Date        :   2013.9.11
-Description :   store current db name
+Date        :   2013.9.25
+Description :   this expr is linked by OR
 Input       :   
 Output      :   
 **************************************************/
-void ObRawExpr::set_db_name(string db_name)
+bool ObRawExpr::is_or_expr() const
 {
-    this->current_db_name = db_name;
+    return (type_ == T_OP_OR);
 }
 
 /**************************************************
-Funtion     :   get_db_name
+Funtion     :   is_and_expr
 Author      :   qinbo
-Date        :   2013.9.11
-Description :   get current db name
+Date        :   2013.9.25
+Description :   this expr is linked by AND
 Input       :   
 Output      :   
 **************************************************/
-string ObRawExpr::get_db_name() const
+bool ObRawExpr::is_and_expr() const
 {
-    return current_db_name;
+    return (type_ == T_OP_AND);
 }
+
 
 /**************************************************
 Funtion     :   is_column_and_sharding_key
@@ -78,7 +81,7 @@ bool ObRawExpr::is_column_and_sharding_key( ) const
     schema_column*  column_schema= table_schema->get_column_from_table_by_id(binary_ref_raw_expr->get_second_ref_id());
     if (column_schema == NULL)
     {
-      return false;
+        return false;
     }
 
     if (column_schema->is_sharding_key())
@@ -87,7 +90,42 @@ bool ObRawExpr::is_column_and_sharding_key( ) const
     }
     
     return false;
+}
+
+/**************************************************
+Funtion     :   get_column_and_sharding_key
+Author      :   qinbo
+Date        :   2013.9.25
+Description :   get this expr's column name when this is sharding column
+Input       :   
+Output      :   
+**************************************************/
+bool ObRawExpr::get_column_and_sharding_key(string &column_name) const
+{
+    if (!is_column())
+    {
+        return false;
+    }
     
+    ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *>(const_cast<ObRawExpr *>(this));
+    
+    string db_name_tmp = get_db_name();
+    
+    schema_table*   table_schema = g_metareader->get_table_schema_by_id(db_name_tmp, binary_ref_raw_expr->get_first_ref_id());
+    if (NULL == table_schema)
+    {
+        return false;
+    }
+
+    schema_column*  column_schema= table_schema->get_column_from_table_by_id(binary_ref_raw_expr->get_second_ref_id());
+    if (column_schema == NULL)
+    {
+        return false;
+    }
+
+    column_name = column_schema->get_column_name();
+    
+    return true;
 }
 
 
@@ -298,6 +336,32 @@ bool ObRawExpr::is_aggr_fun() const
 
 
 /**************************************************
+Funtion     :   set_db_name
+Author      :   qinbo
+Date        :   2013.9.11
+Description :   store current db name
+Input       :   
+Output      :   
+**************************************************/
+void ObRawExpr::set_db_name(string db_name)
+{
+    this->current_db_name = db_name;
+}
+
+/**************************************************
+Funtion     :   get_db_name
+Author      :   qinbo
+Date        :   2013.9.11
+Description :   get current db name
+Input       :   
+Output      :   
+**************************************************/
+string ObRawExpr::get_db_name() const
+{
+    return current_db_name;
+}
+
+/**************************************************
 Funtion		:	is_need_to_get_route
 Author		:	qinbo
 Date		:	2013.9.11
@@ -315,6 +379,182 @@ bool ObRawExpr::is_need_to_get_route() const
     }
     return false;
 
+}
+
+
+/**************************************************
+Funtion     :   convert_ob_expr_to_route
+Author      :   qinbo
+Date        :   2013.10.14
+Description :   convert ob style expr to route used key relation
+Input       :   key_data& key_relation
+Output      :   
+**************************************************/
+bool ObRawExpr::convert_ob_expr_to_route(key_data& key_relation) const
+{
+    string              column_name;
+
+    if (!this->is_need_to_get_route())
+    {
+        return false;
+    }
+    
+    if (this->is_equal_filter_need_route())
+    {
+        key_relation.key_value_num = 1;
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *>(const_cast<ObRawExpr *>(this));
+        if (binary_expr->get_first_op_expr()->is_const())
+        {
+            if (binary_expr->get_second_op_expr()->get_column_and_sharding_key(column_name)
+                &&(key_relation.sharding_key == column_name))
+            {
+                key_relation.key_relation  = this->get_expr_type();
+                
+                ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *>(const_cast<ObRawExpr *>(binary_expr->get_first_op_expr()));
+                const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+            }
+        }
+        else if (binary_expr->get_second_op_expr()->is_const())
+        {
+            if (binary_expr->get_first_op_expr()->get_column_and_sharding_key(column_name)
+                &&(key_relation.sharding_key == column_name))
+            {
+                key_relation.key_relation  = this->get_expr_type();
+                ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *>(const_cast<ObRawExpr *>(binary_expr->get_second_op_expr()));
+                const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+            }
+        }
+        
+    }
+    else if (this->is_contain_filter_need_route())
+    {
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *>(const_cast<ObRawExpr *>(this));
+        if (binary_expr->get_first_op_expr()->get_column_and_sharding_key(column_name)
+            &&(key_relation.sharding_key == column_name))
+        {
+            key_relation.key_relation  = this->get_expr_type();
+            key_relation.key_value_num = 0;
+            ObMultiOpRawExpr *multi_expr    = dynamic_cast<ObMultiOpRawExpr *>(const_cast<ObRawExpr *>(binary_expr->get_second_op_expr()));
+            int32_t expr_size               = multi_expr->get_expr_size();
+            ObRawExpr *raw_expr             = NULL;
+            ObConstRawExpr *const_expr      = NULL;
+            
+            for (int32_t i = 0; i < expr_size; i++)
+            {
+                raw_expr = multi_expr->get_op_expr(i);
+                if (raw_expr->is_const())
+                {
+                    key_relation.key_value_num++;
+                    
+                    const_expr = dynamic_cast<ObConstRawExpr*>(const_cast<ObRawExpr *>(raw_expr));
+                    const_expr->get_ob_const_expr_to_key_data(key_relation, i);
+                }
+            }
+        }
+    }
+    else if (this->is_range_filter_need_route())
+    {
+        if (this->get_expr_type() >= T_OP_LE && this->get_expr_type() <= T_OP_GT)
+        {
+            key_relation.key_value_num = 1;
+            ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *>(const_cast<ObRawExpr *>(this));
+            if (binary_expr->get_first_op_expr()->is_const())
+            {
+                if (binary_expr->get_second_op_expr()->get_column_and_sharding_key(column_name)
+                    &&(key_relation.sharding_key == column_name))
+                {
+                    key_relation.key_relation  = this->get_expr_type();
+                    
+                    ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *>(const_cast<ObRawExpr *>(binary_expr->get_first_op_expr()));
+                    const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                }
+            }
+            else if (binary_expr->get_second_op_expr()->is_const())
+            {
+                if (binary_expr->get_first_op_expr()->get_column_and_sharding_key(column_name)
+                    &&(key_relation.sharding_key == column_name))
+                {
+                    key_relation.key_relation  = this->get_expr_type();
+                    ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *>(const_cast<ObRawExpr *>(binary_expr->get_second_op_expr()));
+                    const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                    return true;
+                }
+            }
+        }
+        else if (this->get_expr_type() == T_OP_BTW)
+        {
+            key_relation.key_value_num = 2;
+            ObTripleOpRawExpr *triple_expr = dynamic_cast<ObTripleOpRawExpr *>(const_cast<ObRawExpr *>(this));
+            if (triple_expr->get_first_op_expr()->get_column_and_sharding_key(column_name)
+                &&(key_relation.sharding_key == column_name))
+            {
+                key_relation.key_relation  = this->get_expr_type();
+                ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *>(const_cast<ObRawExpr *>(triple_expr->get_second_op_expr()));
+                const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                
+                const_expr = dynamic_cast<ObConstRawExpr *>(const_cast<ObRawExpr *>(triple_expr->get_third_op_expr()));
+                const_expr->get_ob_const_expr_to_key_data(key_relation, 1);
+            }
+        }
+    }
+
+    return true;
+
+}
+
+
+/**************************************************
+Funtion     :   get_ob_const_expr_to_key_data
+Author      :   qinbo
+Date        :   2013.10.14
+Description :   get const expr value
+Input       :   ObConstRawExpr *const_expr
+                key_data& key_relation
+                uint32_t seq
+Output      :   
+**************************************************/
+void ObConstRawExpr::get_ob_const_expr_to_key_data(key_data& key_relation, 
+                                                uint32_t seq) const
+{
+    ObObj value_ = this->get_value();
+
+    switch(this->get_expr_type())
+    {
+        case T_INT:
+        case T_DATE:
+        {
+            value_.get_int(key_relation.value.key_integer[seq]);
+            break;
+        }
+        case T_STRING:
+        case T_BINARY:
+        case T_DECIMAL:
+        {
+            string str;
+            value_.get_varchar(str);
+            strncpy(&key_relation.value.key_str[seq][0],str.data(), str.size());
+            break;
+        }
+        case T_FLOAT:
+        {
+            value_.get_float((float&)key_relation.value.key_float[seq]);
+            break;
+        }
+        case T_DOUBLE:
+        {
+            value_.get_double(key_relation.value.key_float[seq]);
+            break;
+        }
+        case T_BOOL:
+        {
+            value_.get_bool(key_relation.value.key_bool);
+            break;
+        }
+        case T_NULL:
+        case T_UNKNOWN:
+        default:
+            break;
+    }
 }
 
 int ObConstRawExpr::set_value_and_type(const common::ObObj& val)
@@ -887,12 +1127,20 @@ int64_t ObBinaryOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const i
     int64_t ret = OB_SUCCESS;
     char buf1[RAW_EXPR_BUF_SIZE] = {0};
     char buf2[RAW_EXPR_BUF_SIZE] = {0};
-    
+
+    if (T_OP_OR == get_expr_type())
+    {
+        databuff_printf(buf, buf_len, pos, "(");
+    }
     first_expr_->to_string(result_plan, buf1, RAW_EXPR_BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf1);
     databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
     second_expr_->to_string(result_plan, buf2, RAW_EXPR_BUF_SIZE);
     databuff_printf(buf, buf_len, pos, buf2);
+    if (T_OP_OR == get_expr_type())
+    {
+        databuff_printf(buf, buf_len, pos, ")");
+    }
 }
 
 void ObBinaryOpRawExpr::set_op_exprs(ObRawExpr *first_expr, ObRawExpr *second_expr)
@@ -1414,7 +1662,23 @@ Output		:	char* buf, const int64_t buf_len
 **************************************************/
 int64_t ObSqlRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
 {
+    key_data key_relation;
     if (NULL != expr_)
-      expr_->to_string(result_plan, buf, buf_len);
+    {
+        expr_->to_string(result_plan, buf, buf_len);
+#if 0        
+        key_relation.sharding_key.assign("lastname");
+        if (convert_ob_expr_to_route(key_relation))
+        {
+            fprintf(stderr, "key_relation relate is %d\n", key_relation.key_relation);
+            
+            fprintf(stderr, "key_relation num is %d\n", key_relation.key_value_num);
+            for (int  i=0;i<key_relation.key_value_num;i++ )
+            {
+                fprintf(stderr, "key_relation value is %s\n", key_relation.value.key_str[i]);
+            }
+        }
+#endif        
+    }
 }
 

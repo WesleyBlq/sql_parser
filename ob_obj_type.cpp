@@ -112,13 +112,13 @@ namespace oceanbase
     {
         switch(type)
         {
-        case NONE_TYPE:
+        case T_UNKNOWN:
             return ObMinType;
-        case INT:
+        case T_INT:
             return ObIntType;
-        case CHAR:
+        case T_STRING:
             return ObVarcharType;
-        case FLOAT:
+        case T_FLOAT:
             return ObFloatType;
         default:
             return ObMinType;

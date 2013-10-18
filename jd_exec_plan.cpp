@@ -1,36 +1,63 @@
 
-#include <stdint.h>
-#include <cstdlib>
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
-#include <map>
-#include <string>
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <cstdlib>
-
-#include "parse_malloc.h"
-#include "parse_node.h"
-#include "utility.h"
-#include "ob_define.h"
-#include "ob_obj_type.h"
-#include "ob_expr_obj.h"
-
-#include "ob_logical_plan.h"
-#include "ob_select_stmt.h"
-#include "ob_delete_stmt.h"
-#include "ob_insert_stmt.h"
-#include "ob_update_stmt.h"
-#include "dml_build_plan.h"
-#include "ob_logical_plan.h"
 #include "jd_exec_plan.h"
 
 extern meta_reader *g_metareader;
 
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
+
+/**************************************************
+Funtion     :   set_exec_unit_sql
+Author      :   qinbo
+Date        :   2013.10.18
+Description :   set exec plan unit sql 
+Input       :   string sql_
+Output      :   
+**************************************************/
+void ExecPlanUnit::set_exec_unit_sql(string sql_)
+{
+    sql.assign(sql_);
+}
+
+/**************************************************
+Funtion     :   set_exec_unit_sql
+Author      :   qinbo
+Date        :   2013.10.18
+Description :   set exec plan unit shard info 
+Input       :   schema_shard* shard_info_
+Output      :   
+**************************************************/
+void ExecPlanUnit::set_exec_uint_shard_info(schema_shard* shard_info_)
+{
+    shard_info = shard_info_;
+}
+
+bool SameLevelExecPlan::get_parent_sql_type()
+{
+
+}
+
+
+void SameLevelExecPlan::set_parent_sql_type(uint8_t parent_sql_type)
+{
+
+}
+
+void SameLevelExecPlan::set_first_plan_true()
+{
+
+}
+
+void SameLevelExecPlan::is_first_plan()
+{
+
+}
+
+void SameLevelExecPlan::add_exec_plan_unit(ExecPlanUnit* exec_plan_unit)
+{
+    exec_plan_units.push_back(exec_plan_unit);
+
+}
 
 
 template <class T>
@@ -133,7 +160,6 @@ int QueryActuator::generate_exec_plan(
     const uint64_t& query_id,
     int32_t* index)
 {
-    
     int& ret = err_stat.err_code_ = OB_SUCCESS;
     bool new_generated = false;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan.plan_tree_);
@@ -145,14 +171,14 @@ int QueryActuator::generate_exec_plan(
       {
         if ((final_exec_plan = (FinalExecPlan*)parse_malloc(sizeof(FinalExecPlan), NULL)) == NULL)
         {
-          ret = OB_ERR_PARSER_MALLOC_FAILED;
-          TBSYS_LOG(DEBUG, "Can not malloc space for FinalExecPlan");
+            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            TBSYS_LOG(DEBUG, "Can not malloc space for FinalExecPlan");
         }
         else
         {
-          final_exec_plan = new(final_exec_plan) FinalExecPlan();
-          TBSYS_LOG(DEBUG, "new physical plan, addr=%p", final_exec_plan);
-          new_generated = true;
+            final_exec_plan = new(final_exec_plan) FinalExecPlan();
+            TBSYS_LOG(DEBUG, "new physical plan, addr=%p", final_exec_plan);
+            new_generated = true;
         }
       }
       
@@ -289,13 +315,17 @@ int QueryActuator::generate_select_plan_single_table(
     vector<string>      table_names;
     string              table_name;
     
-    
     vector<SelectItem>  select_items;
     SelectItem          select_item;
 
     vector<string>      where_items;
     string              where_item;
     string              db_name;
+    char                buf[SQL_PLAN_BUF_SIZE] = {0};
+    string              sql_exec_plan_unit;
+    schema_shard*       shard_info = NULL;
+    ObSqlRawExpr*       sql_expr = NULL;
+    ObRawExpr*          raw_expr = NULL;
     
     /* get statement */
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
@@ -306,7 +336,6 @@ int QueryActuator::generate_select_plan_single_table(
             "Can not get stmt");
         return ret;
     }
-
 
     table_names = select_stmt->fetch_tables_from_tree(result_plan);
     if (table_names.size() > 1)
@@ -328,324 +357,172 @@ int QueryActuator::generate_select_plan_single_table(
     schema_db* db_schema = g_metareader->get_DB_schema(db_name);
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
 
-
-    int get_replicas_num();
-    vector<string> get_relation_table();
-    void set_sharding_key(map<string, int> sharding_key);
-    map<string, int> get_sharding_key();
-    string get_partition_by();
-    string get_primary_key();
+    SameLevelExecPlan* exec_plan = (SameLevelExecPlan*)parse_malloc(sizeof(SameLevelExecPlan), NULL);
+    if (exec_plan == NULL)
+    {
+        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        TBSYS_LOG(WARN, "out of memory");
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+            "Can not malloc space for SameLevelExecPlan");
+        return ret;
+    }
+    else
+    {
+        exec_plan = new(exec_plan) SameLevelExecPlan();
+    }
 
     /*this table is not distributed table*/
-    if (table_schema->get_is_distributed_table())
+    if (!table_schema->get_is_distributed_table())
     {
+        if (1 != table_schema->get_all_shards().size())
+        {
+            ret = JD_ERR_SHARD_NUM_WRONG;
+            TBSYS_LOG(WARN, "shard manage wrong");
+            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Shard manage wrong");
+            return ret;
+        }
 
+        ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*)parse_malloc(sizeof(ExecPlanUnit), NULL);
+        if (exec_plan == NULL)
+        {
+            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            TBSYS_LOG(WARN, "out of memory");
+            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Can not malloc space for ExecPlanUnit");
+            return ret;
+        }
+        else
+        {
+            exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
+        }
+
+        select_stmt->make_stmt_string( result_plan, buf, SQL_PLAN_BUF_SIZE);
+
+        /*generate sql exec plan*/
+        sql_exec_plan_unit.assign(buf, SQL_PLAN_BUF_SIZE);
+        exec_plan_unit->set_exec_unit_sql(sql_exec_plan_unit);
+
+        cout << "exec_plan_unit SQL name: " << sql_exec_plan_unit << endl;
+
+        shard_info = table_schema->get_all_shards().at(0);
+        exec_plan_unit->set_exec_uint_shard_info(shard_info);
+
+        /*add exec_plan_unit*/
+        exec_plan->add_exec_plan_unit(exec_plan_unit);
     }
     /*this table is distributed table*/
     else
-    {
-        
+    {     
+        /*if there is no where conditions*/
+        if (0 == where_items.size())
+        {
+            if (0 == table_schema->get_all_shards().size())
+            {
+                ret = JD_ERR_SHARD_NUM_WRONG;
+                TBSYS_LOG(WARN, "shard manage wrong");
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                    "Shard manage wrong");
+                return ret;
+            }
+
+            for (uint32_t i = 0; i < table_schema->get_all_shards().size(); i++ )
+            {
+                shard_info = table_schema->get_all_shards().at(i);
+                
+                ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*)parse_malloc(sizeof(ExecPlanUnit), NULL);
+                if (exec_plan == NULL)
+                {
+                    ret = OB_ERR_PARSER_MALLOC_FAILED;
+                    TBSYS_LOG(WARN, "out of memory");
+                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "Can not malloc space for ExecPlanUnit");
+                    return ret;
+                }
+                else
+                {
+                    exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
+                }
+                
+                memset(buf , 0, SQL_PLAN_BUF_SIZE);
+                select_stmt->make_stmt_string( result_plan, buf, SQL_PLAN_BUF_SIZE);
+                
+                /*generate sql exec plan*/
+                sql_exec_plan_unit.assign(buf, SQL_PLAN_BUF_SIZE);
+                exec_plan_unit->set_exec_unit_sql(sql_exec_plan_unit);
+                
+                cout << "exec_plan_unit SQL name: " << sql_exec_plan_unit << endl;
+                exec_plan_unit->set_exec_uint_shard_info(shard_info);
+                
+                /*add exec_plan_unit*/
+                exec_plan->add_exec_plan_unit(exec_plan_unit);
+            }
+        }
+        else
+        {
+            /*decompose where conditions into seperate sql which is linked by AND*/
+            vector<uint64_t> expr_ids = select_stmt->get_where_exprs();
+            sql_expr =  logical_plan->get_expr_by_id(expr_ids.at(0));
+            vector<vector<ObRawExpr*> > atomic_exprs_array = decompose_where_items(sql_expr->get_expr());
+            multimap<schema_shard* , vector<ObRawExpr*> > opted_raw_exprs;
+            schema_shard*   shard_key = NULL;
+            
+            cout << "atomic_exprs_array num: " << atomic_exprs_array.size() << endl;
+
+            multimap<schema_shard* , vector<ObRawExpr*> >::iterator p_map1;
+            multimap<schema_shard* , vector<ObRawExpr*> >::iterator p_map_tmp;
+            multimap<schema_shard* , vector<ObRawExpr*> >::iterator p_map2;
+            pair<multimap<schema_shard* , vector<ObRawExpr*> >::iterator, multimap<schema_shard* , vector<ObRawExpr*> >::iterator> raw_exprs_same_shard;
+
+            reparse_where_items_with_route( result_plan,    
+                                            table_schema,
+                                            atomic_exprs_array,
+                                            opted_raw_exprs);
+            int ddddd=0;
+            for(p_map1 = opted_raw_exprs.begin() ; p_map1 != opted_raw_exprs.end(); )
+            {
+                ddddd++;
+                vector<vector<ObRawExpr*> > final_exprs_array;
+                string sql;
+                shard_key = p_map1->first;
+                raw_exprs_same_shard = opted_raw_exprs.equal_range(p_map1->first);
+                for(p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
+                {
+                    final_exprs_array.push_back((*p_map2).second);
+                }
+
+                for (int j = 0; j < opted_raw_exprs.count(p_map1->first); j++)
+                {
+                    p_map1++ ;
+                }
+                
+                append_distributed_where_items(result_plan, sql, final_exprs_array) ;
+
+                ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*)parse_malloc(sizeof(ExecPlanUnit), NULL);
+                if (exec_plan == NULL)
+                {
+                    ret = OB_ERR_PARSER_MALLOC_FAILED;
+                    TBSYS_LOG(WARN, "out of memory");
+                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "Can not malloc space for ExecPlanUnit");
+                    return ret;
+                }
+                else
+                {
+                    exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
+                }
+                
+                exec_plan_unit->set_exec_unit_sql(sql);
+                cout << "exec_plan_unit shard name: " << shard_key->get_shard_name()<< endl;
+                cout << "exec_plan_unit SQL name: " << sql << endl;
+                exec_plan_unit->set_exec_uint_shard_info(shard_key);
+                
+                /*add exec_plan_unit*/
+                exec_plan->add_exec_plan_unit(exec_plan_unit);
+            }
+        }
     }
     
-#if 0
-
-    if ( ! a_table_info->is_distributed) {
-        tablet_t *tablet = a_table_info->single_tablet;
-
-        sql_decomposer_elem_t *elem = (sql_decomposer_elem_t *)calloc(1,
-                sizeof(sql_decomposer_elem_t));
-        if (elem == NULL) {
-            log_error(logger, "calloc() for elem failed!");
-
-            return -1;
-        }
-
-        elem->a_cluster = (cluster *)g_hash_table_lookup(sd->nsc->clusters,
-                tablet->master_tablet_server);
-        if (elem->a_cluster == NULL) {
-            log_error(logger, "Can't find cluster instance by cluster name: %s",
-                    tablet->master_tablet_server);
-
-            goto free_elem;
-        }
-
-        if (clone_tablets(a_table_info->tablet_array, &elem->tablets) < 0) {
-            log_error(logger, "clone_tablets() failed!");
-
-            goto free_elem;
-        }
-
-        if (tablet->alias != NULL && strlen(tablet->alias) > 0) {
-            table_factor->table_name = tablet->alias;
-        }
-        int generated_sql_size = original_sql_size * SQL_DECOMPOSE_EXTEND_ROTIO;
-        elem->sql = (char *)calloc(1, generated_sql_size);
-        if (elem->sql == NULL) {
-            log_error(logger, "calloc() for elem->sql failed!");
-
-            goto free_elem;
-        }
-        if (sql_cmd_select->to_string(elem->sql, generated_sql_size,
-                    (sql_command_t *)sql_cmd_select) == 0) {
-            log_error(logger, "to_string() failed!");
-
-            goto free_elem;
-        }
-
-        g_ptr_array_add(result, elem);
-        return 0;
-    } else {
-        sql_item_t *where_condition = from->where_condition;
-        sql_item_linked_t *group_by_item = from->group_by_list;
-        sql_item_t *having_item = from->having;
-        sql_item_linked_t *order_by_item = from->order_by_list;
-        sql_item_limit_t *limit_item = from->limit;
-        if (from->where_condition == NULL) {
-            GPtrArray *tablets = a_table_info->tablet_array;
-            guint i = 0;
-            for (; i < tablets->len; i++) {
-                tablet_t *tablet = ((tablet_t *)tablets->pdata[i]);
-
-                if (tablet->is_truncated) {
-                    log_debug(logger, "Has truncated!");
-
-                    continue;
-                }
-                if ( ! tablet->is_open || ! tablet->allow_to_read) {
-                    log_error(logger, "Not allowed to read!");
-
-                    return -1;
-                }
-
-                sql_decomposer_elem_t *elem = (sql_decomposer_elem_t *)calloc(1,
-                        sizeof(sql_decomposer_elem_t));
-                if (elem == NULL) {
-                    log_error(logger, "calloc() for elem failed!");
-
-                    return -1;
-                }
-
-                elem->a_cluster = (cluster *)g_hash_table_lookup(sd->nsc->clusters,
-                        tablet->master_tablet_server);
-                if (elem->a_cluster == NULL) {
-                    log_error(logger, "Can't find cluster instance by cluster name: %s",
-                            tablet->master_tablet_server);
-
-                    goto free_elem_2;
-                }
-
-                elem->tablets = g_ptr_array_new();
-                if (tablets == NULL) {
-                    log_error(logger, "g_ptr_array_new() for elem->tablets failed!");
-
-                    goto free_elem_2;
-                }
-                g_ptr_array_add(elem->tablets, tablet);
-
-                if (tablet->alias != NULL && strlen(tablet->alias) > 0) {
-                    table_factor->table_name = tablet->alias;
-                } else {
-                    table_factor->table_name = table_name;
-                }
-                int generated_sql_size = original_sql_size * SQL_DECOMPOSE_EXTEND_ROTIO;
-                elem->sql = (char *)calloc(1, generated_sql_size);
-                if (elem->sql == NULL) {
-                    log_error(logger, "calloc() for elem->sql failed!");
-
-                    goto free_elem_2;
-                }
-                if (sql_cmd_select->to_string(elem->sql, generated_sql_size,
-                            (sql_command_t *)sql_cmd_select) == 0) {
-                    log_error(logger, "to_string() failed!");
-
-                    goto free_elem_2;
-                }
-
-                g_ptr_array_add(result, elem);
-
-                continue;
-
-free_elem_2:
-                sql_decomposer_elem_destroy(elem);
-
-                return -1;
-            }
-
-            if (result->len == 0) {
-                log_error(logger, "Not found any tablet!");
-
-                return -1;
-            }
-
-            return 0;
-        } else {
-            if (from->where_condition->item_type != ITEM_EXPR) {
-                log_error(logger, "where condition is not sql_expr_t, not support now!");
-                return -1;
-            }  
-
-            GPtrArray *atomic_exprs_array = create_atomic_exprs_array(
-                    (sql_expr_t *)from->where_condition);
-            if (atomic_exprs_array == NULL) {
-                log_error(logger, "create_atomic_exprs_array() failed!");
-
-                return -1;
-            }
-
-            // Container type: <tablet_t *, GPtrArray *>
-            GHashTable *tablet_exprs_array_mappings = g_hash_table_new_full(
-                    g_direct_hash, g_direct_equal, NULL, g_destroy_notify_for_hash_value);
-            if (tablet_exprs_array_mappings == NULL) {
-                log_error(logger, "g_hash_table_new() for tablet_exprs_array_mappings failed!");
-
-                goto free_exprs_array;
-            }
-            if (build_tablet_exprs_array_mappings(sd, a_table_info, atomic_exprs_array,
-                    tablet_exprs_array_mappings) < 0) {
-                log_error(logger, "build_tablet_exprs_array_mappings() failed!");
-
-                goto free_mappings;
-            }
-
-            from->where_condition = NULL;
-            from->group_by_list = NULL;
-            from->having = NULL;
-            from->order_by_list = NULL;
-            from->limit = NULL;
-
-            GHashTableIter iter;
-            gpointer key;
-            gpointer value;
-            g_hash_table_iter_init(&iter, tablet_exprs_array_mappings);
-            while (g_hash_table_iter_next(&iter, &key, &value)) {
-                tablet_t *tablet = (tablet_t *)key;
-
-                if (tablet->is_truncated) {
-                    log_debug(logger, "Has truncated!");
-
-                    continue;
-                }
-                if ( ! tablet->is_open || ! tablet->allow_to_read) {
-                    log_error(logger, "Not allowed to read!");
-
-                    goto free_mappings;
-                }
-
-                GPtrArray *atomic_exprs_array = (GPtrArray *)value;
-
-                sql_decomposer_elem_t *elem = (sql_decomposer_elem_t *)calloc(1,
-                        sizeof(sql_decomposer_elem_t));
-                if (elem == NULL) {
-                    log_error(logger, "calloc() for elem failed!");
-
-                    goto free_mappings;
-                }
-
-                elem->a_cluster = (cluster *)g_hash_table_lookup(sd->nsc->clusters,
-                        tablet->master_tablet_server);
-                if (elem->a_cluster == NULL) {
-                    log_error(logger, "Can't find cluster instance by cluster name: %s",
-                            tablet->master_tablet_server);
-
-                    goto free_elem_3;
-                }
-
-                elem->tablets = g_ptr_array_new();
-                if (elem->tablets == NULL) {
-                    log_error(logger, "g_ptr_array_new() for elem->tablets failed!");
-
-                    goto free_elem_3;
-                }
-                g_ptr_array_add(elem->tablets, tablet);
-
-                if (tablet->alias != NULL && strlen(tablet->alias) > 0) {
-                    table_factor->table_name = tablet->alias;
-                } else {
-                    table_factor->table_name = table_name;
-                }
-                int size = original_sql_size * 2;
-                elem->sql = (char *)calloc(1, size);
-                if (elem->sql == NULL) {
-                    log_error(logger, "calloc() for elem->sql failed!");
-
-                    goto free_elem_3;
-                }
-                if (sql_cmd_select->to_string(elem->sql, size, (sql_command_t *)sql_cmd_select)
-                        == 0) {
-                    log_error(logger, "to_string() failed!");
-
-                    goto free_elem_3;
-                }
-                elem->sql[strlen(elem->sql)-1] = '\0';
-                if (append_where_clause(elem->sql, size, atomic_exprs_array) < 0) {
-                    log_error(logger, "append_where_clause() failed!");
-
-                    goto free_elem_3;
-                }
-                if (append_group_by_clause(elem->sql, size, group_by_item) < 0) {
-                    log_error(logger, "append_group_by_clause() failed!");
-
-                    goto free_elem_3;
-                }
-                if (append_having_clause(elem->sql, size, having_item) < 0) {
-                    log_error(logger, "append_having_clause() failed!");
-
-                    goto free_elem_3;
-                }
-                if (append_order_by_clause(elem->sql, size, order_by_item) < 0) {
-                    log_error(logger, "append_order_by_clause() failed!");
-
-                    goto free_elem_3;
-                }
-                if (append_limit_clause(elem->sql, size, limit_item) < 0) {
-                    log_error(logger, "append_limit_clause() failed!");
-
-                    goto free_elem_3;
-                }
-
-                g_ptr_array_add(result, elem);
-
-                continue;
-free_elem_3:
-                sql_decomposer_elem_destroy(elem);
-
-                goto free_mappings;
-            }
-
-            if (result->len == 0) {
-                log_error(logger, "Not found any tablet!");
-
-                goto free_mappings;
-            }
-
-            g_hash_table_destroy(tablet_exprs_array_mappings);
-            g_ptr_array_set_free_func(atomic_exprs_array, g_destroy_notify_for_array);
-            g_ptr_array_free(atomic_exprs_array, TRUE);
-
-            from->where_condition = where_condition;
-            from->group_by_list = group_by_item;
-            from->having = having_item;
-            from->order_by_list = order_by_item;
-            from->limit = limit_item;
-
-            return 0;
-
-free_mappings:
-            g_hash_table_destroy(tablet_exprs_array_mappings);
-free_exprs_array:
-            g_ptr_array_set_free_func(atomic_exprs_array, g_destroy_notify_for_array);
-            g_ptr_array_free(atomic_exprs_array, TRUE);
-            
-            from->where_condition = where_condition;
-            from->group_by_list = group_by_item;
-            from->having = having_item;
-            from->order_by_list = order_by_item;
-            from->limit = limit_item;
-
-            return -1;
-        }
-    }
-#endif
     return 0;
 }
 
@@ -814,4 +691,311 @@ int QueryActuator::gen_exec_plan_insert(
     }
 }
 
+
+
+/**************************************************
+Funtion     :   decompose_where_items
+Author      :   qinbo
+Date        :   2013.9.24
+Description :   generate distributed where conditions items
+Input       :   ResultPlan& result_plan,
+                vector<WhereSubElem> &where_items
+Output      :   
+**************************************************/
+vector<vector<ObRawExpr*> > QueryActuator::decompose_where_items(ObRawExpr* sql_expr)
+{
+    int32_t i = 0;
+    vector<vector<ObRawExpr*> > atomic_exprs_array;
+    
+    if (sql_expr->is_or_expr())
+    {
+        vector<vector<ObRawExpr*> > left_atomic_exprs_array;
+
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *>(const_cast<ObRawExpr *>(sql_expr));
+        ObRawExpr *left_sql_item = binary_expr->get_first_op_expr();
+        
+        if (left_sql_item->is_and_expr()||left_sql_item->is_or_expr()) 
+        {
+            left_atomic_exprs_array = decompose_where_items(left_sql_item);
+        } 
+        else 
+        {
+            vector<ObRawExpr*> atomic_exprs1;
+            atomic_exprs1.push_back(left_sql_item);
+            left_atomic_exprs_array.push_back(atomic_exprs1);
+        }
+        
+        ObRawExpr *right_sql_item = binary_expr->get_second_op_expr();
+        vector<vector<ObRawExpr*> > right_atomic_exprs_array;
+        
+        if (right_sql_item->is_and_expr()||right_sql_item->is_or_expr()) 
+        {
+            right_atomic_exprs_array = decompose_where_items(right_sql_item);
+        } 
+        else 
+        {
+            vector<ObRawExpr*> atomic_exprs2;
+            atomic_exprs2.push_back(right_sql_item);
+            right_atomic_exprs_array.push_back(atomic_exprs2);
+        }
+
+        /*add with each other*/
+        for (i = 0; i < left_atomic_exprs_array.size(); i++) 
+        {
+            atomic_exprs_array.push_back(left_atomic_exprs_array.at(i));
+        }
+        
+        for (i = 0; i < right_atomic_exprs_array.size(); i++) 
+        {
+            atomic_exprs_array.push_back(right_atomic_exprs_array.at(i));
+        }
+        
+        return atomic_exprs_array;
+    }
+    else if (sql_expr->is_and_expr())
+    {
+        vector<vector<ObRawExpr*> > left_atomic_exprs_array;
+
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *>(const_cast<ObRawExpr *>(sql_expr));
+        ObRawExpr *left_sql_item = binary_expr->get_first_op_expr();
+        
+        if (left_sql_item->is_and_expr()||left_sql_item->is_or_expr()) 
+        {
+            left_atomic_exprs_array = decompose_where_items(left_sql_item);
+        } 
+        else 
+        {
+            vector<ObRawExpr*> atomic_exprs1;
+            atomic_exprs1.push_back(left_sql_item);
+            left_atomic_exprs_array.push_back(atomic_exprs1);
+        }
+        
+        ObRawExpr *right_sql_item = binary_expr->get_second_op_expr();
+        vector<vector<ObRawExpr*> > right_atomic_exprs_array;
+        
+        if (right_sql_item->is_and_expr()||right_sql_item->is_or_expr()) 
+        {
+            right_atomic_exprs_array = decompose_where_items(right_sql_item);
+        } else {
+            vector<ObRawExpr*> atomic_exprs2;
+            atomic_exprs2.push_back(right_sql_item);
+            right_atomic_exprs_array.push_back(atomic_exprs2);
+        }
+
+        /*X with each other*/
+        for (i = 0; i < left_atomic_exprs_array.size(); i++) {
+            uint32_t j;
+            for (j = 0; j < right_atomic_exprs_array.size(); j++) {
+                vector<ObRawExpr*> atomic_exprs;
+
+                uint32_t k;
+                vector<ObRawExpr*> left_atomic_exprs = left_atomic_exprs_array.at(i);
+                for (k = 0; k < left_atomic_exprs.size(); k++) {
+                    atomic_exprs.push_back(left_atomic_exprs.at(k));
+                }
+                vector<ObRawExpr*> right_atomic_exprs = right_atomic_exprs_array.at(j);
+                for (k = 0; k < right_atomic_exprs.size(); k++) {
+                    atomic_exprs.push_back(right_atomic_exprs.at(k));
+                }
+
+                atomic_exprs_array.push_back(atomic_exprs);
+            }
+        }
+        
+        return atomic_exprs_array;
+    }
+}
+
+
+/**************************************************
+Funtion     :   reparse_where_items_with_route
+Author      :   qinbo
+Date        :   2013.10.17
+Description :   reparse distributed where conditions items
+Input       :   ResultPlan& result_plan,
+                schema_table table_info,
+                vector<vector<ObRawExpr*> > un_opt_raw_exprs,
+                vector<vector<ObRawExpr*> > opted_raw_exprs
+Output      :   
+**************************************************/
+bool QueryActuator::reparse_where_items_with_route( 
+                ResultPlan& result_plan,
+                schema_table* table_info,
+                vector<vector<ObRawExpr*> > un_opt_raw_exprs,
+                multimap<schema_shard* , vector<ObRawExpr*> > &opted_raw_exprs)
+{
+    ObRawExpr* raw_expr = NULL;
+    int ret = 0;
+    vector<schema_shard*> all_table_shards = table_info->get_all_shards();
+
+
+    if (un_opt_raw_exprs.size() == 0) 
+    {
+        return false;
+    }
+    
+    for (int i = 0; i < un_opt_raw_exprs.size(); i++) 
+    {
+        vector<ObRawExpr*> atomic_exprs = un_opt_raw_exprs.at(i);
+        vector<ObRawExpr*> partition_sql_exprs;
+
+        search_partition_sql_exprs_for_one_table(atomic_exprs, partition_sql_exprs);
+
+        /*if there is no route sql, this sql should be sent to all shards*/
+        if (partition_sql_exprs.size() == 0)
+        {
+            for (int j = 0; j < all_table_shards.size(); j++)
+            {
+                opted_raw_exprs.insert(pair<schema_shard* , vector<ObRawExpr*> >(all_table_shards.at(j), atomic_exprs));
+            }
+        }
+        /*if there is route sql, this sql should be sent to related shards*/
+        else 
+        {
+            build_shard_exprs_array_with_route(
+                                        result_plan,
+                                        table_info,
+                                        partition_sql_exprs, 
+                                        atomic_exprs,
+                                        opted_raw_exprs);
+        }
+    }
+    return true;
+    
+}
+
+/**************************************************
+Funtion     :   search_partition_sql_exprs_for_one_table
+Author      :   qinbo
+Date        :   2013.10.18
+Description :   find all expr that need to be partitioned
+Input       :   vector<ObRawExpr*>  atomic_exprs,
+                vector<ObRawExpr*>  &partition_sql_exprs
+Output      :   
+**************************************************/
+int QueryActuator::search_partition_sql_exprs_for_one_table(
+                        vector<ObRawExpr*>  atomic_exprs,
+                        vector<ObRawExpr*>  &partition_sql_exprs)
+{
+    uint32_t i = 0;
+    ObRawExpr* raw_expr = NULL;
+    
+    for (; i < atomic_exprs.size(); i++) 
+    {
+        raw_expr = atomic_exprs.at(i);
+        
+        if (raw_expr->is_need_to_get_route())
+        {
+            partition_sql_exprs.push_back(raw_expr);
+        }
+    }
+
+    return 0;
+}
+
+/**************************************************
+Funtion     :   append_distributed_where_items
+Author      :   qinbo
+Date        :   2013.10.17
+Description :   generate distributed where conditions items
+Input       :   ResultPlan& result_plan,
+                string &sql
+                vector<vector<ObRawExpr*> > &atomic_exprs_array
+Output      :   
+**************************************************/
+void QueryActuator::append_distributed_where_items(ResultPlan& result_plan,
+                                                string &sql, 
+                                                vector<vector<ObRawExpr*> > &atomic_exprs_array) 
+{
+    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
+    
+    if (atomic_exprs_array.size() == 0) 
+    {
+        return;
+    }
+    
+    for (int i = 0; i < atomic_exprs_array.size(); i++) 
+    {
+        if (i > 0) 
+        {
+            sql.append(" OR ");
+        }
+        vector<ObRawExpr*> atomic_exprs = atomic_exprs_array.at(i);
+        for (int j=0; j < atomic_exprs.size(); j++) 
+        {
+            if (j > 0) 
+            {
+                sql.append(" AND ");
+            }
+            memset(tmp_str, 0 ,RAW_EXPR_BUF_SIZE);
+            atomic_exprs.at(j)->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
+            sql.append(tmp_str, RAW_EXPR_BUF_SIZE);
+        }
+    }
+    
+    return;
+}
+
+
+/**************************************************
+Funtion     :   build_shard_exprs_array_with_route
+Author      :   qinbo
+Date        :   2013.10.17
+Description :   generate distributed where conditions items
+Input       :   ResultPlan& result_plan,
+                string &sql
+                vector<vector<ObRawExpr*> > partition_sql_exprs
+                vector<vector<ObRawExpr*> > atomic_exprs,
+                multimap<schema_shard* , vector<ObRawExpr*> > &opted_raw_exprs
+Output      :   
+**************************************************/
+int QueryActuator::build_shard_exprs_array_with_route( 
+                            ResultPlan& result_plan,
+                            schema_table* table_info,
+                            vector<ObRawExpr*>  partition_sql_exprs,
+                            vector<ObRawExpr*>  atomic_exprs,
+                            multimap<schema_shard* , vector<ObRawExpr*> > &opted_raw_exprs)
+{
+    ObRawExpr* raw_expr = NULL;
+    int ret = 0;
+    
+    for (int j = 0; j < partition_sql_exprs.size(); j++) 
+    {
+        raw_expr = partition_sql_exprs.at(j);
+        if (raw_expr->is_need_to_get_route())
+        {
+            string db_name      = raw_expr->get_db_name();
+            string table_name   = table_info->get_table_name();
+            map<string, SqlItemType>    sharding_key_tmp = table_info->get_sharding_key();
+            vector<key_data>            key_relations;
+            key_data                    key_relation;
+            vector<schema_shard*>       shard_info;
+            
+            map<string, SqlItemType>::iterator it = sharding_key_tmp.begin();
+            
+            while (it != sharding_key_tmp.end()) 
+            {
+                memset(&key_relation, 0, sizeof(key_data));
+                key_relation.db_name        = db_name;
+                key_relation.table_name     = table_name;
+                key_relation.sharding_key   = it->first;
+                key_relation.key_type       = it->second;
+                
+                if (raw_expr->convert_ob_expr_to_route(key_relation))
+                {
+                    key_relations.push_back(key_relation);
+                }
+        
+                it++;
+            }
+        
+            if (key_relations.size() > 0)
+            {
+                router *route_info = (router *)result_plan.route_info;
+                route_info->get_route_result(key_relations, &shard_info, &ret);
+            }
+        }
+    }
+
+}
 

@@ -46,30 +46,41 @@ sql_parser(char * sql)
 
     g_metareader->add_DB_schema("qinbo");
     g_metareader->add_table_schema("qinbo","persons", 100);
-    g_metareader->add_column_schema("qinbo","persons", "lastname", 1111, CHAR, 0);
-    g_metareader->add_column_schema("qinbo","persons", "address", 1112, CHAR, 0);
-    g_metareader->add_column_schema("qinbo","persons", "id", 1113, INT, 0);
-
+    g_metareader->add_column_schema("qinbo","persons", "lastname", 1111, T_STRING, 0);
+    g_metareader->add_column_schema("qinbo","persons", "address", 1112, T_STRING, 0);
+    g_metareader->add_column_schema("qinbo","persons", "id", 1113, T_INT, 0);
+    
     g_metareader->add_table_schema("qinbo","order_list", 101);
-    g_metareader->add_column_schema("qinbo","order_list", "id", 1211, INT, 0);
-    g_metareader->add_column_schema("qinbo","order_list", "item_id", 1212, INT, 0);
-    g_metareader->add_column_schema("qinbo","order_list", "order_desc", 1213, CHAR, 0);    
+    g_metareader->add_column_schema("qinbo","order_list", "id", 1211, T_INT, 0);
+    g_metareader->add_column_schema("qinbo","order_list", "item_id", 1212, T_INT, 0);
+    g_metareader->add_column_schema("qinbo","order_list", "order_desc", 1213, T_STRING, 0);    
 
     schema_table* schema_table = g_metareader->get_table_schema("qinbo",  "persons");
      if (schema_table) {
          cout << "get_table_id:" << schema_table->get_table_id() << endl;
      }
-    
-     schema_column* schema_column = g_metareader->get_column_schema("qinbo","persons", "address");
+
+     schema_shard *shard_info1 = new schema_shard("person1");
+     schema_shard *shard_info2 = new schema_shard("person2");
+     schema_table->add_shard_to_table(shard_info1);
+     schema_table->add_shard_to_table(shard_info2);
+     schema_table->set_is_distributed_table(true);
+
+     
+     schema_column* schema_column = g_metareader->get_column_schema("qinbo","persons", "id");
      if (schema_column) {
          cout << "address: get_column_id:" << schema_column->get_column_id() << endl;
      }
+     
+     schema_column->set_sharding_key_status(false);
     
      schema_column = g_metareader->get_column_schema("qinbo","persons", "lastname");
      if (schema_column) {
          cout << "lastName: get_column_id:" << schema_column->get_column_id() << endl;
      }
-    
+
+     schema_column->set_sharding_key_status(false);
+     
      int a =  g_metareader->get_all_column_schemas("qinbo","persons").size();
      //cout << "persons: column_num:" << a << endl;
      
@@ -172,16 +183,15 @@ sql_parser(char * sql)
     ObSelectStmt *select;
     if(!query_actuator.get_stmt_instance(result_plan, select))
     {
-        return 1;
+        ret = OB_ERR_GEN_PLAN;
+        return ret;
     }
-    
-    fprintf(stderr, "get_stmt_instance OK\n");
-    
+        
     FinalExecPlan* final_exec_plan = NULL;
     ErrStat err_stat;
     if (OB_SUCCESS != (ret = query_actuator.generate_exec_plan(result_plan, final_exec_plan, err_stat)))
     {
-        fprintf(stderr, "failed to transform to physical plan\n");
+        fprintf(stderr, "generate_exec_plan: %s\n", result_plan.err_stat_.err_msg_);
         ret = OB_ERR_GEN_PLAN;
         return ret;
     }
@@ -235,7 +245,7 @@ UNION ALL   \
 SELECT id FROM order_list";
 
     char *sql10 = "UPDATE persons SET address = 'BEIJING' WHERE lastname = 'Wilson'";
-    char *sql11 = "INSERT INTO persons (address, lastname) VALUES ('BEIJING', 'Champs-Elysees')";
+    char *sql11 = "SELECT COUNT(lastname), address AS addr FROM persons";
 
     char *sql12 = "INSERT INTO persons VALUES ('Gates', 'Bill', 100), ('qinbo', 'qin', 101)";
 
@@ -244,12 +254,13 @@ SELECT address,lastname FROM persons";
 
     char *sql14 = "DELETE FROM persons  WHERE address = 'beijing'";
 
-    char *sql15 = "SELECT COUNT(lastname), address AS addr FROM persons WHERE id IN (10,11,12)";
+    char *sql15 = "SELECT COUNT(lastname), address AS addr FROM persons WHERE lastname > 'cao1' AND id = 10 AND (id = 15 OR id = 100)";
     char *sqls = "select t.id, s.name from persons t join persons s on t.id = s.id";
 
     //sql_parser(sql4);
     //sql_parser(sql6);
     sql_parser(sql15);
+    //sql_parser(sql11);
     //sql_parser(sql14);
     //sql_parser(sql9);
     //sql_parser(sql8);

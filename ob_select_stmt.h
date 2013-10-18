@@ -71,7 +71,7 @@ namespace oceanbase {
 
         struct WhereSubElem {
             uint64_t expr_id_;
-
+            string  where_item_name;
         };
 
         /*END: added by qinbo*/
@@ -394,8 +394,7 @@ namespace oceanbase {
                     const int64_t buf_len);
             int64_t make_where_string(ResultPlan& result_plan,
                     char* buf,
-                    const int64_t buf_len,
-                    WhereSubElem &where_sub_elems);
+                    const int64_t buf_len);
 
             int64_t make_group_by_string(ResultPlan& result_plan,
                     char* buf,

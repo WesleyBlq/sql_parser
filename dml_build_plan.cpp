@@ -239,8 +239,9 @@ int resolve_and_exprs(
   int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
   if (node)
   {
+    /*BEGIN:Modified by qinbo, No matter OP is AND or not,  left and right expr is both uniquely stored*/
     /*when OP is AND, left and right expr is both uniquely stored, else stored as whole*/
-    if (node->type_ != T_OP_AND)
+    //if (node->type_ != T_OP_AND)
     {
       uint64_t expr_id = OB_INVALID_ID;
       ret = resolve_independ_expr(result_plan, stmt, node, expr_id, expr_scope_type);
@@ -254,12 +255,15 @@ int resolve_and_exprs(
         #endif
       }
     }
+    #if 0 /*deleted by qinbo*/
     else
     {
       ret = resolve_and_exprs(result_plan, stmt, node->children_[0], and_exprs, expr_scope_type);
       if (ret == OB_SUCCESS)
         ret = resolve_and_exprs(result_plan, stmt, node->children_[1], and_exprs, expr_scope_type);
     }
+    #endif
+    /*END:Modified by qinbo, No matter OP is AND or not,  left and right expr is both uniquely stored*/
   }
   return ret;
 }

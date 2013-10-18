@@ -43,6 +43,26 @@ namespace oceanbase
       bool is_const() const;
       bool is_column() const;
       /**************************************************
+      Funtion     :   is_or_expr
+      Author      :   qinbo
+      Date        :   2013.9.25
+      Description :   this expr is linked by OR
+      Input       :   
+      Output      :   
+      **************************************************/
+      bool is_or_expr() const;
+
+      /**************************************************
+      Funtion     :   is_and_expr
+      Author      :   qinbo
+      Date        :   2013.9.25
+      Description :   this expr is linked by AND
+      Input       :   
+      Output      :   
+      **************************************************/
+      bool is_and_expr() const;
+      
+      /**************************************************
       Funtion     :   is_column_and_sharding_key
       Author      :   qinbo
       Date        :   2013.9.25
@@ -51,6 +71,17 @@ namespace oceanbase
       Output      :   
       **************************************************/
       bool is_column_and_sharding_key( ) const;
+
+      /**************************************************
+      Funtion     :   get_column_and_sharding_key
+      Author      :   qinbo
+      Date        :   2013.9.25
+      Description :   get this expr's column name when this is sharding column
+      Input       :   
+      Output      :   
+      **************************************************/
+      bool get_column_and_sharding_key(string &column_name) const;
+      
       /**************************************************
       Funtion     :   is_contain_filter
       Author      :   qinbo
@@ -140,6 +171,15 @@ namespace oceanbase
           ObTransformer *transformer = NULL,
           ObLogicalPlan *logical_plan = NULL,
           ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
+      /**************************************************
+      Funtion     :   convert_ob_expr_to_route
+      Author      :   qinbo
+      Date        :   2013.10.14
+      Description :   convert ob style expr to route used key relation
+      Input       :   key_data& key_relation
+      Output      :   
+      **************************************************/
+      bool convert_ob_expr_to_route(key_data& key_relation) const;
       virtual void print(FILE* fp, int32_t level) const = 0;
       /*added by qinbo*/
       virtual int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const = 0;
@@ -172,7 +212,18 @@ namespace oceanbase
       void print(FILE* fp, int32_t level) const;
       /*added by qinbo*/
       int64_t to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const;
-
+      /**************************************************
+      Funtion     :   get_ob_const_expr_to_key_data
+      Author      :   qinbo
+      Date        :   2013.10.14
+      Description :   get const expr value
+      Input       :   ObConstRawExpr *const_expr
+                      key_data& key_relation
+                      uint32_t seq
+      Output      :   
+      **************************************************/
+      void get_ob_const_expr_to_key_data(key_data& key_relation, 
+                                          uint32_t seq) const;
     private:
       oceanbase::common::ObObj value_;
     };
@@ -562,7 +613,6 @@ namespace oceanbase
       //common::ObBitSet<>  tables_set_;
       ObRawExpr*  expr_;
     };
-
   }
 
 }

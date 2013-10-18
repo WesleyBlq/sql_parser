@@ -236,8 +236,6 @@ typedef enum SqlPrivilegeType
   T_PRIV_NUM
 } SqlPrivilegeType;
 
-const char* ob_priv_type_str(const SqlPrivilegeType priv_type);
-
 
 #ifdef __cplusplus
 }
