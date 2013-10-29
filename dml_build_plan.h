@@ -24,9 +24,9 @@
 
 using namespace std;
 /*
-  * Expressions from different scope have different limitations,
-  * we need a flage to distinguish where they are from.
-  */
+ * Expressions from different scope have different limitations,
+ * we need a flage to distinguish where they are from.
+ */
 #define T_NONE_LIMIT      0
 #define T_WHERE_LIMIT     1
 #define T_GROUP_LIMIT     2
@@ -37,46 +37,46 @@ using namespace std;
 #define T_VARIABLE_VALUE_LIMIT 7
 
 extern int resolve(
-    ResultPlan* result_plan, 
-    ParseNode* node);
+        ResultPlan* result_plan,
+        ParseNode* node);
 extern int resolve_select_stmt(
-    ResultPlan* result_plan,
-    ParseNode* node,
-    uint64_t& query_id);
+        ResultPlan* result_plan,
+        ParseNode* node,
+        uint64_t& query_id);
 extern int resolve_delete_stmt(
-    ResultPlan* result_plan,
-    ParseNode* node,
-    uint64_t& query_id);
+        ResultPlan* result_plan,
+        ParseNode* node,
+        uint64_t& query_id);
 extern int resolve_insert_stmt(
-    ResultPlan* result_plan,
-    ParseNode* node,
-    uint64_t& query_id);
+        ResultPlan* result_plan,
+        ParseNode* node,
+        uint64_t& query_id);
 extern int resolve_update_stmt(
-    ResultPlan* result_plan,
-    ParseNode* node,
-    uint64_t& query_id);
+        ResultPlan* result_plan,
+        ParseNode* node,
+        uint64_t& query_id);
 extern int resolve_table(
-    ResultPlan * result_plan,
-    oceanbase::sql::ObStmt* stmt,
-    ParseNode* node,
-    uint64_t& table_id);
+        ResultPlan * result_plan,
+        oceanbase::sql::ObStmt* stmt,
+        ParseNode* node,
+        uint64_t& table_id);
 extern int resolve_and_exprs(
-    ResultPlan * result_plan,
-    oceanbase::sql::ObStmt* stmt,
-    ParseNode* node,
-    vector<uint64_t>& and_exprs,
-    int32_t expr_scope_type = T_NONE_LIMIT);
+        ResultPlan * result_plan,
+        oceanbase::sql::ObStmt* stmt,
+        ParseNode* node,
+        vector<uint64_t>& and_exprs,
+        int32_t expr_scope_type = T_NONE_LIMIT);
 extern int resolve_independ_expr(
-    ResultPlan * result_plan,
-    oceanbase::sql::ObStmt* stmt,
-    ParseNode* node,
-    uint64_t& expr_id,
-    int32_t expr_scope_type = T_NONE_LIMIT);
+        ResultPlan * result_plan,
+        oceanbase::sql::ObStmt* stmt,
+        ParseNode* node,
+        uint64_t& expr_id,
+        int32_t expr_scope_type = T_NONE_LIMIT);
 extern int resolve_table_columns(
-    ResultPlan * result_plan,
-    oceanbase::sql::ObStmt* stmt,
-    oceanbase::sql::TableItem& table_item,
-    int64_t num_columns = -1);
+        ResultPlan * result_plan,
+        oceanbase::sql::ObStmt* stmt,
+        oceanbase::sql::TableItem& table_item,
+        int64_t num_columns = -1);
 
 
 #endif //DML_BUILD_PLAN_H_

@@ -4,8 +4,8 @@
 
 typedef struct _NonReservedKeyword
 {
-  const char *keyword_name;
-  int keyword_type;
+    const char *keyword_name;
+    int keyword_type;
 } NonReservedKeyword;
 
 extern const NonReservedKeyword *non_reserved_keyword_lookup(const char *word);

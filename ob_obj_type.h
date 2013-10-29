@@ -21,38 +21,39 @@
 
 namespace oceanbase
 {
-  namespace common
-  {
-    // Obj类型只能增加，不能删除，顺序也不能变，见ob_obj_cast.h
-    enum ObObjType
+    namespace common
     {
-      ObMinType = -1,
+        // Obj类型只能增加，不能删除，顺序也不能变，见ob_obj_cast.h
 
-      ObNullType,   // 空类型
-      ObIntType,
-      ObFloatType,              // @deprecated
+        enum ObObjType
+        {
+            ObMinType = -1,
 
-      ObDoubleType,             // @deprecated
-      ObDateTimeType,           // @deprecated
-      ObPreciseDateTimeType,    // =5
+            ObNullType, // 空类型
+            ObIntType,
+            ObFloatType, // @deprecated
 
-      ObVarcharType,
-      ObSeqType,
-      ObCreateTimeType,
+            ObDoubleType, // @deprecated
+            ObDateTimeType, // @deprecated
+            ObPreciseDateTimeType, // =5
 
-      ObModifyTimeType,
-      ObExtendType,
-      ObBoolType,
+            ObVarcharType,
+            ObSeqType,
+            ObCreateTimeType,
 
-      ObDecimalType,            // aka numeric
-      ObMaxType,
-    };
-    // print obj type string
-    const char* ob_obj_type_str(ObObjType type);
-    // get obj type size for fixed length type
-    int64_t ob_obj_type_size(ObObjType type);
-    ObObjType trans_int_type2obj_type(int type);
-  }
+            ObModifyTimeType,
+            ObExtendType,
+            ObBoolType,
+
+            ObDecimalType, // aka numeric
+            ObMaxType,
+        };
+        // print obj type string
+        const char* ob_obj_type_str(ObObjType type);
+        // get obj type size for fixed length type
+        int64_t ob_obj_type_size(ObObjType type);
+        ObObjType trans_int_type2obj_type(int type);
+    }
 }
 
 #endif //OCEANBASE_COMMON_OB_OBJECT_TYPE_H_

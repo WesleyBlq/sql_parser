@@ -93,40 +93,40 @@ extern int ob_write_string(const string &src, string &dst);
 
 namespace oceanbase
 {
-  namespace common
-  {
-    int64_t lower_align(int64_t input, int64_t align);
-    int64_t upper_align(int64_t input, int64_t align);
-    bool is2n(int64_t input);
-    bool all_zero(const char *buffer, const int64_t size);
-    bool all_zero_small(const char *buffer, const int64_t size);
-    const char* get_file_path(const char* file_dir, const char* file_name);
-    char* str_trim(char *str);
-    char* ltrim(char *str);
-    char* rtrim(char *str);
-    const char *inet_ntoa_r(const uint64_t ipport);
-    void databuff_printf(char *buf, const int64_t buf_len, int64_t& pos, const char* fmt, ...) __attribute__ ((format (printf, 4, 5)));
-    const char *time2str(const int64_t time_s, const char *format = DEFAULT_TIME_FORMAT);
-    const char* strtype(ObObjType type);
-    //const char* strtype(ObObjType type);
-
-    template <bool c>
-    struct BoolType
+    namespace common
     {
-      static const bool value = c;
-    };
-    typedef BoolType<false> FalseType;
-    typedef BoolType<true> TrueType;
+        int64_t lower_align(int64_t input, int64_t align);
+        int64_t upper_align(int64_t input, int64_t align);
+        bool is2n(int64_t input);
+        bool all_zero(const char *buffer, const int64_t size);
+        bool all_zero_small(const char *buffer, const int64_t size);
+        const char* get_file_path(const char* file_dir, const char* file_name);
+        char* str_trim(char *str);
+        char* ltrim(char *str);
+        char* rtrim(char *str);
+        const char *inet_ntoa_r(const uint64_t ipport);
+        void databuff_printf(char *buf, const int64_t buf_len, int64_t& pos, const char* fmt, ...) __attribute__((format(printf, 4, 5)));
+        const char *time2str(const int64_t time_s, const char *format = DEFAULT_TIME_FORMAT);
+        const char* strtype(ObObjType type);
+        //const char* strtype(ObObjType type);
 
-    template <typename T>
-    int64_t to_string(const T &obj, char *buffer, const int64_t buffer_size)
-    {
-      return obj.to_string(buffer, buffer_size);
-    }
-    template <>
-    int64_t to_string<string>(const string &obj, char *buffer, const int64_t buffer_size);
+        template <bool c>
+        struct BoolType
+        {
+            static const bool value = c;
+        };
+        typedef BoolType<false> FalseType;
+        typedef BoolType<true> TrueType;
 
-  } // end namespace common
+        template <typename T>
+        int64_t to_string(const T &obj, char *buffer, const int64_t buffer_size)
+        {
+            return obj.to_string(buffer, buffer_size);
+        }
+        template <>
+        int64_t to_string<string>(const string &obj, char *buffer, const int64_t buffer_size);
+
+    } // end namespace common
 } // end namespace oceanbase
 
 

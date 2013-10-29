@@ -21,21 +21,22 @@
 
 namespace oceanbase
 {
-  namespace common
-  {
-    struct ObObjCastParams
+    namespace common
     {
-      // add params when necessary
-    };
-    typedef int (*ObObjCastFunc) (const ObObjCastParams &params, const ObExprObj &in, ObExprObj &out);
-    extern ObObjCastFunc OB_OBJ_CAST[ObMaxType][ObMaxType];
 
-    // utility function
-    int obj_cast(const ObObj &orig_cell, const ObObj &expected_type,
-                 ObObj &casted_cell, const ObObj *&res_cell);
-    int obj_cast(ObObj &cell, const ObObjType expected_type, char* buf, int64_t buf_size, int64_t &used_buf_len);
-    int obj_cast(ObObj &cell, const ObObjType expected_type, string &cast_buffer);
-  } // end namespace common
+        struct ObObjCastParams
+        {
+            // add params when necessary
+        };
+        typedef int (*ObObjCastFunc) (const ObObjCastParams &params, const ObExprObj &in, ObExprObj &out);
+        extern ObObjCastFunc OB_OBJ_CAST[ObMaxType][ObMaxType];
+
+        // utility function
+        int obj_cast(const ObObj &orig_cell, const ObObj &expected_type,
+                ObObj &casted_cell, const ObObj *&res_cell);
+        int obj_cast(ObObj &cell, const ObObjType expected_type, char* buf, int64_t buf_size, int64_t &used_buf_len);
+        int obj_cast(ObObj &cell, const ObObjType expected_type, string &cast_buffer);
+    } // end namespace common
 } // end namespace oceanbase
 
 #endif /* _OB_OBJ_CAST_H */

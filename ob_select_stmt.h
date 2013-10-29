@@ -24,10 +24,13 @@
 #define OP_SELECT_ALL (OP_SELECT + OP_FROM + OP_TABLE + OP_ON + OP_WHERE + \
                         OP_GROUP + OP_HAVING + OP_ORDER + OP_LIMIT + OP_SUBSELECT)
 
-namespace oceanbase {
-    namespace sql {
+namespace oceanbase
+{
+    namespace sql
+    {
 
-        struct SelectItem {
+        struct SelectItem
+        {
             uint64_t expr_id_;
             bool is_real_alias_;
             string alias_name_;
@@ -37,17 +40,20 @@ namespace oceanbase {
             string raw_select_item_name;
             SqlItemType aggr_fun_type; /*added by qinbo*/
         };
-        
-        struct LimitItem {
+
+        struct LimitItem
+        {
             int64_t start;
             int64_t end;
             uint32_t pos;
             bool end_of_query;
         };
-        
-        struct OrderItem {
 
-            enum OrderType {
+        struct OrderItem
+        {
+
+            enum OrderType
+            {
                 ASC,
                 DESC
             };
@@ -57,9 +63,11 @@ namespace oceanbase {
             string order_column;
         };
 
-        struct GroupItem {
+        struct GroupItem
+        {
 
-            enum GroupType {
+            enum GroupType
+            {
                 ASC,
                 DESC
             };
@@ -69,38 +77,39 @@ namespace oceanbase {
             string group_column_;
         };
 
-        struct WhereSubElem {
-            uint64_t expr_id_;
-            string  where_item_name;
-        };
-
         /*END: added by qinbo*/
 
-        struct JoinedTable {
+        struct JoinedTable
+        {
 
-            enum JoinType {
+            enum JoinType
+            {
                 T_FULL,
                 T_LEFT,
                 T_RIGHT,
                 T_INNER,
             };
 
-            int add_table_id(uint64_t tid) {
+            int add_table_id(uint64_t tid)
+            {
                 table_ids_.push_back(tid);
                 return common::OB_SUCCESS;
             }
 
-            int add_join_type(JoinType type) {
+            int add_join_type(JoinType type)
+            {
                 join_types_.push_back(type);
                 return common::OB_SUCCESS;
             }
 
-            int add_expr_id(uint64_t eid) {
+            int add_expr_id(uint64_t eid)
+            {
                 expr_ids_.push_back(eid);
                 return common::OB_SUCCESS;
             }
 
-            void set_joined_tid(uint64_t tid) {
+            void set_joined_tid(uint64_t tid)
+            {
                 joined_table_id_ = tid;
             }
 
@@ -110,14 +119,16 @@ namespace oceanbase {
             vector<uint64_t> expr_ids_;
         };
 
-        struct FromItem {
+        struct FromItem
+        {
             uint64_t table_id_;
             // false: it is the real table id
             // true: it is the joined table id
             bool is_joined_;
         };
 
-        typedef struct st_select_tpl {
+        typedef struct st_select_tpl
+        {
             string str;
             string table_name;
             string real_table_name;
@@ -126,10 +137,12 @@ namespace oceanbase {
         } select_tpl;
     }
 #if 0
-    namespace common {
+    namespace common
+    {
 
         template <>
-        struct ob_vector_traits<oceanbase::sql::SelectItem> {
+        struct ob_vector_traits<oceanbase::sql::SelectItem>
+        {
             typedef oceanbase::sql::SelectItem* pointee_type;
             typedef oceanbase::sql::SelectItem value_type;
             typedef const oceanbase::sql::SelectItem const_value_type;
@@ -139,7 +152,8 @@ namespace oceanbase {
         };
 
         template <>
-        struct ob_vector_traits<oceanbase::sql::OrderItem> {
+        struct ob_vector_traits<oceanbase::sql::OrderItem>
+        {
             typedef oceanbase::sql::OrderItem* pointee_type;
             typedef oceanbase::sql::OrderItem value_type;
             typedef const oceanbase::sql::OrderItem const_value_type;
@@ -149,7 +163,8 @@ namespace oceanbase {
         };
 
         template <>
-        struct ob_vector_traits<oceanbase::sql::FromItem> {
+        struct ob_vector_traits<oceanbase::sql::FromItem>
+        {
             typedef oceanbase::sql::FromItem* pointee_type;
             typedef oceanbase::sql::FromItem value_type;
             typedef const oceanbase::sql::FromItem const_value_type;
@@ -159,12 +174,15 @@ namespace oceanbase {
         };
     }
 #endif
-    namespace sql {
+    namespace sql
+    {
 
-        class ObSelectStmt : public ObStmt {
+        class ObSelectStmt : public ObStmt
+        {
         public:
 
-            enum SetOperator {
+            enum SetOperator
+            {
                 UNION,
                 INTERSECT,
                 EXCEPT,
@@ -174,168 +192,216 @@ namespace oceanbase {
             ObSelectStmt();
             virtual ~ObSelectStmt();
 
-            int32_t get_select_item_size() const {
+            int32_t get_select_item_size() const
+            {
                 return select_items_.size();
             }
 
-            int32_t get_from_item_size() const {
+            int32_t get_from_item_size() const
+            {
                 return from_items_.size();
             }
 
-            int32_t get_joined_table_size() const {
+            int32_t get_joined_table_size() const
+            {
                 return joined_tables_.size();
             }
 
-            int32_t get_group_expr_size() const {
+            int32_t get_group_expr_size() const
+            {
                 return group_expr_ids_.size();
             }
 
-            int32_t get_agg_fun_size() const {
+            int32_t get_agg_fun_size() const
+            {
                 return agg_func_ids_.size();
             }
 
-            int32_t get_having_expr_size() const {
+            int32_t get_having_expr_size() const
+            {
                 return having_expr_ids_.size();
             }
 
-            int32_t get_order_item_size() const {
+            int32_t get_order_item_size() const
+            {
                 return order_items_.size();
             }
 
-            void assign_distinct() {
+            void assign_distinct()
+            {
                 is_distinct_ = true;
             }
 
-            void assign_all() {
+            void assign_all()
+            {
                 is_distinct_ = false;
             }
 
-            void assign_set_op(SetOperator op) {
+            void assign_set_op(SetOperator op)
+            {
                 set_op_ = op;
             }
 
-            void assign_set_distinct() {
+            void assign_set_distinct()
+            {
                 is_set_distinct_ = true;
             }
 
-            void assign_set_all() {
+            void assign_set_all()
+            {
                 is_set_distinct_ = false;
             }
 
-            void assign_left_query_id(uint64_t lid) {
+            void assign_left_query_id(uint64_t lid)
+            {
                 left_query_id_ = lid;
             }
 
-            void assign_right_query_id(uint64_t rid) {
+            void assign_right_query_id(uint64_t rid)
+            {
                 right_query_id_ = rid;
             }
             int check_alias_name(ResultPlan& result_plan, const string& sAlias);
             uint64_t get_alias_expr_id(string& alias_name);
 
-            uint64_t generate_joined_tid() {
+            uint64_t generate_joined_tid()
+            {
                 return gen_joined_tid_--;
             }
 
-            uint64_t get_left_query_id() {
+            uint64_t get_left_query_id()
+            {
                 return left_query_id_;
             }
 
-            uint64_t get_right_query_id() {
+            uint64_t get_right_query_id()
+            {
                 return right_query_id_;
             }
 
-            uint64_t get_limit_expr_id() const {
+            uint64_t get_limit_expr_id() const
+            {
                 return limit_count_id_;
             }
 
-            uint64_t get_offset_expr_id() const {
+            uint64_t get_offset_expr_id() const
+            {
                 return limit_offset_id_;
             }
 
-            bool is_distinct() {
+            bool is_distinct()
+            {
                 return is_distinct_;
             }
 
-            bool is_set_distinct() {
+            bool is_set_distinct()
+            {
                 return is_set_distinct_;
             }
 
-            bool is_for_update() {
+            bool is_for_update()
+            {
                 return for_update_;
             }
 
-            bool has_limit() {
+            bool has_limit()
+            {
                 return (limit_count_id_ != common::OB_INVALID_ID || limit_offset_id_ != common::OB_INVALID_ID);
             }
 
-            SetOperator get_set_op() {
+            SetOperator get_set_op()
+            {
                 return set_op_;
             }
             JoinedTable* get_joined_table(uint64_t table_id);
 
-            const SelectItem& get_select_item(int32_t index) {
+            const SelectItem& get_select_item(int32_t index)
+            {
                 OB_ASSERT(0 <= index && index < select_items_.size());
                 return select_items_[index];
             }
 
-            const FromItem& get_from_item(int32_t index) {
+            const FromItem& get_from_item(int32_t index)
+            {
                 OB_ASSERT(0 <= index && index < from_items_.size());
                 return from_items_[index];
             }
 
-            const OrderItem& get_order_item(int32_t index) {
+            //BEGIN: Added by qinbo
+
+            const vector<FromItem> &get_all_from_items()
+            {
+                return from_items_;
+            }
+            //END: Added by qinbo
+
+            const OrderItem& get_order_item(int32_t index)
+            {
                 OB_ASSERT(0 <= index && index < order_items_.size());
                 return order_items_[index];
             }
 
-            uint64_t get_group_expr_id(int32_t index) {
+            uint64_t get_group_expr_id(int32_t index)
+            {
                 OB_ASSERT(0 <= index && index < group_expr_ids_.size());
                 return group_expr_ids_[index];
             }
 
-            uint64_t get_agg_expr_id(int32_t index) {
+            uint64_t get_agg_expr_id(int32_t index)
+            {
                 OB_ASSERT(0 <= index && index < agg_func_ids_.size());
                 return agg_func_ids_[index];
             }
 
-            uint64_t get_having_expr_id(int32_t index) {
+            uint64_t get_having_expr_id(int32_t index)
+            {
                 OB_ASSERT(0 <= index && index < having_expr_ids_.size());
                 return having_expr_ids_[index];
             }
 
-            vector<uint64_t>& get_having_exprs() {
+            vector<uint64_t>& get_having_exprs()
+            {
                 return having_expr_ids_;
             }
 
-            int add_group_expr(uint64_t expr_id) {
+            int add_group_expr(uint64_t expr_id)
+            {
                 group_expr_ids_.push_back(expr_id);
                 return common::OB_SUCCESS;
             }
 
-            int add_agg_func(uint64_t expr_id) {
+            int add_agg_func(uint64_t expr_id)
+            {
                 agg_func_ids_.push_back(expr_id);
                 return common::OB_SUCCESS;
             }
 
-            int add_from_item(uint64_t tid, bool is_joined = false) {
+            int add_from_item(uint64_t tid, bool is_joined = false)
+            {
                 int ret = OB_SUCCESS;
-                if (tid != OB_INVALID_ID) {
+                if (tid != OB_INVALID_ID)
+                {
                     FromItem item;
                     item.table_id_ = tid;
                     item.is_joined_ = is_joined;
                     from_items_.push_back(item);
                     return common::OB_SUCCESS;
-                } else {
+                }
+                else
+                {
                     ret = OB_ERR_ILLEGAL_ID;
                 }
                 return ret;
             }
 
             /*BEGIN: added by qinbo*/
-            bool is_from_item_with_join() {
-                for (int32_t i = 0; i < from_items_.size(); i++) {
+            bool is_from_item_with_join()
+            {
+                for (int32_t i = 0; i < from_items_.size(); i++)
+                {
                     FromItem& item = from_items_[i];
-                    if (item.is_joined_) {
+                    if (item.is_joined_)
+                    {
                         return true;
                     }
                 }
@@ -344,27 +410,32 @@ namespace oceanbase {
 
             /*END: added by qinbo*/
 
-            int add_order_item(OrderItem& order_item) {
+            int add_order_item(OrderItem& order_item)
+            {
                 order_items_.push_back(order_item);
                 return common::OB_SUCCESS;
             }
 
-            int add_joined_table(JoinedTable* pJoinedTable) {
+            int add_joined_table(JoinedTable* pJoinedTable)
+            {
                 joined_tables_.push_back(pJoinedTable);
                 return common::OB_SUCCESS;
             }
 
-            int add_having_expr(uint64_t expr_id) {
+            int add_having_expr(uint64_t expr_id)
+            {
                 having_expr_ids_.push_back(expr_id);
                 return common::OB_SUCCESS;
             }
 
-            void set_limit_offset(const uint64_t& limit, const uint64_t& offset) {
+            void set_limit_offset(const uint64_t& limit, const uint64_t& offset)
+            {
                 limit_count_id_ = limit;
                 limit_offset_id_ = offset;
             }
 
-            void set_for_update(bool for_update) {
+            void set_for_update(bool for_update)
+            {
                 for_update_ = for_update;
             }
 
@@ -422,9 +493,6 @@ namespace oceanbase {
             vector<uint64_t> having_expr_ids_;
             vector<uint64_t> agg_func_ids_;
 
-            /*BEGIN: added by qinbo*/
-            vector<WhereSubElem> where_sub_elem;
-            /*END: added by qinbo*/
             /* These fields are only used by set select */
             SetOperator set_op_;
             bool is_set_distinct_;
@@ -437,7 +505,7 @@ namespace oceanbase {
             /* -1 means no limit */
             uint64_t limit_count_id_;
             uint64_t limit_offset_id_;
-            
+
             /* FOR UPDATE clause */
             bool for_update_;
 
@@ -452,39 +520,38 @@ namespace oceanbase {
             vector<OrderItem> fetch_order_from_tree(ResultPlan& result_plan, string table_name);
             LimitItem fetch_limit_from_tree(ResultPlan& result_plan);
 
-            void set_follow_order(bool f) {
+            void set_follow_order(bool f)
+            {
                 follow_order = f;
             }
 
-            void set_follow_group(bool f) {
+            void set_follow_group(bool f)
+            {
                 follow_group = f;
             }
 
-            void set_follow_agg(bool f) {
+            void set_follow_agg(bool f)
+            {
                 follow_aggregate = f;
             }
 
-            void set_order_by_primary(bool f) {
+            void set_order_by_primary(bool f)
+            {
                 order_by_primary = f;
             }
+
             void set_limit(long f)
             {
                 limit = f;
             }
-            void update_ultimate(string str, string table_name,
-                    string real_table_name, ulong op);
 
         private:
             /* follow down */
-            bool follow_order; /* true need do order by seconds. */
-            bool follow_group; /* true need do group seconds. */
+            bool follow_order; /* true need do order by secondary. */
+            bool follow_group; /* true need do group secondary. */
             bool follow_aggregate; /* true need do function. */
             bool order_by_primary; /* order by */
-            long limit;        /* */
-
-            /* We store query item on table. */
-            multimap<string, select_tpl> ultimate_query;
-            vector<string> op_tables;
+            long limit; /* */
         };
     }
 }
