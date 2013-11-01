@@ -777,11 +777,10 @@ Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
-Output		:	char* buf, const int64_t buf_len
+Output		:	string& assembled_sql
  **************************************************/
-int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
 {
-    int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
     char buf_tmp[RAW_EXPR_BUF_SIZE] = {0};
 
@@ -790,22 +789,22 @@ int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, char* buf, const int6
         case T_STRING:
         case T_BINARY:
         {
-            databuff_printf(buf, buf_len, pos, "\"");
+            assembled_sql.append("\"");
             value_.to_string(buf_tmp, RAW_EXPR_BUF_SIZE);
-            databuff_printf(buf, buf_len, pos, buf_tmp);
-            databuff_printf(buf, buf_len, pos, "\"");
+            assembled_sql.append(buf_tmp, RAW_EXPR_BUF_SIZE);
+            assembled_sql.append("\"");
             break;
         }
         default:
             value_.to_string(buf_tmp, RAW_EXPR_BUF_SIZE);
-            databuff_printf(buf, buf_len, pos, buf_tmp);
+            assembled_sql.append(buf_tmp, RAW_EXPR_BUF_SIZE);
             break;
     }
+    return ret;
 }
 
 
 #if 0
-
 int ObConstRawExpr::fill_sql_expression(
         ObSqlExpression& inter_expr,
         ObTransformer *transformer,
@@ -942,14 +941,13 @@ Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
-Output		:	char* buf, const int64_t buf_len
+Output		:	string &assembled_sql
  **************************************************/
-int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_sql) const
 {
-    int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[2048] = {0};
     uint64_t id = 0;
+    string assembled_sql_tmp;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     if (logical_plan == NULL)
@@ -960,7 +958,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const i
         return ret;
     }
 
-    databuff_printf(buf, buf_len, pos, "(");
+    assembled_sql.append("(");
     id = get_ref_id();
 
     ObSelectStmt *sub_select = dynamic_cast<ObSelectStmt *> (logical_plan->get_query(id));
@@ -973,15 +971,14 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const i
         return ret;
     }
 
-    sub_select->make_stmt_string(result_plan, buf_tmp, 2048);
-    databuff_printf(buf, buf_len, pos, buf_tmp);
-    databuff_printf(buf, buf_len, pos, ")");
+    sub_select->make_stmt_string(result_plan, assembled_sql_tmp);
+    assembled_sql.append(assembled_sql_tmp);
+    assembled_sql.append(")");
 
     return ret;
 }
 
 #if 0
-
 int ObUnaryRefRawExpr::fill_sql_expression(
         ObSqlExpression& inter_expr,
         ObTransformer *transformer,
@@ -1033,13 +1030,12 @@ Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
-Output		:	char* buf, const int64_t buf_len
+Output		:	string &assembled_sql
  **************************************************/
-int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_sql) const
 {
-    int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
+    string assembled_sql_tmp;
 
     ObSqlRawExpr* sql_expr = NULL;
 
@@ -1063,9 +1059,8 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
             return ret;
         }
 
-        memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-        sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-        databuff_printf(buf, buf_len, pos, tmp_str);
+        sql_expr->to_string(result_plan, assembled_sql_tmp);
+        assembled_sql.append(assembled_sql_tmp);
     }
     else
     {
@@ -1091,13 +1086,13 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, char* buf, const 
 
         if (is_op_name_field)
         {
-            databuff_printf(buf, RAW_EXPR_BUF_SIZE, pos, table_schema->get_table_name().data());
-            databuff_printf(buf, RAW_EXPR_BUF_SIZE, pos, ".");
-            databuff_printf(buf, RAW_EXPR_BUF_SIZE, pos, column_schema->get_column_name().data());
+            assembled_sql.append(table_schema->get_table_name());
+            assembled_sql.append(".");
+            assembled_sql.append(column_schema->get_column_name());
         }
         else
         {
-            databuff_printf(buf, RAW_EXPR_BUF_SIZE, pos, column_schema->get_column_name().data());
+            assembled_sql.append(column_schema->get_column_name());
         }
     }
 
@@ -1151,20 +1146,21 @@ Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
-Output		:	char* buf, const int64_t buf_len
+Output		:   string &assembled_sql
+
  **************************************************/
-int64_t ObUnaryOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+int64_t ObUnaryOpRawExpr::to_string(ResultPlan& result_plan, string &assembled_sql) const
 {
     /*T_OP_NOT, no need to get route*/
-    int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[RAW_EXPR_BUF_SIZE] = {0};
+    string assembled_sql_tmp;
 
-    databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
-    databuff_printf(buf, buf_len, pos, "(");
-    expr_->to_string(result_plan, buf_tmp, RAW_EXPR_BUF_SIZE);
-    databuff_printf(buf, buf_len, pos, buf_tmp);
-    databuff_printf(buf, buf_len, pos, ")");
+    assembled_sql.append(get_type_symbol(get_expr_type()));
+    assembled_sql.append("(");
+    expr_->to_string(result_plan, assembled_sql_tmp);
+    assembled_sql.append(assembled_sql_tmp);
+    assembled_sql.append(")");
+    return ret;
 }
 
 #if 0
@@ -1204,28 +1200,29 @@ Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
-Output		:	char* buf, const int64_t buf_len
+Output		:	string &assembled_sql
  **************************************************/
-int64_t ObBinaryOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+int64_t ObBinaryOpRawExpr::to_string(ResultPlan& result_plan, string &assembled_sql) const
 {
-    int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf1[RAW_EXPR_BUF_SIZE] = {0};
-    char buf2[RAW_EXPR_BUF_SIZE] = {0};
+    string assembled_sql_tmp1;
+    string assembled_sql_tmp2;
 
     if (T_OP_OR == get_expr_type())
     {
-        databuff_printf(buf, buf_len, pos, "(");
+        assembled_sql.append("(");
     }
-    first_expr_->to_string(result_plan, buf1, RAW_EXPR_BUF_SIZE);
-    databuff_printf(buf, buf_len, pos, buf1);
-    databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
-    second_expr_->to_string(result_plan, buf2, RAW_EXPR_BUF_SIZE);
-    databuff_printf(buf, buf_len, pos, buf2);
+    first_expr_->to_string(result_plan, assembled_sql_tmp1);
+    assembled_sql.append(assembled_sql_tmp1);
+    assembled_sql.append(get_type_symbol(get_expr_type()));
+    second_expr_->to_string(result_plan, assembled_sql_tmp2);
+    assembled_sql.append(assembled_sql_tmp2);
+
     if (T_OP_OR == get_expr_type())
     {
-        databuff_printf(buf, buf_len, pos, ")");
+        assembled_sql.append(")");
     }
+    return ret;
 }
 
 void ObBinaryOpRawExpr::set_op_exprs(ObRawExpr *first_expr, ObRawExpr *second_expr)
@@ -1269,7 +1266,6 @@ void ObBinaryOpRawExpr::set_op_exprs(ObRawExpr *first_expr, ObRawExpr *second_ex
 }
 
 #if 0
-
 int ObBinaryOpRawExpr::fill_sql_expression(
         ObSqlExpression& inter_expr,
         ObTransformer *transformer,
@@ -1390,26 +1386,28 @@ Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
-Output		:	char* buf, const int64_t buf_len
+Output		:	string& assembled_sql
  **************************************************/
-int64_t ObTripleOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+int64_t ObTripleOpRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
 {
-    int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf1[RAW_EXPR_BUF_SIZE] = {0};
-    char buf2[RAW_EXPR_BUF_SIZE] = {0};
-    char buf3[RAW_EXPR_BUF_SIZE] = {0};
+    string  assembled_sql_tmp1;
+    string  assembled_sql_tmp2;
+    string  assembled_sql_tmp3;
 
-    first_expr_->to_string(result_plan, buf1, RAW_EXPR_BUF_SIZE);
-    databuff_printf(buf, buf_len, pos, buf1);
-    databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
-    second_expr_->to_string(result_plan, buf2, RAW_EXPR_BUF_SIZE);
-    databuff_printf(buf, buf_len, pos, buf2);
-    databuff_printf(buf, buf_len, pos, " ");
-    databuff_printf(buf, buf_len, pos, "AND ");
-    third_expr_->to_string(result_plan, buf3, RAW_EXPR_BUF_SIZE);
-    databuff_printf(buf, buf_len, pos, buf3);
-    databuff_printf(buf, buf_len, pos, " ");
+    first_expr_->to_string(result_plan, assembled_sql_tmp1);
+    assembled_sql.append(assembled_sql_tmp1);
+    assembled_sql.append(get_type_symbol(get_expr_type()));
+    
+    second_expr_->to_string(result_plan, assembled_sql_tmp2);
+    assembled_sql.append(assembled_sql_tmp2);
+    assembled_sql.append(" ");
+    assembled_sql.append("AND ");
+    
+    third_expr_->to_string(result_plan, assembled_sql_tmp3);
+    assembled_sql.append(assembled_sql_tmp3);
+    assembled_sql.append(" ");
+    return ret;
 }
 
 void ObTripleOpRawExpr::set_op_exprs(
@@ -1466,28 +1464,27 @@ Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
-Output		:	char* buf, const int64_t buf_len
+Output		:	string&  assembled_sql
  **************************************************/
-int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
 {
     int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[RAW_EXPR_BUF_SIZE] = {0};
+    string  assembled_sql_tmp;
 
-    databuff_printf(buf, buf_len, pos, "(");
+    assembled_sql.append("(");
 
     for (int32_t i = 0; i < exprs_.size(); i++)
     {
-        memset(buf_tmp, RAW_EXPR_BUF_SIZE, 0);
-        exprs_[i]->to_string(result_plan, buf_tmp, RAW_EXPR_BUF_SIZE);
-        databuff_printf(buf, buf_len, pos, buf_tmp);
+        exprs_[i]->to_string(result_plan, assembled_sql_tmp);
+        assembled_sql.append(assembled_sql_tmp);
 
         if (i != exprs_.size() - 1)
         {
-            databuff_printf(buf, buf_len, pos, ",");
+            assembled_sql.append(",");
         }
     }
-    databuff_printf(buf, buf_len, pos, ")");
+    assembled_sql.append(")");
 }
 
 #if 0
@@ -1592,27 +1589,27 @@ Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
-Output		:	char* buf, const int64_t buf_len
+Output		:	string& assembled_sql
  **************************************************/
-int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
 {
-    int64_t pos = 0;
     int64_t ret = OB_SUCCESS;
-    char buf_tmp[RAW_EXPR_BUF_SIZE] = {0};
+    string  assembled_sql_tmp;
 
-    databuff_printf(buf, buf_len, pos, get_type_symbol(get_expr_type()));
+    assembled_sql.append(get_type_symbol(get_expr_type()));
     if (distinct_)
     {
-        databuff_printf(buf, buf_len, pos, "DISTINCT");
+        assembled_sql.append("DISTINCT");
     }
 
     if (param_expr_)
     {
-        databuff_printf(buf, buf_len, pos, "(");
-        param_expr_->to_string(result_plan, buf_tmp, RAW_EXPR_BUF_SIZE);
-        databuff_printf(buf, buf_len, pos, buf_tmp);
-        databuff_printf(buf, buf_len, pos, ")");
+        assembled_sql.append("(");
+        param_expr_->to_string(result_plan, assembled_sql_tmp);
+        assembled_sql.append(assembled_sql_tmp);
+        assembled_sql.append(")");
     }
+    return ret;
 }
 
 #if 0
@@ -1745,14 +1742,14 @@ Author		:	qinbo
 Date		:	2013.9.11
 Description	:   convert expr to string
 Input		:	
-Output		:	char* buf, const int64_t buf_len
+Output		:	string& assembled_sql
  **************************************************/
-int64_t ObSqlRawExpr::to_string(ResultPlan& result_plan, char* buf, const int64_t buf_len) const
+int64_t ObSqlRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
 {
     key_data key_relation;
     if (NULL != expr_)
     {
-        expr_->to_string(result_plan, buf, buf_len);
+        expr_->to_string(result_plan, assembled_sql);
 #if 0        
         key_relation.sharding_key.assign("lastname");
         if (convert_ob_expr_to_route(key_relation))

@@ -491,21 +491,16 @@ namespace oceanbase
         Date        :   2013.9.10
         Description :   make stmt string
         Input       :   ResultPlan& result_plan,
-                        char* buf, 
-                        const int64_t buf_len
+                        string &assembled_sql_tmp
         Output      :   ObSqlRawExpr* 
          **************************************************/
-        void ObLogicalPlan::make_stmt_string(ResultPlan& result_plan,
-                char* buf,
-                const int64_t buf_len)
+        void ObLogicalPlan::make_stmt_string(ResultPlan& result_plan, string &assembled_sql_tmp)
         {
             uint32_t i;
             for (i = 0; i < stmts_.size(); i++)
             {
                 ObBasicStmt* stmt = stmts_[i];
-                stmt->make_stmt_string(result_plan, buf, buf_len);
-                fprintf(stderr, "%s\n", buf);
-                memset(buf, 0, buf_len);
+                stmt->make_stmt_string(result_plan, assembled_sql_tmp);
             }
         }
     }

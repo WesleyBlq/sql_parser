@@ -345,6 +345,18 @@ private:
     void generate_all_table_shards(ResultPlan& result_plan,
             vector<string> table_names,
             vector<vector<schema_shard*> > &all_tables_shards);
+    /**************************************************
+    Funtion     :   vector_elem_exist_already
+    Author      :   qinbo
+    Date        :   2013.10.30
+    Description :   vector elem is already existing
+    Input       :   vector<schema_shard*> vector_shards,
+                    schema_shard* single_shard
+    Output      :   
+     **************************************************/
+    bool vector_elem_exist_already( 
+                            vector<schema_shard*> vector_shards,
+                            schema_shard* single_shard);
 };
 
 

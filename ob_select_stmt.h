@@ -456,32 +456,14 @@ namespace oceanbase
             void print(FILE* fp, int32_t level, int32_t index = 0);
 
             /*BEGIN: added by qinbo*/
-            int64_t make_stmt_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
-
-            int64_t make_select_item_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
-            int64_t make_where_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
-
-            int64_t make_group_by_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
-
-            int64_t make_order_by_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
-
-            int64_t make_having_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
-
-            int64_t make_limit_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
+            int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_select_item_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_from_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_where_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_group_by_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_order_by_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_having_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_limit_string(ResultPlan& result_plan, string &assembled_sql);
             /*END: added by qinbo*/
         private:
             /* These fields are only used by normal select */

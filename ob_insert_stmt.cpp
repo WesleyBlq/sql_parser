@@ -72,18 +72,14 @@ Author      :   qinbo
 Date        :   2013.9.10
 Description :   make select sql
 Input       :   ResultPlan& result_plan,
-                char* buf, 
-                const int64_t buf_len
+                string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan,
-        char* buf,
-        const int64_t buf_len)
+int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
 {
     int32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    int64_t pos = 0;
-    char tmp_str[STMT_BUF_SIZE] = {0};
+    string assembled_sql_tmp;
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -96,37 +92,38 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan,
 
     if (is_replace_)
     {
-        databuff_printf(buf, buf_len, pos, "REPLACE INTO ");
+        assembled_sql.append("REPLACE INTO ");
     }
     else
     {
-        databuff_printf(buf, buf_len, pos, "INSERT INTO ");
+        assembled_sql.append("INSERT INTO ");
     }
 
-    databuff_printf(buf, buf_len, pos, ObStmt::get_table_item_by_id(table_id_)->table_name_.data());
-
+    assembled_sql.append(ObStmt::get_table_item_by_id(table_id_)->table_name_);
+        
     for (int64_t i = 0; i < ObStmt::get_column_size(); i++)
     {
         if (0 == i)
         {
-            databuff_printf(buf, buf_len, pos, " (");
+            assembled_sql.append(" (");
         }
 
-        databuff_printf(buf, buf_len, pos, ObStmt::get_column_item(i)->column_name_.data());
-
+        assembled_sql.append(ObStmt::get_column_item(i)->column_name_);
+            
         if (i != ObStmt::get_column_size() - 1)
         {
-            databuff_printf(buf, buf_len, pos, ", ");
+            assembled_sql.append(", ");
         }
         else
         {
-            databuff_printf(buf, buf_len, pos, ") ");
+            assembled_sql.append(") ");
         }
     }
 
     if (sub_query_id_ == OB_INVALID_ID)
     {
-        databuff_printf(buf, buf_len, pos, "VALUES ");
+        assembled_sql.append("VALUES ");
+            
         for (int64_t i = 0; i < value_vectors_.size(); i++)
         {
             vector<uint64_t>& value_row = value_vectors_.at(i);
@@ -134,7 +131,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan,
             {
                 if (j == 0)
                 {
-                    databuff_printf(buf, buf_len, pos, "(");
+                    assembled_sql.append("(");
                 }
 
                 sql_expr = logical_plan->get_expr_by_id(value_row.at(j));
@@ -147,29 +144,29 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan,
                     return ret;
                 }
 
-                memset(tmp_str, 0, STMT_BUF_SIZE);
-                sql_expr->to_string(result_plan, tmp_str, STMT_BUF_SIZE);
-                databuff_printf(buf, buf_len, pos, tmp_str);
-
+                sql_expr->to_string(result_plan, assembled_sql_tmp);
+                assembled_sql.append(assembled_sql_tmp);
+                    
                 if (j == value_row.size() - 1)
                 {
-                    databuff_printf(buf, buf_len, pos, ")");
+                    assembled_sql.append(")");
                 }
                 else
                 {
-                    databuff_printf(buf, buf_len, pos, ",");
+                    assembled_sql.append(",");
                 }
 
             }
 
             if (i != value_vectors_.size() - 1)
             {
-                databuff_printf(buf, buf_len, pos, ",");
+                assembled_sql.append(",");
             }
         }
     }
     else
     {
+        string assembled_sql_tmp;
         ObBasicStmt* query_stmt = logical_plan->get_query(sub_query_id_);
 
         if (NULL == query_stmt)
@@ -180,9 +177,8 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan,
             return ret;
         }
 
-        memset(tmp_str, 0, STMT_BUF_SIZE);
-        query_stmt->make_stmt_string(result_plan, tmp_str, STMT_BUF_SIZE);
-        databuff_printf(buf, buf_len, pos, tmp_str);
+        query_stmt->make_stmt_string(result_plan, assembled_sql_tmp);
+        assembled_sql.append(assembled_sql_tmp);
     }
 }
 

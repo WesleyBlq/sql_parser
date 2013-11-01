@@ -85,7 +85,7 @@ SELECT id FROM order_list";
     string sql13 = "INSERT INTO persons (address, lastname)  \
 SELECT address,lastname FROM persons";
 
-    string sql14 = "DELETE FROM persons  WHERE address = 'beijing'";
+    string sql14 = "DELETE FROM persons  WHERE lastname > 'cao1' AND id = 10 AND (id = 15 OR id = 100)";
 
     string sql15 = "SELECT COUNT(lastname), address AS addr FROM persons WHERE lastname > 'cao1' AND id = 10 AND (id = 15 OR id = 100)";
     string sqls = "select t.id, s.lastname from persons t join persons s on t.id = s.id";
@@ -94,8 +94,8 @@ SELECT address,lastname FROM persons";
 
     //sql_parser(sql4);
     //sql_parser(sql6);
-    sql_parser(sql_multi_table);
-    //sql_parser(sql11);
+    //sql_parser(sql10);
+    sql_parser(sql14);
     //sql_parser(sql14);
     //sql_parser(sql9);
     //sql_parser(sql8);

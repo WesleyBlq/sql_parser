@@ -83,9 +83,10 @@ namespace oceanbase
             }
 
             void print(FILE* fp, int32_t level, int32_t index);
-            int64_t make_stmt_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
+            int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_update_table_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_update_column_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_update_where_string(ResultPlan& result_plan, string &assembled_sql);
 
         private:
             uint64_t table_id_;

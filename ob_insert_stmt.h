@@ -27,11 +27,17 @@ namespace oceanbase
             uint64_t get_insert_query_id() const;
             int64_t get_value_row_size() const;
             const vector<uint64_t>& get_value_row(int64_t idx) const;
-
+            /**************************************************
+            Funtion     :   get_all_value_rows
+            Author      :   qinbo
+            Date        :   2013.10.30
+            Description :   get all value rows
+            Input       :   
+            Output      :   vector<vector<uint64_t> > all_value_rows
+             **************************************************/
+            const vector<vector<uint64_t> >& get_all_value_rows() const;
             void print(FILE* fp, int32_t level, int32_t index);
-            int64_t make_stmt_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
+            int64_t make_stmt_string(ResultPlan& result_plan, string& assembled_sql_tmp);
 
         private:
             uint64_t table_id_;
@@ -93,6 +99,19 @@ namespace oceanbase
         {
             OB_ASSERT(idx >= 0 && idx < value_vectors_.size());
             return value_vectors_.at(idx);
+        }
+        
+        /**************************************************
+        Funtion     :   get_all_value_rows
+        Author      :   qinbo
+        Date        :   2013.10.30
+        Description :   get all value rows
+        Input       :   
+        Output      :   vector<vector<uint64_t> > all_value_rows
+         **************************************************/
+        inline const vector<vector<uint64_t> >& ObInsertStmt::get_all_value_rows() const
+        {
+            return value_vectors_;
         }
     }
 }

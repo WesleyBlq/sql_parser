@@ -472,18 +472,13 @@ Author      :   qinbo
 Date        :   2013.9.10
 Description :   make select sql
 Input       :   ResultPlan& result_plan,
-                char* buf, 
-                const int64_t buf_len
+                string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObSelectStmt::make_stmt_string(ResultPlan& result_plan,
-        char* buf,
-        const int64_t buf_len)
+int64_t ObSelectStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
 {
     int32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    int64_t pos = 0;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -496,84 +491,11 @@ int64_t ObSelectStmt::make_stmt_string(ResultPlan& result_plan,
 
     if (set_op_ == NONE)
     {
-        make_select_item_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-        databuff_printf(buf, buf_len, pos, tmp_str);
-
-        databuff_printf(buf, buf_len, pos, "FROM ");
-        for (i = 0; i < from_items_.size(); i++)
-        {
-            FromItem& item = from_items_[i];
-            if (item.is_joined_)
-            {
-                JoinedTable* joined_table = get_joined_table(item.table_id_);
-                for (int32_t j = 1; j < joined_table->table_ids_.size(); j++)
-                {
-                    if (j == 1)
-                    {
-                        databuff_printf(buf, buf_len, pos, ObStmt::get_table_item_by_id(joined_table->table_ids_.at(j - 1))->table_name_.data());
-                    }
-
-                    switch (joined_table->join_types_.at(j - 1))
-                    {
-                        case JoinedTable::T_FULL:
-                            databuff_printf(buf, buf_len, pos, " FULL JOIN ");
-                            break;
-                        case JoinedTable::T_LEFT:
-                            databuff_printf(buf, buf_len, pos, " LEFT JOIN ");
-                            break;
-                        case JoinedTable::T_RIGHT:
-                            databuff_printf(buf, buf_len, pos, " RIGHT JOIN ");
-                            break;
-                        case JoinedTable::T_INNER:
-                            databuff_printf(buf, buf_len, pos, " JOIN ");
-                            break;
-                        default:
-                            break;
-                    }
-
-                    databuff_printf(buf, buf_len, pos, ObStmt::get_table_item_by_id(joined_table->table_ids_.at(j))->table_name_.data());
-                    databuff_printf(buf, buf_len, pos, " ON ");
-
-                    sql_expr = logical_plan->get_expr_by_id(joined_table->expr_ids_.at(j - 1));
-                    if (NULL == sql_expr)
-                    {
-                        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "join table expr name error!!!");
-                        return ret;
-                    }
-                    memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-                    sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-                    databuff_printf(buf, buf_len, pos, tmp_str);
-                    databuff_printf(buf, buf_len, pos, " ");
-                }
-            }
-            else
-            {
-                databuff_printf(buf, buf_len, pos, ObStmt::get_table_item_by_id(item.table_id_)->table_name_.data());
-                if (i == from_items_.size() - 1)
-                {
-                    databuff_printf(buf, buf_len, pos, " ");
-                }
-                else
-                {
-                    databuff_printf(buf, buf_len, pos, ", ");
-                }
-            }
-        }
-
-
-        memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-        make_where_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-        databuff_printf(buf, buf_len, pos, tmp_str);
-
-        memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-        make_group_by_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-        databuff_printf(buf, buf_len, pos, tmp_str);
-
-        memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-        make_having_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-        databuff_printf(buf, buf_len, pos, tmp_str);
+        make_select_item_string(result_plan, assembled_sql);
+        make_from_string(result_plan, assembled_sql);
+        make_where_string(result_plan, assembled_sql);
+        make_group_by_string(result_plan, assembled_sql);
+        make_having_string(result_plan, assembled_sql);
     }
     else
     {
@@ -604,12 +526,8 @@ int64_t ObSelectStmt::make_stmt_string(ResultPlan& result_plan,
         fprintf(stderr, "RIGHTQUERY ::= <%lu>\n", right_query_id_);
     }
 
-    memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-    make_order_by_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-    databuff_printf(buf, buf_len, pos, tmp_str);
-    memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-    make_limit_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-    databuff_printf(buf, buf_len, pos, tmp_str);
+    make_order_by_string(result_plan, assembled_sql);
+    make_limit_string(result_plan, assembled_sql);
 
     return ret;
 }
@@ -620,19 +538,14 @@ Author      :   qinbo
 Date        :   2013.9.10
 Description :   make select sql
 Input       :   ResultPlan& result_plan,
-                char* buf, 
-                const int64_t buf_len
+                string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan,
-        char* buf,
-        const int64_t buf_len)
+int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &assembled_sql)
 {
     int32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    int64_t pos = 0;
     ObSqlRawExpr* sql_expr = NULL;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     if (logical_plan == NULL)
@@ -643,29 +556,30 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan,
     }
 
     if (is_distinct_)
-        databuff_printf(buf, buf_len, pos, "SELECT DISTINCT ");
+        assembled_sql.append("SELECT DISTINCT ");
     else
-        databuff_printf(buf, buf_len, pos, "SELECT ");
+        assembled_sql.append("SELECT ");
 
 
     for (i = 0; i < select_items_.size(); i++)
     {
+        string assembled_sql_tmp;
         SelectItem& item = select_items_[i];
 
         if (item.is_real_alias_)
         {
-            databuff_printf(buf, buf_len, pos, item.expr_name_.data());
-            databuff_printf(buf, buf_len, pos, " AS ");
-            databuff_printf(buf, buf_len, pos, item.alias_name_.data());
-            databuff_printf(buf, buf_len, pos, " ");
+            assembled_sql.append(item.expr_name_);
+            assembled_sql.append(" AS ");
+            assembled_sql.append(item.alias_name_);
+            assembled_sql.append(" ");
 
             if (i < select_items_.size() - 1)
             {
-                databuff_printf(buf, buf_len, pos, ", ");
+                assembled_sql.append(", ");
             }
             else
             {
-                databuff_printf(buf, buf_len, pos, " ");
+                assembled_sql.append(" ");
             }
         }
         else
@@ -679,19 +593,18 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan,
                 return ret;
             }
 
-            memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-            sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-            databuff_printf(buf, buf_len, pos, tmp_str);
+            sql_expr->to_string(result_plan, assembled_sql_tmp);
+            assembled_sql.append(assembled_sql_tmp);
 
             //databuff_printf(buf, buf_len, pos, item.expr_name_.data());
 
             if (i < select_items_.size() - 1)
             {
-                databuff_printf(buf, buf_len, pos, ", ");
+                assembled_sql.append(", ");
             }
             else
             {
-                databuff_printf(buf, buf_len, pos, " ");
+                assembled_sql.append(" ");
             }
         }
     }
@@ -699,23 +612,108 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan,
 }
 
 /**************************************************
+Funtion     :   make_from_string
+Author      :   qinbo
+Date        :   2013.10.31
+Description :   make_from_string
+Input       :   ResultPlan& result_plan,
+                string &assembled_sql
+Output      :   
+ **************************************************/
+int64_t ObSelectStmt::make_from_string(ResultPlan& result_plan, string &assembled_sql)
+{
+    int32_t i = 0;
+    int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+    ObSqlRawExpr* sql_expr = NULL;
+
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    if (logical_plan == NULL)
+    {
+        ret = OB_ERR_LOGICAL_PLAN_FAILD;
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "logical_plan must exist!!!");
+    }
+    
+    assembled_sql.append("FROM ");
+    
+    for (i = 0; i < from_items_.size(); i++)
+    {
+        FromItem& item = from_items_[i];
+        if (item.is_joined_)
+        {
+            JoinedTable* joined_table = get_joined_table(item.table_id_);
+            for (int32_t j = 1; j < joined_table->table_ids_.size(); j++)
+            {
+                if (j == 1)
+                {
+                    assembled_sql.append(ObStmt::get_table_item_by_id(joined_table->table_ids_.at(j - 1))->table_name_);
+                }
+    
+                switch (joined_table->join_types_.at(j - 1))
+                {
+                    case JoinedTable::T_FULL:
+                        assembled_sql.append(" FULL JOIN ");
+                        break;
+                    case JoinedTable::T_LEFT:
+                        assembled_sql.append(" LEFT JOIN ");
+                        break;
+                    case JoinedTable::T_RIGHT:
+                        assembled_sql.append(" RIGHT JOIN ");
+                        break;
+                    case JoinedTable::T_INNER:
+                        assembled_sql.append(" JOIN ");
+                        break;
+                    default:
+                        break;
+                }
+    
+                assembled_sql.append(ObStmt::get_table_item_by_id(joined_table->table_ids_.at(j))->table_name_);
+                assembled_sql.append(" ON ");
+    
+                sql_expr = logical_plan->get_expr_by_id(joined_table->expr_ids_.at(j - 1));
+                if (NULL == sql_expr)
+                {
+                    ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                            "join table expr name error!!!");
+                    return ret;
+                }
+                string tmp;
+                sql_expr->to_string(result_plan, tmp);
+                assembled_sql.append(tmp);
+                assembled_sql.append(" ");
+            }
+        }
+        else
+        {
+            assembled_sql.append(ObStmt::get_table_item_by_id(item.table_id_)->table_name_);
+            if (i == from_items_.size() - 1)
+            {
+                assembled_sql.append(" ");
+            }
+            else
+            {
+                assembled_sql.append(", ");
+            }
+        }
+    }
+    
+}
+
+
+/**************************************************
 Funtion     :   make_group_by_string
 Author      :   qinbo
 Date        :   2013.9.24
 Description :   make select sql
 Input       :   ResultPlan& result_plan,
-                char* buf, 
-                const int64_t buf_len
+                string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObSelectStmt::make_group_by_string(ResultPlan& result_plan,
-        char* buf,
-        const int64_t buf_len)
+int64_t ObSelectStmt::make_group_by_string(ResultPlan& result_plan, string &assembled_sql)
 {
     int32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    int64_t pos = 0;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -728,9 +726,10 @@ int64_t ObSelectStmt::make_group_by_string(ResultPlan& result_plan,
 
     if (group_expr_ids_.size() > 0)
     {
-        databuff_printf(buf, buf_len, pos, "GROUP BY ");
+        assembled_sql.append("GROUP BY ");
         for (i = 0; i < group_expr_ids_.size(); i++)
         {
+            string  assembled_sql_tmp;
             sql_expr = logical_plan->get_expr_by_id(group_expr_ids_[i]);
             if (NULL == sql_expr)
             {
@@ -740,10 +739,9 @@ int64_t ObSelectStmt::make_group_by_string(ResultPlan& result_plan,
                 return ret;
             }
 
-            memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-            sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-            databuff_printf(buf, buf_len, pos, tmp_str);
-            databuff_printf(buf, buf_len, pos, " ");
+            sql_expr->to_string(result_plan, assembled_sql_tmp);
+            assembled_sql.append(assembled_sql_tmp);
+            assembled_sql.append(" ");
         }
     }
 
@@ -756,18 +754,13 @@ Author      :   qinbo
 Date        :   2013.9.24
 Description :   make select sql
 Input       :   ResultPlan& result_plan,
-                char* buf, 
-                const int64_t buf_len
+                string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan,
-        char* buf,
-        const int64_t buf_len)
+int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan, string &assembled_sql)
 {
     int32_t i = 0;
-    int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    int64_t pos = 0;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
+    int&    ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -781,9 +774,10 @@ int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan,
 
     for (i = 0; i < order_items_.size(); i++)
     {
+        string  assembled_sql_tmp;
         if (i == 0)
         {
-            databuff_printf(buf, buf_len, pos, "ORDER BY ");
+            assembled_sql.append("ORDER BY ");
         }
 
         OrderItem& item = order_items_[i];
@@ -797,11 +791,10 @@ int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan,
             return ret;
         }
 
-        memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-        sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-        databuff_printf(buf, buf_len, pos, tmp_str);
-        databuff_printf(buf, buf_len, pos, " ");
-        databuff_printf(buf, buf_len, pos, item.order_type_ == OrderItem::ASC ? "ASC " : "DESC ");
+        sql_expr->to_string(result_plan, assembled_sql_tmp);
+        assembled_sql.append(assembled_sql_tmp);        
+        assembled_sql.append(" ");
+        assembled_sql.append(item.order_type_ == OrderItem::ASC ? "ASC " : "DESC ");
     }
 
     return ret;
@@ -813,18 +806,13 @@ Author      :   qinbo
 Date        :   2013.9.24
 Description :   make select sql
 Input       :   ResultPlan& result_plan,
-                char* buf, 
-                const int64_t buf_len
+                string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan,
-        char* buf,
-        const int64_t buf_len)
+int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan, string &assembled_sql)
 {
     int32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    int64_t pos = 0;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -838,9 +826,10 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan,
 
     if (having_expr_ids_.size() > 0)
     {
-        databuff_printf(buf, buf_len, pos, "HAVING ");
+        assembled_sql.append("HAVING ");
         for (i = 0; i < having_expr_ids_.size(); i++)
         {
+            string  assembled_sql_tmp;
             sql_expr = logical_plan->get_expr_by_id(having_expr_ids_[i]);
             if (NULL == sql_expr)
             {
@@ -850,10 +839,9 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan,
                 return ret;
             }
 
-            memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-            sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-            databuff_printf(buf, buf_len, pos, tmp_str);
-            databuff_printf(buf, buf_len, pos, " ");
+            sql_expr->to_string(result_plan, assembled_sql_tmp);
+            assembled_sql.append(assembled_sql_tmp);        
+            assembled_sql.append(" ");
         }
     }
 
@@ -866,18 +854,14 @@ Author      :   qinbo
 Date        :   2013.9.24
 Description :   make select sql
 Input       :   ResultPlan& result_plan,
-                char* buf, 
-                const int64_t buf_len
+                string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObSelectStmt::make_limit_string(ResultPlan& result_plan,
-        char* buf,
-        const int64_t buf_len)
+int64_t ObSelectStmt::make_limit_string(ResultPlan& result_plan, string &assembled_sql)
 {
     int32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    int64_t pos = 0;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
+    string  assembled_sql_tmp;
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -891,8 +875,8 @@ int64_t ObSelectStmt::make_limit_string(ResultPlan& result_plan,
 
     if (has_limit())
     {
-        databuff_printf(buf, buf_len, pos, "LIMIT ");
-
+        assembled_sql.append("LIMIT ");
+       
         if (limit_offset_id_ == OB_INVALID_ID)
         {
             //fprintf(stderr, "NULL>\n");
@@ -908,9 +892,8 @@ int64_t ObSelectStmt::make_limit_string(ResultPlan& result_plan,
                 return ret;
             }
 
-            memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-            sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-            databuff_printf(buf, buf_len, pos, tmp_str);
+            sql_expr->to_string(result_plan, assembled_sql_tmp);
+            assembled_sql.append(assembled_sql_tmp);        
         }
 
         if (limit_count_id_ == OB_INVALID_ID)
@@ -930,11 +913,12 @@ int64_t ObSelectStmt::make_limit_string(ResultPlan& result_plan,
 
             if (limit_offset_id_ != OB_INVALID_ID)
             {
-                databuff_printf(buf, buf_len, pos, ", ");
+                assembled_sql.append(", ");        
             }
-            memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-            sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-            databuff_printf(buf, buf_len, pos, tmp_str);
+
+            assembled_sql_tmp.clear();
+            sql_expr->to_string(result_plan, assembled_sql_tmp);
+            assembled_sql.append(assembled_sql_tmp);        
         }
     }
 
@@ -947,18 +931,14 @@ Author      :   qinbo
 Date        :   2013.9.24
 Description :   make where sql
 Input       :   ResultPlan& result_plan,
-                char* buf, 
-                const int64_t buf_len
+                string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObSelectStmt::make_where_string(ResultPlan& result_plan,
-        char* buf,
-        const int64_t buf_len)
+int64_t ObSelectStmt::make_where_string(ResultPlan& result_plan, string &assembled_sql)
 {
     int32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     int64_t pos = 0;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -973,9 +953,10 @@ int64_t ObSelectStmt::make_where_string(ResultPlan& result_plan,
 
     if (where_exprs.size() > 0)
     {
-        databuff_printf(buf, buf_len, pos, "WHERE ");
+        assembled_sql.append("WHERE ");        
         for (i = 0; i < where_exprs.size(); i++)
         {
+            string  assembled_sql_tmp;
             sql_expr = logical_plan->get_expr_by_id(where_exprs[i]);
             if (NULL == sql_expr)
             {
@@ -985,16 +966,15 @@ int64_t ObSelectStmt::make_where_string(ResultPlan& result_plan,
                 return ret;
             }
 
-            memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-            sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-            databuff_printf(buf, buf_len, pos, tmp_str);
+            sql_expr->to_string(result_plan, assembled_sql_tmp);
+            assembled_sql.append(assembled_sql_tmp);        
             if (i != where_exprs.size() - 1)
             {
-                databuff_printf(buf, buf_len, pos, " AND ");
+                assembled_sql.append(" AND ");        
             }
             else
             {
-                databuff_printf(buf, buf_len, pos, " ");
+                assembled_sql.append(" ");        
             }
         }
     }
@@ -1040,10 +1020,8 @@ Output      :
 vector<SelectItem> ObSelectStmt::fetch_select_from_tree(ResultPlan& result_plan, string table_name)
 {
     int32_t i = 0;
-    int64_t pos = 0;
     ObSqlRawExpr* sql_expr = NULL;
     vector<SelectItem> select_items;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     if (logical_plan == NULL)
     {
@@ -1053,6 +1031,7 @@ vector<SelectItem> ObSelectStmt::fetch_select_from_tree(ResultPlan& result_plan,
 
     for (i = 0; i < select_items_.size(); i++)
     {
+        string  assembled_sql_tmp;
         SelectItem& item = select_items_[i];
 
         sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
@@ -1089,9 +1068,8 @@ vector<SelectItem> ObSelectStmt::fetch_select_from_tree(ResultPlan& result_plan,
                         return select_items;
                     }
 
-                    memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-                    agg_fun_raw_expr->get_param_expr()->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-                    item.raw_select_item_name.assign(tmp_str, RAW_EXPR_BUF_SIZE);
+                    agg_fun_raw_expr->get_param_expr()->to_string(result_plan, assembled_sql_tmp);
+                    item.raw_select_item_name.assign(assembled_sql_tmp);
                 }
             }
         }
@@ -1133,8 +1111,6 @@ Output      :
 vector<string> ObSelectStmt::fetch_where_from_tree(ResultPlan& result_plan, string table_name)
 {
     int32_t i = 0;
-    int64_t pos = 0;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     ObSqlRawExpr* sql_expr = NULL;
     vector<string> where_items;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -1148,6 +1124,7 @@ vector<string> ObSelectStmt::fetch_where_from_tree(ResultPlan& result_plan, stri
 
     for (i = 0; i < where_exprs.size(); i++)
     {
+        string  assembled_sql_tmp;
         sql_expr = logical_plan->get_expr_by_id(where_exprs[i]);
         if (NULL == sql_expr)
         {
@@ -1156,10 +1133,8 @@ vector<string> ObSelectStmt::fetch_where_from_tree(ResultPlan& result_plan, stri
             return where_items;
         }
 
-        memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-        sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-
-        where_items.push_back(tmp_str);
+        sql_expr->to_string(result_plan, assembled_sql_tmp);
+        where_items.push_back(assembled_sql_tmp);
     }
 
     return where_items;
@@ -1177,8 +1152,6 @@ Output      :
 vector<GroupItem> ObSelectStmt::fetch_group_from_tree(ResultPlan& result_plan, string table_name)
 {
     int32_t i = 0;
-    int64_t pos = 0;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     ObSqlRawExpr* sql_expr = NULL;
     vector<GroupItem> group_items;
     GroupItem item = {0};
@@ -1193,6 +1166,7 @@ vector<GroupItem> ObSelectStmt::fetch_group_from_tree(ResultPlan& result_plan, s
     {
         for (i = 0; i < group_expr_ids_.size(); i++)
         {
+            string  assembled_sql_tmp;
             sql_expr = logical_plan->get_expr_by_id(group_expr_ids_[i]);
             if (NULL == sql_expr)
             {
@@ -1201,11 +1175,10 @@ vector<GroupItem> ObSelectStmt::fetch_group_from_tree(ResultPlan& result_plan, s
                 return group_items;
             }
 
-            memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-            sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
+            sql_expr->to_string(result_plan, assembled_sql_tmp);
 
             item.group_type_ = GroupItem::ASC;
-            item.group_column_.assign(tmp_str);
+            item.group_column_.assign(assembled_sql_tmp);
             group_items.push_back(item);
         }
     }
@@ -1225,8 +1198,6 @@ Output      :
 vector<OrderItem> ObSelectStmt::fetch_order_from_tree(ResultPlan& result_plan, string table_name)
 {
     int32_t i = 0;
-    int64_t pos = 0;
-    char tmp_str[RAW_EXPR_BUF_SIZE] = {0};
     ObSqlRawExpr* sql_expr = NULL;
     vector<OrderItem> order_items;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -1238,6 +1209,7 @@ vector<OrderItem> ObSelectStmt::fetch_order_from_tree(ResultPlan& result_plan, s
 
     for (i = 0; i < order_items_.size(); i++)
     {
+        string  assembled_sql_tmp;
         OrderItem& item = order_items_[i];
 
         sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
@@ -1248,9 +1220,8 @@ vector<OrderItem> ObSelectStmt::fetch_order_from_tree(ResultPlan& result_plan, s
             return order_items;
         }
 
-        memset(tmp_str, 0, RAW_EXPR_BUF_SIZE);
-        sql_expr->to_string(result_plan, tmp_str, RAW_EXPR_BUF_SIZE);
-        item.order_column.assign(tmp_str);
+        sql_expr->to_string(result_plan, assembled_sql_tmp);
+        item.order_column.assign(assembled_sql_tmp);
 
 
         order_items.push_back(item);

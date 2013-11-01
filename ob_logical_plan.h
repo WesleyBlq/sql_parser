@@ -161,13 +161,10 @@ namespace oceanbase
             Date        :   2013.9.10
             Description :   make stmt string
             Input       :   ResultPlan& result_plan,
-                            char* buf, 
-                            const int64_t buf_len
+                            string &assembled_sql_tmp
             Output      :   ObSqlRawExpr* 
              **************************************************/
-            void make_stmt_string(ResultPlan& result_plan,
-                    char* buf,
-                    const int64_t buf_len);
+            void make_stmt_string(ResultPlan& result_plan, string &assembled_sql_tmp);
 #if 0
         protected:
             oceanbase::common::ObStringBuf* name_pool_;

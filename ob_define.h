@@ -345,9 +345,11 @@ namespace oceanbase
 
 
         const int JD_ERR_LOGICAL_TREE_WRONG = -5070;
-        const int JD_ERR_SHARD_NUM_WRONG = -5071;
+        const int JD_ERR_SHARD_NUM_WRONG    = -5071;
+        const int JD_ERR_COLUMN_NOT_MATCH   = -5072;
+        const int JD_ERR_SQL_NOT_SUPPORT    = -5073;
 
-
+        
         const int OB_ERR_SQL_END = -5999;
 #define IS_SQL_ERR(e) (OB_ERR_SQL_END >= e && OB_ERR_SQL_START <= e)
         //////////////////////////////////////////////////////////////// end of ob error code

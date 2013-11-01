@@ -585,9 +585,7 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
     }
 }
 
-int64_t ObStmt::make_stmt_string(ResultPlan& result_plan,
-        char* buf,
-        const int64_t buf_len)
+int64_t ObStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
 {
 
 }
