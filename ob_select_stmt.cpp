@@ -196,7 +196,19 @@ int ObSelectStmt::check_having_ident(
                         if (column_item && column_item->column_name_ == column_name)
                         {
                             ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
-                            b_expr = new(b_expr) ObBinaryRefRawExpr();
+                            if (b_expr == NULL)
+                            {
+                                ret = OB_ERR_PARSER_MALLOC_FAILED;
+                                TBSYS_LOG(WARN, "out of memory");
+                                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                                        "Can not malloc space for ObBinaryRefRawExpr");
+                                return ret;
+                            }
+                            else
+                            {
+                                b_expr = new(b_expr) ObBinaryRefRawExpr();
+                            }
+                            
                             b_expr->set_expr_type(T_REF_COLUMN);
                             b_expr->set_first_ref_id(col_expr->get_first_ref_id());
                             b_expr->set_second_ref_id(col_expr->get_second_ref_id());
@@ -223,7 +235,18 @@ int ObSelectStmt::check_having_ident(
                 {
                     ObBinaryRefRawExpr *col_expr = dynamic_cast<ObBinaryRefRawExpr *> (expr);
                     ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
-                    b_expr = new(b_expr) ObBinaryRefRawExpr();
+                    if (b_expr == NULL)
+                    {
+                        ret = OB_ERR_PARSER_MALLOC_FAILED;
+                        TBSYS_LOG(WARN, "out of memory");
+                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                                "Can not malloc space for ObBinaryRefRawExpr");
+                        return ret;
+                    }
+                    else
+                    {
+                        b_expr = new(b_expr) ObBinaryRefRawExpr();
+                    }
                     b_expr->set_expr_type(T_REF_COLUMN);
                     b_expr->set_first_ref_id(col_expr->get_first_ref_id());
                     b_expr->set_second_ref_id(col_expr->get_second_ref_id());
@@ -235,7 +258,18 @@ int ObSelectStmt::check_having_ident(
                 else
                 {
                     ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
-                    b_expr = new(b_expr) ObBinaryRefRawExpr();
+                    if (b_expr == NULL)
+                    {
+                        ret = OB_ERR_PARSER_MALLOC_FAILED;
+                        TBSYS_LOG(WARN, "out of memory");
+                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                                "Can not malloc space for ObBinaryRefRawExpr");
+                        return ret;
+                    }
+                    else
+                    {
+                        b_expr = new(b_expr) ObBinaryRefRawExpr();
+                    }
                     b_expr->set_expr_type(T_REF_COLUMN);
                     b_expr->set_first_ref_id(OB_INVALID_ID);
                     b_expr->set_second_ref_id(sql_expr->get_column_id());
@@ -266,7 +300,18 @@ int ObSelectStmt::check_having_ident(
                 if (column_item && column_name == column_item->column_name_)
                 {
                     ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
-                    b_expr = new(b_expr) ObBinaryRefRawExpr();
+                    if (b_expr == NULL)
+                    {
+                        ret = OB_ERR_PARSER_MALLOC_FAILED;
+                        TBSYS_LOG(WARN, "out of memory");
+                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                                "Can not malloc space for ObBinaryRefRawExpr");
+                        return ret;
+                    }
+                    else
+                    {
+                        b_expr = new(b_expr) ObBinaryRefRawExpr();
+                    }
                     b_expr->set_expr_type(T_REF_COLUMN);
                     b_expr->set_first_ref_id(column_item->table_id_);
                     b_expr->set_second_ref_id(column_item->column_id_);

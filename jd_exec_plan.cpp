@@ -33,6 +33,36 @@ void ExecPlanUnit::set_exec_uint_shard_info(schema_shard* shard_info_)
     shard_info = shard_info_;
 }
 
+/**************************************************
+Funtion     :   SameLevelExecPlan
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   
+Input       :   
+Output      :   
+ **************************************************/
+SameLevelExecPlan::SameLevelExecPlan()
+{
+
+}
+
+/**************************************************
+Funtion     :   ~SameLevelExecPlan
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   
+Input       :   
+Output      :   
+ **************************************************/
+SameLevelExecPlan::~SameLevelExecPlan()
+{
+    for(int32_t i = 0; i < exec_plan_units.size(); i++)
+    {
+        parse_free(exec_plan_units.at(i));
+    }
+    exec_plan_units.clear();
+}
+
 bool SameLevelExecPlan::get_parent_sql_type()
 {
 
@@ -58,6 +88,38 @@ void SameLevelExecPlan::add_exec_plan_unit(ExecPlanUnit* exec_plan_unit)
     exec_plan_units.push_back(exec_plan_unit);
 
 }
+
+/**************************************************
+Funtion     :   FinalExecPlan
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   
+Input       :   
+Output      :   
+ **************************************************/
+FinalExecPlan::FinalExecPlan()
+{
+
+}
+
+/**************************************************
+Funtion     :   ~FinalExecPlan
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   
+Input       :   
+Output      :   
+ **************************************************/
+FinalExecPlan::~FinalExecPlan()
+{
+    for(int32_t i = 0; i < exec_plan.size(); i++)
+    {
+        exec_plan[i]->~SameLevelExecPlan();
+        parse_free(exec_plan.at(i));
+    }
+    exec_plan.clear();
+}
+
 
 template <class T>
 int QueryActuator::get_stmt(
@@ -146,8 +208,6 @@ Output      :
  **************************************************/
 int QueryActuator::init_exec_plan(string current_db_name)
 {
-    g_metareader = new meta_reader;
-
     g_metareader->add_DB_schema("qinbo");
     g_metareader->add_table_schema("qinbo", "persons", 100);
     g_metareader->add_column_schema("qinbo", "persons", "lastname", 1111, T_STRING, 0);
@@ -194,11 +254,8 @@ int QueryActuator::init_exec_plan(string current_db_name)
     a = g_metareader->get_all_column_schemas("qinbo", "order_list").size();
     //cout << "order_list: column_num:" << a << endl;
 
-    router *route_info = new router;
-    route_info->route_init(g_metareader);
-
     result_plan.name_pool_ = NULL;
-    result_plan.route_info = (void*) route_info;
+    result_plan.route_info = (void*) route;
     result_plan.plan_tree_ = NULL;
     result_plan.db_name = "qinbo";
 
@@ -230,7 +287,42 @@ int QueryActuator::release_exec_plan()
         destroy_tree(result.result_tree_);
         result.result_tree_ = NULL;
     }
+
+    if (NULL != final_exec_plan)
+    {
+        final_exec_plan->~FinalExecPlan();
+        parse_free(final_exec_plan);
+        final_exec_plan = NULL;
+    }
 }
+
+/**************************************************
+Funtion     :   set_final_exec_plan
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   set QueryActuator exec plans
+Input       :   
+Output      :   
+ **************************************************/
+void QueryActuator::set_final_exec_plan(FinalExecPlan* final_exec_plan_)
+{
+    final_exec_plan = final_exec_plan_;
+}
+
+
+/**************************************************
+Funtion     :   get_final_exec_plan
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   set QueryActuator exec plans
+Input       :   
+Output      :   
+ **************************************************/
+FinalExecPlan*  QueryActuator::get_final_exec_plan( )
+{
+    return final_exec_plan;
+}
+
 
 /**************************************************
 Funtion     :   generate_exec_plan
@@ -244,13 +336,13 @@ Output      :
  **************************************************/
 int QueryActuator::generate_exec_plan(
         string sql,
-        FinalExecPlan*& final_exec_plan,
         int32_t* index)
 {
     int&        ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     bool        new_generated = false;
     uint64_t    query_id = OB_INVALID_ID;
     string      assemble_sql;
+    FinalExecPlan* final_exec_plan = NULL;
 
     if (parse_init(&result))
     {
@@ -343,6 +435,8 @@ int QueryActuator::generate_exec_plan(
             }
         }
 
+        set_final_exec_plan(final_exec_plan);
+        
         ObBasicStmt *stmt = NULL;
         if (ret == OB_SUCCESS)
         {

@@ -63,6 +63,8 @@ private:
     bool is_1st_plan;
     char parent_sql_type; /**if need to be reparsed*/
 public:
+    SameLevelExecPlan();
+    virtual ~SameLevelExecPlan();
     bool get_parent_sql_type();
     void set_parent_sql_type(uint8_t parent_sql_type);
     void set_first_plan_true();
@@ -78,6 +80,8 @@ private:
 
 public:
     //friend class Optimizor;
+    FinalExecPlan();
+    virtual ~FinalExecPlan();
 };
 
 /*���ڲ���ִ�мƻ��Ķ�����class*/
@@ -114,6 +118,7 @@ public:
     Output      :   
      **************************************************/
     int release_exec_plan();
+    
     /**************************************************
     Funtion     :   release_exec_plan
     Author      :   qinbo
@@ -124,8 +129,27 @@ public:
      **************************************************/
     int generate_exec_plan(
             string sql,
-            FinalExecPlan*& physical_plan,
             int32_t* index = NULL);
+
+    /**************************************************
+    Funtion     :   set_final_exec_plan
+    Author      :   qinbo
+    Date        :   2013.11.1
+    Description :   set QueryActuator exec plans
+    Input       :   
+    Output      :   
+     **************************************************/
+    void set_final_exec_plan(FinalExecPlan* final_exec_plan_);
+    
+    /**************************************************
+    Funtion     :   get_final_exec_plan
+    Author      :   qinbo
+    Date        :   2013.11.1
+    Description :   set QueryActuator exec plans
+    Input       :   
+    Output      :   
+     **************************************************/
+    FinalExecPlan*  get_final_exec_plan();
 
     /**************************************************
     Funtion     :   release_exec_plan
@@ -171,6 +195,7 @@ private:
     bool is_next_plan_reparsed;
     ParseResult result;
     ResultPlan result_plan;
+    FinalExecPlan* final_exec_plan;
 
     //internal functions
     int generate_select_plan_single_table(

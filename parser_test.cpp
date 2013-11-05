@@ -27,7 +27,6 @@ using namespace oceanbase;
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
 
-meta_reader *g_metareader = NULL;
 
 int
 sql_parser(string sql)
@@ -38,7 +37,7 @@ sql_parser(string sql)
     query_actuator.init_exec_plan("qinbo");
             
     FinalExecPlan* final_exec_plan = NULL;
-    if (OB_SUCCESS != (ret = query_actuator.generate_exec_plan(sql, final_exec_plan)))
+    if (OB_SUCCESS != (ret = query_actuator.generate_exec_plan(sql)))
     {
         fprintf(stderr, "generate_exec_plan: %s\n", query_actuator.get_result_plan().err_stat_.err_msg_);
         ret = OB_ERR_GEN_PLAN;
