@@ -69,6 +69,27 @@
 #define STMT_BUF_SIZE       1024
 #define SQL_PLAN_BUF_SIZE   4096
 
+#define MAX_ERROR_MSG_ 1024
+
+
+typedef struct
+{
+  int   err_code_;
+  char  err_msg_[MAX_ERROR_MSG_];
+} ErrStat;
+
+
+typedef struct
+{
+  void*     plan_tree_;
+  void*     name_pool_;     // ObStringBuf
+  void*     route_info;     // route info
+  ErrStat   err_stat_;
+  int       is_prepare_;
+  string    db_name;        //record current db name
+} ResultPlan;
+
+
 namespace oceanbase
 {
     namespace common

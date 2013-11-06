@@ -272,7 +272,7 @@ int resolve_and_exprs(
 ({    \
   ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_); \
   string current_db_name;   \
-  current_db_name.assign(result_plan->db_name); \
+  current_db_name = result_plan->db_name; \
   expr = (type_name*)parse_malloc(sizeof(type_name), NULL);   \
   if (expr != NULL) \
   { \

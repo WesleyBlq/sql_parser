@@ -208,6 +208,7 @@ Output      :
  **************************************************/
 int QueryActuator::init_exec_plan(string current_db_name)
 {
+#if 0
     g_metareader->add_DB_schema("qinbo");
     g_metareader->add_table_schema("qinbo", "persons", 100);
     g_metareader->add_column_schema("qinbo", "persons", "lastname", 1111, T_STRING, 0);
@@ -247,17 +248,11 @@ int QueryActuator::init_exec_plan(string current_db_name)
     }
 
     schema_column->set_sharding_key_status(false);
-
-    int a = g_metareader->get_all_column_schemas("qinbo", "persons").size();
-    //cout << "persons: column_num:" << a << endl;
-
-    a = g_metareader->get_all_column_schemas("qinbo", "order_list").size();
-    //cout << "order_list: column_num:" << a << endl;
-
+#endif
     result_plan.name_pool_ = NULL;
     result_plan.route_info = (void*) route;
     result_plan.plan_tree_ = NULL;
-    result_plan.db_name = "qinbo";
+    result_plan.db_name    = current_db_name;
 
     return 0;
 
@@ -397,12 +392,12 @@ int QueryActuator::generate_exec_plan(
     if (NULL == result_plan.plan_tree_)
     {
         fprintf(stderr, "\n<<result_plan.plan_tree_ is NULL>>\n");
-        fprintf(stderr, "RESULT_PLAN: %s\n", result_plan.err_stat_.err_msg_);
+        fprintf(stderr, "RESULT_PLAN ERR INFO: %s\n", result_plan.err_stat_.err_msg_);
         return 1;
     }
 
     //if (OB_SUCCESS != ret)
-    fprintf(stderr, "RESULT_PLAN: %s\n", result_plan.err_stat_.err_msg_);
+    fprintf(stderr, "RESULT_PLAN ERR INFO: %s\n", result_plan.err_stat_.err_msg_);
 
     ObLogicalPlan* logic_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     fflush(stderr);
@@ -594,10 +589,7 @@ int QueryActuator::generate_select_plan_single_table(
     }
 
     table_name = table_names.at(0);
-
     db_name.assign(result_plan.db_name);
-
-    cout << "db name get " << db_name << endl;
 
     schema_db* db_schema = g_metareader->get_DB_schema(db_name);
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
@@ -764,7 +756,7 @@ int QueryActuator::generate_select_plan_single_table(
 
                 exec_plan_unit->set_exec_unit_sql(assembled_sql);
                 cout << "exec_plan_unit shard name: " << shard_key->get_shard_name() << endl;
-                cout << "exec_plan_unit SQL name: " << assembled_sql << endl;
+                cout << "exec_plan_unit SQL name  : " << assembled_sql << endl;
                 exec_plan_unit->set_exec_uint_shard_info(shard_key);
 
                 /*add exec_plan_unit*/
@@ -855,45 +847,37 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
     ObRawExpr* raw_expr = NULL;
     int ret = false;
     vector<vector<schema_shard*> > all_related_shards;
-    vector<schema_shard*> shard_tmp1;
+    vector<schema_shard*> shard_tmp1(MAX_SQL_EXEC_PLAN_SHARD_NUM);
     vector<schema_shard*> shard_tmp2;
-    vector<schema_shard*> shard_tmp3;
     int i = 0;
 
     for (i = 0; i < partition_sql_exprs.size(); i++)
     {
         raw_expr = partition_sql_exprs.at(i);
 
-        string db_name = raw_expr->get_db_name();
         string table_name = table_schema->get_table_name();
         map<string, SqlItemType> sharding_key_tmp = table_schema->get_sharding_key();
         vector<key_data> key_relations;
-        key_data key_relation;
         vector<schema_shard*> shard_info;
 
         map<string, SqlItemType>::iterator it = sharding_key_tmp.begin();
-
         while (it != sharding_key_tmp.end())
         {
-            memset(&key_relation, 0, sizeof (key_data));
-            key_relation.db_name = db_name;
-            key_relation.table_name = table_name;
-            key_relation.sharding_key = it->first;
-            key_relation.key_type = it->second;
-
+            key_data key_relation;
+            key_relation.db_name        = result_plan.db_name;
+            key_relation.table_name     = table_name;
+            key_relation.sharding_key   = it->first;
+            key_relation.key_type       = it->second;
             if (raw_expr->convert_ob_expr_to_route(key_relation))
             {
                 key_relations.push_back(key_relation);
             }
-
             it++;
         }
-
         if (key_relations.size() > 0)
         {
             router *route_info = (router *) result_plan.route_info;
-            route_info->get_route_result(key_relations, &shard_info, &ret);
-            if (!ret)
+            if (!route_info->get_route_result(key_relations, &shard_info, NULL))
             {
                 TBSYS_LOG(WARN, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -928,23 +912,29 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
     else if (all_related_shards.size() == 2)
     {
         set_intersection(all_related_shards.at(0).begin(), all_related_shards.at(0).end(),
-                all_related_shards.at(1).begin(), all_related_shards.at(1).end(), shard_tmp1.begin()); //����
+                all_related_shards.at(1).begin(), all_related_shards.at(1).end(), shard_tmp1.begin());
     }
     else
     {
         set_intersection(all_related_shards.at(0).begin(), all_related_shards.at(0).end(),
-                all_related_shards.at(1).begin(), all_related_shards.at(1).end(), shard_tmp1.begin()); //����
+                all_related_shards.at(1).begin(), all_related_shards.at(1).end(), shard_tmp1.begin());
         for (i = 2; i < all_related_shards.size(); i++)
         {
+            vector<schema_shard*> shard_tmp3(MAX_SQL_EXEC_PLAN_SHARD_NUM);
             shard_tmp2 = all_related_shards.at(i);
-            set_intersection(shard_tmp1.begin(), shard_tmp1.end(), shard_tmp2.begin(), shard_tmp2.end(), shard_tmp3.begin()); //����
+            set_intersection(shard_tmp1.begin(), shard_tmp1.end(), shard_tmp2.begin(), shard_tmp2.end(), shard_tmp3.begin());
+            shard_tmp1.clear();
+            shard_tmp1.resize(MAX_SQL_EXEC_PLAN_SHARD_NUM, NULL);
             shard_tmp1 = shard_tmp3;
         }
     }
 
     for (i = 0; i < shard_tmp1.size(); i++)
     {
-        opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(shard_tmp1.at(i), atomic_exprs));
+        if (NULL != shard_tmp1.at(i))
+        {
+            opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(shard_tmp1.at(i), atomic_exprs));
+        }
     }
 
     return true;
@@ -1256,30 +1246,28 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
     {
         raw_expr = partition_sql_exprs.at(i);
 
-        string db_name = raw_expr->get_db_name();
         string table_name;
-
+        
         if (!raw_expr->try_get_table_name(table_name))
         {
             continue;
         }
         
-        table_schema = g_metareader->get_table_schema(db_name, table_name);
+        table_schema = g_metareader->get_table_schema(result_plan.db_name, table_name);
         
         map<string, SqlItemType> sharding_key_tmp = table_schema->get_sharding_key();
         vector<key_data> key_relations;
-        key_data key_relation;
         vector<schema_shard*> shard_info;
 
         map<string, SqlItemType>::iterator it = sharding_key_tmp.begin();
 
         while (it != sharding_key_tmp.end())
         {
-            memset(&key_relation, 0, sizeof (key_data));
-            key_relation.db_name = db_name;
-            key_relation.table_name = table_name;
-            key_relation.sharding_key = it->first;
-            key_relation.key_type = it->second;
+            key_data key_relation;
+            key_relation.db_name        = result_plan.db_name;
+            key_relation.table_name     = table_name;
+            key_relation.sharding_key   = it->first;
+            key_relation.key_type       = it->second;
 
             if (raw_expr->convert_ob_expr_to_route(key_relation))
             {
@@ -1292,8 +1280,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
         if (key_relations.size() > 0)
         {
             router *route_info = (router *) result_plan.route_info;
-            route_info->get_route_result(key_relations, &shard_info, &ret);
-            if (!ret)
+            if (!route_info->get_route_result(key_relations, &shard_info, NULL))
             {
                 TBSYS_LOG(WARN, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -1619,13 +1606,13 @@ void QueryActuator::append_distributed_where_items(ResultPlan& result_plan,
                                                 string &sql,
                                                 vector<vector<ObRawExpr*> > &atomic_exprs_array)
 {
-    string assembled_sql_tmp;
-
     if (atomic_exprs_array.size() == 0)
     {
         return;
     }
 
+    sql.append(" WHERE ");
+    
     for (int i = 0; i < atomic_exprs_array.size(); i++)
     {
         if (i > 0)
@@ -1635,6 +1622,8 @@ void QueryActuator::append_distributed_where_items(ResultPlan& result_plan,
         vector<ObRawExpr*> atomic_exprs = atomic_exprs_array.at(i);
         for (int j = 0; j < atomic_exprs.size(); j++)
         {
+            string assembled_sql_tmp;
+            
             if (j > 0)
             {
                 sql.append(" AND ");
@@ -2153,10 +2142,7 @@ int QueryActuator::gen_exec_plan_insert(
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     router *route_info = static_cast<router*> (result_plan.route_info);
 
-
-    string db_name;
     string table_name;
-    char tmp_str[STMT_BUF_SIZE] = {0};
     string sql_exec_plan_unit;
     vector<schema_shard*> all_related_shards;
     schema_shard*   shard_info = NULL;
@@ -2178,8 +2164,7 @@ int QueryActuator::gen_exec_plan_insert(
         return ret;
     }
 
-    db_name.assign(result_plan.db_name);
-    schema_db* db_schema = g_metareader->get_DB_schema(db_name);
+    schema_db* db_schema = g_metareader->get_DB_schema(result_plan.db_name);
     table_name.assign(insert_stmt->get_table_item_by_id(insert_stmt->get_table_id())->table_name_);
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
 
@@ -2289,18 +2274,17 @@ int QueryActuator::gen_exec_plan_insert(
                     
                     map<string, SqlItemType> sharding_key_tmp = table_schema->get_sharding_key();
                     vector<key_data> key_relations;
-                    key_data key_relation;
                     vector<schema_shard*> shard_info;
                     
                     map<string, SqlItemType>::iterator it = sharding_key_tmp.begin();
                     
                     while (it != sharding_key_tmp.end())
                     {
-                        memset(&key_relation, 0, sizeof (key_data));
-                        key_relation.db_name = db_name;
-                        key_relation.table_name = table_name;
-                        key_relation.sharding_key = it->first;
-                        key_relation.key_type = it->second;
+                        key_data key_relation;
+                        key_relation.db_name        = result_plan.db_name;
+                        key_relation.table_name     = table_name;
+                        key_relation.sharding_key   = it->first;
+                        key_relation.key_type       = it->second;
                     
                         if (raw_expr->convert_ob_expr_to_route(key_relation))
                         {
@@ -2313,8 +2297,7 @@ int QueryActuator::gen_exec_plan_insert(
                     if (key_relations.size() > 0)
                     {
                         router *route_info = (router *) result_plan.route_info;
-                        route_info->get_route_result(key_relations, &shard_info, &ret);
-                        if (!ret)
+                        if (!route_info->get_route_result(key_relations, &shard_info, NULL))
                         {
                             TBSYS_LOG(WARN, "route info manage error");
                             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,

@@ -9,22 +9,6 @@
 
 #define MAX_ERROR_MSG 1024
 
-typedef struct
-{
-  int   err_code_;
-  char  err_msg_[MAX_ERROR_MSG];
-} ErrStat;
-
-typedef struct
-{
-  void* plan_tree_;
-  void* name_pool_;     // ObStringBuf
-  void* route_info;     // route info
-  ErrStat err_stat_;
-  int   is_prepare_;
-  char* db_name;        //record current db name
-} ResultPlan;
-
 struct _ParseNode;
 
 typedef struct _ParseNode

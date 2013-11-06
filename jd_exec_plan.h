@@ -44,6 +44,8 @@
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
 
+#define MAX_SQL_EXEC_PLAN_SHARD_NUM   200
+
 /*��ִ�е�Ԫ�ķ�װ*/
 class ExecPlanUnit
 {

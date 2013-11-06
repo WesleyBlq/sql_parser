@@ -29,12 +29,12 @@ using namespace oceanbase::sql;
 
 
 int
-sql_parser(string sql)
+sql_parser(string sql, string current_db_name)
 {
     int ret = 0;
     QueryActuator query_actuator;
 
-    query_actuator.init_exec_plan("qinbo");
+    query_actuator.init_exec_plan(current_db_name);
             
     FinalExecPlan* final_exec_plan = NULL;
     if (OB_SUCCESS != (ret = query_actuator.generate_exec_plan(sql)))
@@ -91,10 +91,13 @@ SELECT address,lastname FROM persons";
     string sql_multi_table = "select * from persons, order_list \
         WHERE persons.lastname = 'Attendee' AND persons.address = 'beijing'  AND (persons.id = 147 OR persons.id = 155)";
 
+    string sql_test1 = "SELECT id, name, age from tt where id = 147 OR id = 155";
+    string sql_test2 = "SELECT id from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing'";
+
     //sql_parser(sql4);
     //sql_parser(sql6);
     //sql_parser(sql10);
-    sql_parser(sql14);
+    sql_parser(sql_test2, "oxwf");
     //sql_parser(sql14);
     //sql_parser(sql9);
     //sql_parser(sql8);
