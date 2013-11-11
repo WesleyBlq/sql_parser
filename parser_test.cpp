@@ -61,7 +61,6 @@ GROUP BY lastname HAVING(count(lastname) > 10) ORDER BY lastname desc limit 100,
     string sql7 = "select lastname,address FROM persons \
 WHERE id=(select id from persons where lastname='NEW YORK')";
 
-
     string sql5 = "SELECT persons.lastname, persons.address, order_list.order_desc \
 FROM persons \
 JOIN order_list \
@@ -93,11 +92,12 @@ SELECT address,lastname FROM persons";
 
     string sql_test1 = "SELECT id, name, age from tt where id = 147 OR id = 155";
     string sql_test2 = "SELECT id from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing'";
-
-    //sql_parser(sql4);
+    string sql_test3 = "SELECT id FROM pp";
+    
+    //sql_parser(sql3, "qinbo");
     //sql_parser(sql6);
     //sql_parser(sql10);
-    sql_parser(sql_test2, "oxwf");
+    sql_parser(sql_test3, "oxwf");
     //sql_parser(sql14);
     //sql_parser(sql9);
     //sql_parser(sql8);

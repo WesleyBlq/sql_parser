@@ -494,13 +494,15 @@ namespace oceanbase
                         string &assembled_sql_tmp
         Output      :   ObSqlRawExpr* 
          **************************************************/
-        void ObLogicalPlan::make_stmt_string(ResultPlan& result_plan, string &assembled_sql_tmp)
+        void ObLogicalPlan::make_stmt_string(ResultPlan& result_plan)
         {
             uint32_t i;
             for (i = 0; i < stmts_.size(); i++)
             {
+                string assembled_sql;
                 ObBasicStmt* stmt = stmts_[i];
-                stmt->make_stmt_string(result_plan, assembled_sql_tmp);
+                stmt->make_stmt_string(result_plan, assembled_sql);
+                cout << "STMT string: " << assembled_sql << endl;
             }
         }
     }

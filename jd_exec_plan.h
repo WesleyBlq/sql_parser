@@ -46,6 +46,9 @@ using namespace oceanbase::sql;
 
 #define MAX_SQL_EXEC_PLAN_SHARD_NUM   200
 
+#define WHERE_IS_OR_AND     0
+#define WHERE_IS_SUBQUERY   1
+
 /*��ִ�е�Ԫ�ķ�װ*/
 class ExecPlanUnit
 {
@@ -323,14 +326,15 @@ private:
 
 
     /**************************************************
-    Funtion     :   generate_distributed_where_items
+    Funtion     :   decompose_where_items
     Author      :   qinbo
-    Date        :   2013.10.17
+    Date        :   2013.9.24
     Description :   generate distributed where conditions items
     Input       :   ObRawExpr* sql_expr
-    Output      :   
+    Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
+    return      :   
      **************************************************/
-    vector<vector<ObRawExpr*> > decompose_where_items(ObRawExpr* sql_expr);
+    int decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array);
 
     /**************************************************
     Funtion     :   search_partition_sql_exprs
@@ -384,6 +388,22 @@ private:
     bool vector_elem_exist_already( 
                             vector<schema_shard*> vector_shards,
                             schema_shard* single_shard);
+    
+    /**************************************************
+    Funtion     :   distribute_to_all_shards
+    Author      :   qinbo
+    Date        :   2013.11.6
+    Description :   vector elem is already existing
+    Input       :   ResultPlan& result_plan,
+                    schema_table* table_schema,
+                    SameLevelExecPlan* exec_plan
+    Output      :   
+    return      :
+     **************************************************/
+    int distribute_to_all_shards( 
+                        ResultPlan& result_plan,
+                        schema_table* table_schema,
+                        SameLevelExecPlan* exec_plan);
 };
 
 
