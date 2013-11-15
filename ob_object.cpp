@@ -213,7 +213,7 @@ int ObObj::compare_same_type(const ObObj &other) const
             cmp = this->value_.bool_val - other.value_.bool_val;
             break;
         default:
-            TBSYS_LOG(ERROR, "invalid type=%d", get_type());
+            jlog(ERROR, "invalid type=%d", get_type());
             break;
     }
     return cmp;
@@ -226,7 +226,7 @@ int ObObj::compare(const ObObj &other) const
     ObObjType other_type = other.get_type();
     if (!can_compare(other))
     {
-        TBSYS_LOG(ERROR, "can not be compared, this_type=%d other_type=%d",
+        jlog(ERROR, "can not be compared, this_type=%d other_type=%d",
                 get_type(), other.get_type());
         cmp = this_type - other_type;
     }
@@ -346,7 +346,7 @@ int ObObj::apply(const ObObj &mutation)
             || ObMinType >= mut_type
             || ObMaxType <= mut_type)
     {
-        TBSYS_LOG(WARN, "unsupported type [type:%d]", mut_type);
+        jlog(WARNING, "unsupported type [type:%d]", mut_type);
         err = OB_INVALID_ARGUMENT;
     }
     if (OB_SUCCESS == err
@@ -356,7 +356,7 @@ int ObObj::apply(const ObObj &mutation)
             && ObNullType != mut_type
             && org_type != mut_type)
     {
-        TBSYS_LOG(WARN, "type not coincident [this->type:%d,mutation.type:%d]",
+        jlog(WARNING, "type not coincident [this->type:%d,mutation.type:%d]",
                 org_type, mut_type);
         err = OB_INVALID_ARGUMENT;
     }
@@ -510,7 +510,7 @@ int ObObj::apply(const ObObj &mutation)
                         }
                         break;
                     default:
-                        TBSYS_LOG(ERROR, "unsupported ext value [value:%ld]", mutation.get_ext());
+                        jlog(ERROR, "unsupported ext value [value:%ld]", mutation.get_ext());
                         err = OB_INVALID_ARGUMENT;
                         break;
                 }
@@ -594,14 +594,14 @@ int ObObj::apply(const ObObj &mutation)
             }
             default:
                 /* case ObSeqType: */
-                TBSYS_LOG(ERROR, "unsupported type [type:%d]", mut_type);
+                jlog(ERROR, "unsupported type [type:%d]", mut_type);
                 err = OB_INVALID_ARGUMENT;
                 break;
         }
     }
     if (OB_SUCCESS != err)
     {
-        TBSYS_LOG(WARN, "fail to apply [this->type:%d,this->ext:%d,"
+        jlog(WARNING, "fail to apply [this->type:%d,this->ext:%d,"
                 "mutation->type:%d,mutation->ext:%ld, err:%d]",
                 org_type, org_ext, mut_type, mutation.get_ext(), err);
     }
@@ -951,7 +951,7 @@ DEFINE_SERIALIZE(ObObj)
                 }
                 break;
             default:
-                TBSYS_LOG(ERROR, "invalid obj_type=%d", type);
+                jlog(ERROR, "invalid obj_type=%d", type);
                 ret = OB_ERR_UNEXPECTED;
                 break;
         }
@@ -1080,28 +1080,28 @@ DEFINE_DESERIALIZE(ObObj)
                                             break;
                                         }
                                         default:
-                                            TBSYS_LOG(ERROR, "invalid obj_type=%d", sub_sub_sub_type);
+                                            jlog(ERROR, "invalid obj_type=%d", sub_sub_sub_type);
                                             ret = OB_ERR_UNEXPECTED;
                                             break;
                                     }
                                     break;
                                 }
                                 default:
-                                    TBSYS_LOG(ERROR, "invalid obj_type=%d", sub_sub_type);
+                                    jlog(ERROR, "invalid obj_type=%d", sub_sub_type);
                                     ret = OB_ERR_UNEXPECTED;
                                     break;
                             }
                             break;
                         }
                         default:
-                            TBSYS_LOG(ERROR, "invalid obj_type=%d", sub_type);
+                            jlog(ERROR, "invalid obj_type=%d", sub_type);
                             ret = OB_ERR_UNEXPECTED;
                             break;
                     }
                 }
                     break;
                 default:
-                    TBSYS_LOG(ERROR, "invalid obj_type=%d", type);
+                    jlog(ERROR, "invalid obj_type=%d", type);
                     ret = OB_ERR_UNEXPECTED;
                     break;
             }
@@ -1175,7 +1175,7 @@ DEFINE_GET_SERIALIZE_SIZE(ObObj)
             }
             break;
         default:
-            TBSYS_LOG(ERROR, "unexpected obj type [obj.type:%d]", type);
+            jlog(ERROR, "unexpected obj type [obj.type:%d]", type);
             break;
     }
     return len;
@@ -1242,7 +1242,7 @@ uint32_t ObObj::murmurhash2(const uint32_t hash) const
             break;
         }
         default:
-            TBSYS_LOG(ERROR, "invalid obj_type=%d", type);
+            jlog(ERROR, "invalid obj_type=%d", type);
             result = 0;
             break;
     }
@@ -1310,7 +1310,7 @@ int64_t ObObj::checksum(const int64_t current) const
             break;
         }
         default:
-            TBSYS_LOG(ERROR, "invalid obj_type=%d", type);
+            jlog(ERROR, "invalid obj_type=%d", type);
             ret = 0;
             break;
     }
@@ -1377,7 +1377,7 @@ void ObObj::checksum(ObBatchChecksum &bc) const
             break;
         }
         default:
-            TBSYS_LOG(ERROR, "invalid obj_type=%d", type);
+            jlog(ERROR, "invalid obj_type=%d", type);
             break;
     }
 }

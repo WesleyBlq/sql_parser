@@ -22,7 +22,6 @@ USERLIBS_test = $(SYSLIBS_test) \
 	#-L/usr/local/mysql-cpp-connector/mysql-connector-c++-1.1.3-linux-glibc2.3-x86-64bit/lib
 
 LDLIBS = $(USERLIBS_test)  \
-	../log/libjlog.a  \
 	../sql/libsql.a ../route/libroute.a -lcrypto \
 	/usr/local/lib/libzookeeper_mt.a \
 	/usr/local/lib/libjson_linux-gcc-4.1.2_libmt.a \
@@ -36,7 +35,6 @@ OBJS_SQL =  \
 	sql_non_reserved_keywords.o \
 	sql_parser.lex.o \
 	sql_parser.tab.o \
-	log.o \
 	utility.o \
 	ob_number.o \
 	ob_object.o \
@@ -49,8 +47,11 @@ OBJS_SQL =  \
 	ob_insert_stmt.o  \
 	ob_update_stmt.o \
 	ob_select_stmt.o \
+	ob_show_stmt.o \
+	ob_variable_set_stmt.o \
 	ob_logical_plan.o\
 	dml_build_plan.o \
+	crud_build_plan.o \
 	jd_exec_plan.o
 
 #libsql.a

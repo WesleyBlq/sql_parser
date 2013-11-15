@@ -188,6 +188,7 @@ extern "C"
         T_SHOW_SERVER_STATUS,
         T_SHOW_WARNINGS,
         T_SHOW_GRANTS,
+        T_SHOW_PROCESSLIST,
         T_SHOW_LIMIT,
 
         T_CREATE_USER,

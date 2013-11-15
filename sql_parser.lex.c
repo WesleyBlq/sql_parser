@@ -9,7 +9,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_SUBMINOR_VERSION 37
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -54,7 +54,6 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t; 
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
-#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -84,6 +83,8 @@ typedef unsigned int flex_uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX             (4294967295U)
 #endif
+
+#endif /* ! C99 */
 
 #endif /* ! FLEXINT_H */
 
@@ -170,6 +171,11 @@ typedef void* yyscan_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
+
 #define EOB_ACT_CONTINUE_SCAN 0
 #define EOB_ACT_END_OF_FILE 1
 #define EOB_ACT_LAST_MATCH 2
@@ -205,11 +211,6 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 
 #define unput(c) yyunput( c, yyg->yytext_ptr , yyscanner )
 
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
-#endif
-
 #ifndef YY_STRUCT_YY_BUFFER_STATE
 #define YY_STRUCT_YY_BUFFER_STATE
 struct yy_buffer_state
@@ -227,7 +228,7 @@ struct yy_buffer_state
 	/* Number of characters read into yy_ch_buf, not including EOB
 	 * characters.
 	 */
-	int yy_n_chars;
+	yy_size_t yy_n_chars;
 
 	/* Whether we "own" the buffer - i.e., we know we created it,
 	 * and can realloc() it to grow it, and should free() it to
@@ -306,7 +307,7 @@ static void yy_init_buffer (YY_BUFFER_STATE b,FILE *file ,yyscan_t yyscanner );
 
 YY_BUFFER_STATE yy_scan_buffer (char *base,yy_size_t size ,yyscan_t yyscanner );
 YY_BUFFER_STATE yy_scan_string (yyconst char *yy_str ,yyscan_t yyscanner );
-YY_BUFFER_STATE yy_scan_bytes (yyconst char *bytes,int len ,yyscan_t yyscanner );
+YY_BUFFER_STATE yy_scan_bytes (yyconst char *bytes,yy_size_t len ,yyscan_t yyscanner );
 
 void *yyalloc (yy_size_t ,yyscan_t yyscanner );
 void *yyrealloc (void *,yy_size_t ,yyscan_t yyscanner );
@@ -338,7 +339,7 @@ void yyfree (void * ,yyscan_t yyscanner );
 
 /* Begin user sect3 */
 
-#define yywrap(n) 1
+#define yywrap(yyscanner) 1
 #define YY_SKIP_YYWRAP
 
 typedef unsigned char YY_CHAR;
@@ -1239,7 +1240,7 @@ static yyconst flex_int32_t yy_rule_can_match_eol[177] =
 #define YY_RESTORE_YY_MORE_OFFSET
 #line 1 "sql_parser.l"
 #define YY_NO_INPUT 1
-#line 6 "sql_parser.l"
+#line 5 "sql_parser.l"
 #include <stdarg.h>
 #include <string.h>
 #include <assert.h>
@@ -1359,7 +1360,7 @@ char* str_tolower(char *buff)
 }
 
 
-#line 1363 "sql_parser.lex.c"
+#line 1364 "sql_parser.lex.c"
 
 #define INITIAL 0
 #define hint 1
@@ -1389,8 +1390,8 @@ struct yyguts_t
     size_t yy_buffer_stack_max; /**< capacity of stack. */
     YY_BUFFER_STATE * yy_buffer_stack; /**< Stack as an array. */
     char yy_hold_char;
-    int yy_n_chars;
-    int yyleng_r;
+    yy_size_t yy_n_chars;
+    yy_size_t yyleng_r;
     char *yy_c_buf_p;
     int yy_init;
     int yy_start;
@@ -1447,13 +1448,17 @@ FILE *yyget_out (yyscan_t yyscanner );
 
 void yyset_out  (FILE * out_str ,yyscan_t yyscanner );
 
-int yyget_leng (yyscan_t yyscanner );
+yy_size_t yyget_leng (yyscan_t yyscanner );
 
 char *yyget_text (yyscan_t yyscanner );
 
 int yyget_lineno (yyscan_t yyscanner );
 
 void yyset_lineno (int line_number ,yyscan_t yyscanner );
+
+int yyget_column  (yyscan_t yyscanner );
+
+void yyset_column (int column_no ,yyscan_t yyscanner );
 
 YYSTYPE * yyget_lval (yyscan_t yyscanner );
 
@@ -1503,7 +1508,7 @@ static int input (yyscan_t yyscanner );
 /* This used to be an fputs(), but since the string might contain NUL's,
  * we now use fwrite().
  */
-#define ECHO fwrite( yytext, yyleng, 1, yyout )
+#define ECHO do { if (fwrite( yytext, yyleng, 1, yyout )) {} } while (0)
 #endif
 
 /* Gets input and stuffs it into "buf".  number of characters read, or YY_NULL,
@@ -1514,7 +1519,7 @@ static int input (yyscan_t yyscanner );
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		int n; \
+		size_t n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -1599,9 +1604,9 @@ YY_DECL
 	register int yy_act;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
-#line 142 "sql_parser.l"
+#line 141 "sql_parser.l"
 
-#line 1605 "sql_parser.lex.c"
+#line 1610 "sql_parser.lex.c"
 
     yylval = yylval_param;
 
@@ -1702,667 +1707,667 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 143 "sql_parser.l"
+#line 142 "sql_parser.l"
 { return ADD; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 144 "sql_parser.l"
+#line 143 "sql_parser.l"
 { return ALTER; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 145 "sql_parser.l"
+#line 144 "sql_parser.l"
 { return AND; }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 146 "sql_parser.l"
+#line 145 "sql_parser.l"
 { return ANY; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 147 "sql_parser.l"
+#line 146 "sql_parser.l"
 { return ALL; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 148 "sql_parser.l"
+#line 147 "sql_parser.l"
 { return AS; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 149 "sql_parser.l"
+#line 148 "sql_parser.l"
 { return ASC; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 150 "sql_parser.l"
+#line 149 "sql_parser.l"
 { return BEGI; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 151 "sql_parser.l"
+#line 150 "sql_parser.l"
 { return BETWEEN; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 152 "sql_parser.l"
+#line 151 "sql_parser.l"
 { return BIGINT; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 153 "sql_parser.l"
+#line 152 "sql_parser.l"
 { return BINARY; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 154 "sql_parser.l"
+#line 153 "sql_parser.l"
 { return BOOLEAN; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 155 "sql_parser.l"
+#line 154 "sql_parser.l"
 { return BOTH; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 156 "sql_parser.l"
+#line 155 "sql_parser.l"
 { return BY; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 157 "sql_parser.l"
+#line 156 "sql_parser.l"
 { return CASCADE; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 158 "sql_parser.l"
+#line 157 "sql_parser.l"
 { return CASE; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 159 "sql_parser.l"
+#line 158 "sql_parser.l"
 { return CHARACTER; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 160 "sql_parser.l"
+#line 159 "sql_parser.l"
 { return CLUSTER; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 161 "sql_parser.l"
+#line 160 "sql_parser.l"
 { return COLUMN; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 162 "sql_parser.l"
+#line 161 "sql_parser.l"
 { return COLUMNS; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 163 "sql_parser.l"
+#line 162 "sql_parser.l"
 { return COMMIT; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 164 "sql_parser.l"
+#line 163 "sql_parser.l"
 { return CONSISTENT; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 165 "sql_parser.l"
+#line 164 "sql_parser.l"
 { return CREATE; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 166 "sql_parser.l"
+#line 165 "sql_parser.l"
 { return CREATETIME; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 167 "sql_parser.l"
+#line 166 "sql_parser.l"
 { return CURRENT_USER; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 168 "sql_parser.l"
+#line 167 "sql_parser.l"
 { return DATE; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 169 "sql_parser.l"
+#line 168 "sql_parser.l"
 { return DATETIME; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 170 "sql_parser.l"
+#line 169 "sql_parser.l"
 { return DEALLOCATE; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 171 "sql_parser.l"
+#line 170 "sql_parser.l"
 { return DECIMAL; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 172 "sql_parser.l"
+#line 171 "sql_parser.l"
 { return DEFAULT; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 173 "sql_parser.l"
+#line 172 "sql_parser.l"
 { return DELETE; }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 174 "sql_parser.l"
+#line 173 "sql_parser.l"
 { return DESC; }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 175 "sql_parser.l"
+#line 174 "sql_parser.l"
 { return DESCRIBE; }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 176 "sql_parser.l"
+#line 175 "sql_parser.l"
 { return DISTINCT; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 177 "sql_parser.l"
+#line 176 "sql_parser.l"
 { return DOUBLE; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 178 "sql_parser.l"
+#line 177 "sql_parser.l"
 { return DROP; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 179 "sql_parser.l"
+#line 178 "sql_parser.l"
 { return DUAL; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 180 "sql_parser.l"
+#line 179 "sql_parser.l"
 { return ELSE; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 181 "sql_parser.l"
+#line 180 "sql_parser.l"
 { return END; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 182 "sql_parser.l"
+#line 181 "sql_parser.l"
 { return ERROR; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 183 "sql_parser.l"
+#line 182 "sql_parser.l"
 { return EXCEPT; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 184 "sql_parser.l"
+#line 183 "sql_parser.l"
 { return EXECUTE; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 185 "sql_parser.l"
+#line 184 "sql_parser.l"
 { return EXISTS; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 186 "sql_parser.l"
+#line 185 "sql_parser.l"
 { return EXPLAIN; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 187 "sql_parser.l"
+#line 186 "sql_parser.l"
 { return FLOAT; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 188 "sql_parser.l"
+#line 187 "sql_parser.l"
 { return FLOAT; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 189 "sql_parser.l"
+#line 188 "sql_parser.l"
 { return DOUBLE; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 190 "sql_parser.l"
+#line 189 "sql_parser.l"
 { return FOR; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 191 "sql_parser.l"
+#line 190 "sql_parser.l"
 { return FROM; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 192 "sql_parser.l"
+#line 191 "sql_parser.l"
 { return FULL; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 193 "sql_parser.l"
+#line 192 "sql_parser.l"
 { return GRANT; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 194 "sql_parser.l"
+#line 193 "sql_parser.l"
 { return GROUP; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 195 "sql_parser.l"
+#line 194 "sql_parser.l"
 { return GLOBAL; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 196 "sql_parser.l"
+#line 195 "sql_parser.l"
 { return HAVING; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 197 "sql_parser.l"
+#line 196 "sql_parser.l"
 { return IDENTIFIED; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 198 "sql_parser.l"
+#line 197 "sql_parser.l"
 { return IF; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 199 "sql_parser.l"
+#line 198 "sql_parser.l"
 { return IN; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 200 "sql_parser.l"
+#line 199 "sql_parser.l"
 { return INNER; }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 201 "sql_parser.l"
+#line 200 "sql_parser.l"
 { return INTEGER; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 202 "sql_parser.l"
+#line 201 "sql_parser.l"
 { return INTEGER; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 203 "sql_parser.l"
+#line 202 "sql_parser.l"
 { return INTERSECT; }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 204 "sql_parser.l"
+#line 203 "sql_parser.l"
 { return INSERT; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 205 "sql_parser.l"
+#line 204 "sql_parser.l"
 { return INTO; }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 206 "sql_parser.l"
+#line 205 "sql_parser.l"
 { return IS; }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 207 "sql_parser.l"
+#line 206 "sql_parser.l"
 { return JOIN; }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 208 "sql_parser.l"
+#line 207 "sql_parser.l"
 { return KEY; }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 209 "sql_parser.l"
+#line 208 "sql_parser.l"
 { return LEADING; }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 210 "sql_parser.l"
+#line 209 "sql_parser.l"
 { return LEFT; }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 211 "sql_parser.l"
+#line 210 "sql_parser.l"
 { return LIMIT; }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 212 "sql_parser.l"
+#line 211 "sql_parser.l"
 { return LIKE; }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 213 "sql_parser.l"
+#line 212 "sql_parser.l"
 { return LOCAL; }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 214 "sql_parser.l"
+#line 213 "sql_parser.l"
 { return LOCKED; }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 215 "sql_parser.l"
+#line 214 "sql_parser.l"
 { return MEDIUMINT; }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 216 "sql_parser.l"
+#line 215 "sql_parser.l"
 { return MEMORY; }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 217 "sql_parser.l"
+#line 216 "sql_parser.l"
 { return MOD; }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 218 "sql_parser.l"
+#line 217 "sql_parser.l"
 { return MODIFYTIME; }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 219 "sql_parser.l"
+#line 218 "sql_parser.l"
 { return NOT; }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 220 "sql_parser.l"
+#line 219 "sql_parser.l"
 { return NUMERIC; }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 221 "sql_parser.l"
+#line 220 "sql_parser.l"
 { return OFFSET; }
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 222 "sql_parser.l"
+#line 221 "sql_parser.l"
 { return ON; }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 223 "sql_parser.l"
+#line 222 "sql_parser.l"
 { return OPTION; }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 224 "sql_parser.l"
+#line 223 "sql_parser.l"
 { return OR; }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 225 "sql_parser.l"
+#line 224 "sql_parser.l"
 { return ORDER; }
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 226 "sql_parser.l"
+#line 225 "sql_parser.l"
 { return OUTER; }
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 227 "sql_parser.l"
+#line 226 "sql_parser.l"
 { return COMMENT; }
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 228 "sql_parser.l"
+#line 227 "sql_parser.l"
 { return PARAMETERS; }
 	YY_BREAK
 case 87:
 YY_RULE_SETUP
-#line 229 "sql_parser.l"
+#line 228 "sql_parser.l"
 { return PASSWORD; }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 230 "sql_parser.l"
+#line 229 "sql_parser.l"
 { return PRECISION; }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 231 "sql_parser.l"
+#line 230 "sql_parser.l"
 { return PREPARE; }
 	YY_BREAK
 case 90:
 YY_RULE_SETUP
-#line 232 "sql_parser.l"
+#line 231 "sql_parser.l"
 { return PRIMARY; }
 	YY_BREAK
 case 91:
 YY_RULE_SETUP
-#line 233 "sql_parser.l"
+#line 232 "sql_parser.l"
 { return REAL; }
 	YY_BREAK
 case 92:
 YY_RULE_SETUP
-#line 234 "sql_parser.l"
+#line 233 "sql_parser.l"
 { return RENAME; }
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 235 "sql_parser.l"
+#line 234 "sql_parser.l"
 { return REPLACE; }
 	YY_BREAK
 case 94:
 YY_RULE_SETUP
-#line 236 "sql_parser.l"
+#line 235 "sql_parser.l"
 { return RESTRICT; }
 	YY_BREAK
 case 95:
 YY_RULE_SETUP
-#line 237 "sql_parser.l"
+#line 236 "sql_parser.l"
 { return REVOKE; }
 	YY_BREAK
 case 96:
 YY_RULE_SETUP
-#line 238 "sql_parser.l"
+#line 237 "sql_parser.l"
 { return RIGHT; }
 	YY_BREAK
 case 97:
 YY_RULE_SETUP
-#line 239 "sql_parser.l"
+#line 238 "sql_parser.l"
 { return ROLLBACK; }
 	YY_BREAK
 case 98:
 YY_RULE_SETUP
-#line 240 "sql_parser.l"
+#line 239 "sql_parser.l"
 { return PRIVILEGES; }
 	YY_BREAK
 case 99:
 YY_RULE_SETUP
-#line 241 "sql_parser.l"
+#line 240 "sql_parser.l"
 { return SELECT; }
 	YY_BREAK
 case 100:
 YY_RULE_SETUP
-#line 242 "sql_parser.l"
+#line 241 "sql_parser.l"
 { return SCHEMA; }
 	YY_BREAK
 case 101:
 YY_RULE_SETUP
-#line 243 "sql_parser.l"
+#line 242 "sql_parser.l"
 { return SCOPE; }
 	YY_BREAK
 case 102:
 YY_RULE_SETUP
-#line 244 "sql_parser.l"
+#line 243 "sql_parser.l"
 { return SESSION; }
 	YY_BREAK
 case 103:
 YY_RULE_SETUP
-#line 245 "sql_parser.l"
+#line 244 "sql_parser.l"
 { return SET; }
 	YY_BREAK
 case 104:
 YY_RULE_SETUP
-#line 246 "sql_parser.l"
+#line 245 "sql_parser.l"
 { return SHOW; }
 	YY_BREAK
 case 105:
 YY_RULE_SETUP
-#line 247 "sql_parser.l"
+#line 246 "sql_parser.l"
 { return SMALLINT; }
 	YY_BREAK
 case 106:
 YY_RULE_SETUP
-#line 248 "sql_parser.l"
+#line 247 "sql_parser.l"
 { return SNAPSHOT; }
 	YY_BREAK
 case 107:
 YY_RULE_SETUP
-#line 249 "sql_parser.l"
+#line 248 "sql_parser.l"
 { return SPFILE; }
 	YY_BREAK
 case 108:
 YY_RULE_SETUP
-#line 250 "sql_parser.l"
+#line 249 "sql_parser.l"
 { return START; }
 	YY_BREAK
 case 109:
 YY_RULE_SETUP
-#line 251 "sql_parser.l"
+#line 250 "sql_parser.l"
 { return STATIC; }
 	YY_BREAK
 case 110:
 YY_RULE_SETUP
-#line 252 "sql_parser.l"
+#line 251 "sql_parser.l"
 { return SYSTEM; }
 	YY_BREAK
 case 111:
 YY_RULE_SETUP
-#line 253 "sql_parser.l"
+#line 252 "sql_parser.l"
 { return TABLE; }
 	YY_BREAK
 case 112:
 YY_RULE_SETUP
-#line 254 "sql_parser.l"
+#line 253 "sql_parser.l"
 { return TABLES; }
 	YY_BREAK
 case 113:
 YY_RULE_SETUP
-#line 255 "sql_parser.l"
+#line 254 "sql_parser.l"
 { return THEN; }
 	YY_BREAK
 case 114:
 YY_RULE_SETUP
-#line 256 "sql_parser.l"
+#line 255 "sql_parser.l"
 { return TIME; }
 	YY_BREAK
 case 115:
 YY_RULE_SETUP
-#line 257 "sql_parser.l"
+#line 256 "sql_parser.l"
 { return TIMESTAMP; }
 	YY_BREAK
 case 116:
 YY_RULE_SETUP
-#line 258 "sql_parser.l"
+#line 257 "sql_parser.l"
 { return TINYINT; }
 	YY_BREAK
 case 117:
 YY_RULE_SETUP
-#line 259 "sql_parser.l"
+#line 258 "sql_parser.l"
 { return TO; }
 	YY_BREAK
 case 118:
 YY_RULE_SETUP
-#line 260 "sql_parser.l"
+#line 259 "sql_parser.l"
 { return TRAILING; }
 	YY_BREAK
 case 119:
 YY_RULE_SETUP
-#line 261 "sql_parser.l"
+#line 260 "sql_parser.l"
 { return TRANSACTION; }
 	YY_BREAK
 case 120:
 YY_RULE_SETUP
-#line 262 "sql_parser.l"
+#line 261 "sql_parser.l"
 { return UNION; }
 	YY_BREAK
 case 121:
 YY_RULE_SETUP
-#line 263 "sql_parser.l"
+#line 262 "sql_parser.l"
 { return UPDATE; }
 	YY_BREAK
 case 122:
 YY_RULE_SETUP
-#line 264 "sql_parser.l"
+#line 263 "sql_parser.l"
 { return USER; }
 	YY_BREAK
 case 123:
 YY_RULE_SETUP
-#line 265 "sql_parser.l"
+#line 264 "sql_parser.l"
 { return USING; }
 	YY_BREAK
 case 124:
 YY_RULE_SETUP
-#line 266 "sql_parser.l"
+#line 265 "sql_parser.l"
 { return VALUES; }
 	YY_BREAK
 case 125:
 YY_RULE_SETUP
-#line 267 "sql_parser.l"
+#line 266 "sql_parser.l"
 { return VARBINARY; }
 	YY_BREAK
 case 126:
 YY_RULE_SETUP
-#line 268 "sql_parser.l"
+#line 267 "sql_parser.l"
 { return VARCHAR; }
 	YY_BREAK
 case 127:
 YY_RULE_SETUP
-#line 269 "sql_parser.l"
+#line 268 "sql_parser.l"
 { return WHERE; }
 	YY_BREAK
 case 128:
 YY_RULE_SETUP
-#line 270 "sql_parser.l"
+#line 269 "sql_parser.l"
 { return WHEN; }
 	YY_BREAK
 case 129:
 YY_RULE_SETUP
-#line 271 "sql_parser.l"
+#line 270 "sql_parser.l"
 { return WITH; }
 	YY_BREAK
 case 130:
 YY_RULE_SETUP
-#line 272 "sql_parser.l"
+#line 271 "sql_parser.l"
 { return WORK; }
 	YY_BREAK
 case 131:
 YY_RULE_SETUP
-#line 273 "sql_parser.l"
+#line 272 "sql_parser.l"
 { return GLOBAL_ALIAS; }
 	YY_BREAK
 case 132:
 YY_RULE_SETUP
-#line 274 "sql_parser.l"
+#line 273 "sql_parser.l"
 { return SESSION_ALIAS; }
 	YY_BREAK
 case 133:
 YY_RULE_SETUP
-#line 276 "sql_parser.l"
+#line 275 "sql_parser.l"
 {
   /* yylval->node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_NULL, 0); */
   malloc_new_node(yylval->node, ((ParseResult*)yyextra)->malloc_pool_, T_NULL, 0);
@@ -2371,7 +2376,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 134:
 YY_RULE_SETUP
-#line 282 "sql_parser.l"
+#line 281 "sql_parser.l"
 {
   /* ParseNode* node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_INT, 0); */
   ParseNode* node = NULL;
@@ -2384,12 +2389,12 @@ YY_RULE_SETUP
 }
 	YY_BREAK
 case 135:
-#line 294 "sql_parser.l"
+#line 293 "sql_parser.l"
 case 136:
-#line 295 "sql_parser.l"
+#line 294 "sql_parser.l"
 case 137:
 YY_RULE_SETUP
-#line 295 "sql_parser.l"
+#line 294 "sql_parser.l"
 {
   /* ParseNode* node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_DOUBLE, 0); */
   ParseNode* node = NULL;
@@ -2401,10 +2406,10 @@ YY_RULE_SETUP
 }
 	YY_BREAK
 case 138:
-#line 306 "sql_parser.l"
+#line 305 "sql_parser.l"
 case 139:
 YY_RULE_SETUP
-#line 306 "sql_parser.l"
+#line 305 "sql_parser.l"
 {
   /* ParseNode* node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_DOUBLE,  0); */
   ParseNode* node = NULL;
@@ -2417,7 +2422,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 140:
 YY_RULE_SETUP
-#line 316 "sql_parser.l"
+#line 315 "sql_parser.l"
 {
   /* ParseNode* node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_BOOL, 0); */
   malloc_new_node(yylval->node, ((ParseResult*)yyextra)->malloc_pool_, T_BOOL, 0);
@@ -2427,7 +2432,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 141:
 YY_RULE_SETUP
-#line 322 "sql_parser.l"
+#line 321 "sql_parser.l"
 {
   /* Unknown is can only appears in grammer 'expr is unknown'
      * and it is equal to NULL semanticly
@@ -2440,7 +2445,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 142:
 YY_RULE_SETUP
-#line 331 "sql_parser.l"
+#line 330 "sql_parser.l"
 {
   /* ParseNode* node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_BOOL, 0); */
   malloc_new_node(yylval->node, ((ParseResult*)yyextra)->malloc_pool_, T_BOOL, 0);
@@ -2450,7 +2455,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 143:
 YY_RULE_SETUP
-#line 338 "sql_parser.l"
+#line 337 "sql_parser.l"
 {
   /* ParseNode* node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_STRING, 0); */
   ParseNode* node = NULL;
@@ -2470,7 +2475,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 144:
 YY_RULE_SETUP
-#line 355 "sql_parser.l"
+#line 354 "sql_parser.l"
 {
   ParseNode* node = NULL;
   malloc_new_node(node, ((ParseResult*)yyextra)->malloc_pool_, T_IDENT, 0);
@@ -2489,7 +2494,7 @@ case 145:
 yyg->yy_c_buf_p = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 368 "sql_parser.l"
+#line 367 "sql_parser.l"
 {yyerror(yylloc, yyextra, "Unterminated string %s", yytext);}
 	YY_BREAK
 case 146:
@@ -2497,12 +2502,12 @@ case 146:
 yyg->yy_c_buf_p = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 370 "sql_parser.l"
+#line 369 "sql_parser.l"
 {yyerror(yylloc, yyextra, "Unterminated string %s", yytext);}
 	YY_BREAK
 case 147:
 YY_RULE_SETUP
-#line 372 "sql_parser.l"
+#line 371 "sql_parser.l"
 {
   /* ParseNode* node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_BINARY, 0); */
   ParseNode* node = NULL;
@@ -2530,7 +2535,7 @@ YY_RULE_SETUP
 case 148:
 /* rule 148 can match eol */
 YY_RULE_SETUP
-#line 396 "sql_parser.l"
+#line 395 "sql_parser.l"
 {
   int year, month, day;
   struct  tm time;
@@ -2566,7 +2571,7 @@ YY_RULE_SETUP
 case 149:
 /* rule 149 can match eol */
 YY_RULE_SETUP
-#line 428 "sql_parser.l"
+#line 427 "sql_parser.l"
 {
   int hour, minute, second, micro_sec;
   struct  tm time;
@@ -2602,7 +2607,7 @@ YY_RULE_SETUP
 case 150:
 /* rule 150 can match eol */
 YY_RULE_SETUP
-#line 460 "sql_parser.l"
+#line 459 "sql_parser.l"
 {
   int hour, minute, second;
   struct  tm time;
@@ -2638,7 +2643,7 @@ YY_RULE_SETUP
 case 151:
 /* rule 151 can match eol */
 YY_RULE_SETUP
-#line 493 "sql_parser.l"
+#line 492 "sql_parser.l"
 {
   int year, month, day, hour, minute, second, micro_sec;
   struct  tm time;
@@ -2675,7 +2680,7 @@ YY_RULE_SETUP
 case 152:
 /* rule 152 can match eol */
 YY_RULE_SETUP
-#line 526 "sql_parser.l"
+#line 525 "sql_parser.l"
 {
   int year, month, day, hour, minute, second;
   struct  tm time;
@@ -2713,7 +2718,7 @@ YY_RULE_SETUP
 case 153:
 /* rule 153 can match eol */
 YY_RULE_SETUP
-#line 560 "sql_parser.l"
+#line 559 "sql_parser.l"
 {
   size_t len = 0;
   char* dest;
@@ -2735,7 +2740,7 @@ YY_RULE_SETUP
 case 154:
 /* rule 154 can match eol */
 YY_RULE_SETUP
-#line 578 "sql_parser.l"
+#line 577 "sql_parser.l"
 {
   BEGIN hint;
   return HINT_BEGIN;
@@ -2743,7 +2748,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 155:
 YY_RULE_SETUP
-#line 582 "sql_parser.l"
+#line 581 "sql_parser.l"
 {
   BEGIN INITIAL;
   return HINT_END;
@@ -2752,75 +2757,75 @@ YY_RULE_SETUP
 case 156:
 /* rule 156 can match eol */
 YY_RULE_SETUP
-#line 586 "sql_parser.l"
+#line 585 "sql_parser.l"
 {}
 	YY_BREAK
 case 157:
 YY_RULE_SETUP
-#line 587 "sql_parser.l"
+#line 586 "sql_parser.l"
 {
   return READ_STATIC;
 }
 	YY_BREAK
 case 158:
 YY_RULE_SETUP
-#line 590 "sql_parser.l"
+#line 589 "sql_parser.l"
 {}
 	YY_BREAK
 case 159:
 YY_RULE_SETUP
-#line 591 "sql_parser.l"
+#line 590 "sql_parser.l"
 {}
 	YY_BREAK
 case 160:
 /* rule 160 can match eol */
 YY_RULE_SETUP
-#line 593 "sql_parser.l"
+#line 592 "sql_parser.l"
 { /* ignore */ }
 	YY_BREAK
 case 161:
 YY_RULE_SETUP
-#line 595 "sql_parser.l"
+#line 594 "sql_parser.l"
 { return yytext[0];}
 	YY_BREAK
 case 162:
 YY_RULE_SETUP
-#line 597 "sql_parser.l"
+#line 596 "sql_parser.l"
 {return CNNOP;}
 	YY_BREAK
 case 163:
 YY_RULE_SETUP
-#line 598 "sql_parser.l"
+#line 597 "sql_parser.l"
 {return COMP_EQ;}
 	YY_BREAK
 case 164:
 YY_RULE_SETUP
-#line 599 "sql_parser.l"
+#line 598 "sql_parser.l"
 {return COMP_GE;}
 	YY_BREAK
 case 165:
 YY_RULE_SETUP
-#line 600 "sql_parser.l"
+#line 599 "sql_parser.l"
 {return COMP_GT;}
 	YY_BREAK
 case 166:
 YY_RULE_SETUP
-#line 601 "sql_parser.l"
+#line 600 "sql_parser.l"
 {return COMP_LE;}
 	YY_BREAK
 case 167:
 YY_RULE_SETUP
-#line 602 "sql_parser.l"
+#line 601 "sql_parser.l"
 {return COMP_LT;}
 	YY_BREAK
 case 168:
 YY_RULE_SETUP
-#line 603 "sql_parser.l"
+#line 602 "sql_parser.l"
 {return COMP_NE;}
 	YY_BREAK
 case 169:
 YY_RULE_SETUP
-#line 605 "sql_parser.l"
+#line 604 "sql_parser.l"
 {
   /* yylval->node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_QUESTIONMARK, 0); */
   malloc_new_node(yylval->node, ((ParseResult*)yyextra)->malloc_pool_, T_QUESTIONMARK, 0);
@@ -2830,7 +2835,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 170:
 YY_RULE_SETUP
-#line 612 "sql_parser.l"
+#line 611 "sql_parser.l"
 {
   /* ParseNode* node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_SYSTEM_VARIABLE, 0); */
   ParseNode* node = NULL;
@@ -2845,7 +2850,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 171:
 YY_RULE_SETUP
-#line 624 "sql_parser.l"
+#line 623 "sql_parser.l"
 {
   /* ParseNode* node = new_node(((ParseResult*)yyextra)->malloc_pool_, T_TEMP_VARIABLE, 0); */
   ParseNode* node = NULL;
@@ -2860,7 +2865,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 172:
 YY_RULE_SETUP
-#line 636 "sql_parser.l"
+#line 635 "sql_parser.l"
 {
   int ret = NAME;
   const NonReservedKeyword *word = NULL;
@@ -2886,22 +2891,22 @@ YY_RULE_SETUP
 case 173:
 /* rule 173 can match eol */
 YY_RULE_SETUP
-#line 658 "sql_parser.l"
+#line 657 "sql_parser.l"
 {}
 	YY_BREAK
 case 174:
 YY_RULE_SETUP
-#line 659 "sql_parser.l"
+#line 658 "sql_parser.l"
 
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(hint):
-#line 661 "sql_parser.l"
+#line 660 "sql_parser.l"
 {return END_P;}
 	YY_BREAK
 case 175:
 YY_RULE_SETUP
-#line 662 "sql_parser.l"
+#line 661 "sql_parser.l"
 {
   yyerror(yylloc, yyextra, "mystery charactor '%c'", *yytext);
   return ERROR;
@@ -2909,10 +2914,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 176:
 YY_RULE_SETUP
-#line 666 "sql_parser.l"
+#line 665 "sql_parser.l"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 2916 "sql_parser.lex.c"
+#line 2921 "sql_parser.lex.c"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -3097,21 +3102,21 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 	else
 		{
-			int num_to_read =
+			yy_size_t num_to_read =
 			YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 		while ( num_to_read <= 0 )
 			{ /* Not enough room in the buffer - grow it. */
 
 			/* just a shorter name for the current buffer */
-			YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+			YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 			int yy_c_buf_p_offset =
 				(int) (yyg->yy_c_buf_p - b->yy_ch_buf);
 
 			if ( b->yy_is_our_buffer )
 				{
-				int new_size = b->yy_buf_size * 2;
+				yy_size_t new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
 					b->yy_buf_size += b->yy_buf_size / 8;
@@ -3142,7 +3147,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 		/* Read in more data. */
 		YY_INPUT( (&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
-			yyg->yy_n_chars, (size_t) num_to_read );
+			yyg->yy_n_chars, num_to_read );
 
 		YY_CURRENT_BUFFER_LVALUE->yy_n_chars = yyg->yy_n_chars;
 		}
@@ -3239,6 +3244,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 	yy_is_jam = (yy_current_state == 834);
 
+	(void)yyg;
 	return yy_is_jam ? 0 : yy_current_state;
 }
 
@@ -3267,7 +3273,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 		else
 			{ /* need more input */
-			int offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
+			yy_size_t offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
 			++yyg->yy_c_buf_p;
 
 			switch ( yy_get_next_buffer( yyscanner ) )
@@ -3438,10 +3444,6 @@ static void yy_load_buffer_state  (yyscan_t yyscanner)
 	yyfree((void *) b ,yyscanner );
 }
 
-#ifndef __cplusplus
-extern int isatty (int );
-#endif /* __cplusplus */
-    
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a yyrestart() or at EOF.
@@ -3558,7 +3560,7 @@ void yypop_buffer_state (yyscan_t yyscanner)
  */
 static void yyensure_buffer_stack (yyscan_t yyscanner)
 {
-	int num_to_alloc;
+	yy_size_t num_to_alloc;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
 	if (!yyg->yy_buffer_stack) {
@@ -3651,12 +3653,12 @@ YY_BUFFER_STATE yy_scan_string (yyconst char * yystr , yyscan_t yyscanner)
 
 /** Setup the input buffer state to scan the given bytes. The next call to yylex() will
  * scan from a @e copy of @a bytes.
- * @param bytes the byte buffer to scan
- * @param len the number of bytes in the buffer pointed to by @a bytes.
+ * @param yybytes the byte buffer to scan
+ * @param _yybytes_len the number of bytes in the buffer pointed to by @a bytes.
  * @param yyscanner The scanner object.
  * @return the newly allocated buffer state object.
  */
-YY_BUFFER_STATE yy_scan_bytes  (yyconst char * yybytes, int  _yybytes_len , yyscan_t yyscanner)
+YY_BUFFER_STATE yy_scan_bytes  (yyconst char * yybytes, yy_size_t  _yybytes_len , yyscan_t yyscanner)
 {
 	YY_BUFFER_STATE b;
 	char *buf;
@@ -3771,7 +3773,7 @@ FILE *yyget_out  (yyscan_t yyscanner)
 /** Get the length of the current token.
  * @param yyscanner The scanner object.
  */
-int yyget_leng  (yyscan_t yyscanner)
+yy_size_t yyget_leng  (yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
     return yyleng;
@@ -3807,7 +3809,7 @@ void yyset_lineno (int  line_number , yyscan_t yyscanner)
 
         /* lineno is only valid if an input buffer exists. */
         if (! YY_CURRENT_BUFFER )
-           yy_fatal_error( "yyset_lineno called with no buffer" , yyscanner); 
+           YY_FATAL_ERROR( "yyset_lineno called with no buffer" );
     
     yylineno = line_number;
 }
@@ -3822,7 +3824,7 @@ void yyset_column (int  column_no , yyscan_t yyscanner)
 
         /* column is only valid if an input buffer exists. */
         if (! YY_CURRENT_BUFFER )
-           yy_fatal_error( "yyset_column called with no buffer" , yyscanner); 
+           YY_FATAL_ERROR( "yyset_column called with no buffer" );
     
     yycolumn = column_no;
 }
@@ -4034,34 +4036,38 @@ static int yy_flex_strlen (yyconst char * s , yyscan_t yyscanner)
 }
 #endif
 
+void *yyalloc (yy_size_t  size , yyscan_t yyscanner)
+{
+	return (void *) malloc( size );
+}
+
+void *yyrealloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
+{
+	/* The cast to (char *) in the following accommodates both
+	 * implementations that use char* generic pointers, and those
+	 * that use void* generic pointers.  It works with the latter
+	 * because both ANSI C and C++ allow castless assignment from
+	 * any pointer type to void*, and deal with argument conversions
+	 * as though doing an assignment.
+	 */
+	return (void *) realloc( (char *) ptr, size );
+}
+
+void yyfree (void * ptr , yyscan_t yyscanner)
+{
+	free( (char *) ptr );	/* see yyrealloc() for (char *) cast */
+}
+
 #define YYTABLES_NAME "yytables"
 
-#line 666 "sql_parser.l"
+#line 665 "sql_parser.l"
 
 
-
-void * yyalloc (size_t bytes, void* yyscanner)
-{
-  ParseResult *p = yyget_extra(yyscanner);
-  return parse_malloc(bytes, p->malloc_pool_);
-}
-
-void * yyrealloc (void * ptr, size_t bytes, void* yyscanner)
-{
-  ParseResult *p = yyget_extra(yyscanner);
-  return parse_realloc(ptr, bytes, p->malloc_pool_);
-}
-
-void yyfree (void * ptr, void * yyscanner)
-{
-  /* Do nothing -- we leave it to the garbage collector. */
-  parse_free(ptr);
-}
-/* A Bison parser, made by GNU Bison 2.7.  */
+/* A Bison parser, made by GNU Bison 2.7.12-4996.  */
 
 /* Bison interface for Yacc-like parsers in C
    
-      Copyright (C) 1984, 1989-1990, 2000-2012 Free Software Foundation, Inc.
+      Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
    
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

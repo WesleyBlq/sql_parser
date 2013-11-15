@@ -284,7 +284,7 @@ namespace oceanbase
                     set_flag(is_add);
                     break;
                 default:
-                    TBSYS_LOG(ERROR, "check obj type failed:type[%d]", get_type());
+                    jlog(ERROR, "check obj type failed:type[%d]", get_type());
                     ret = OB_ERROR;
             }
             return ret;
@@ -651,7 +651,7 @@ namespace oceanbase
                     timestamp = value_.createtime_val;
                     break;
                 default:
-                    TBSYS_LOG(ERROR, "unexpected branch");
+                    jlog(ERROR, "unexpected branch");
                     ret = OB_OBJ_TYPE_ERROR;
             }
             return ret;

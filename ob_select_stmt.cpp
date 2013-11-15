@@ -199,7 +199,7 @@ int ObSelectStmt::check_having_ident(
                             if (b_expr == NULL)
                             {
                                 ret = OB_ERR_PARSER_MALLOC_FAILED;
-                                TBSYS_LOG(WARN, "out of memory");
+                                jlog(WARNING, "out of memory");
                                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                                         "Can not malloc space for ObBinaryRefRawExpr");
                                 return ret;
@@ -238,7 +238,7 @@ int ObSelectStmt::check_having_ident(
                     if (b_expr == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        TBSYS_LOG(WARN, "out of memory");
+                        jlog(WARNING, "out of memory");
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                                 "Can not malloc space for ObBinaryRefRawExpr");
                         return ret;
@@ -261,7 +261,7 @@ int ObSelectStmt::check_having_ident(
                     if (b_expr == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        TBSYS_LOG(WARN, "out of memory");
+                        jlog(WARNING, "out of memory");
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                                 "Can not malloc space for ObBinaryRefRawExpr");
                         return ret;
@@ -303,7 +303,7 @@ int ObSelectStmt::check_having_ident(
                     if (b_expr == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        TBSYS_LOG(WARN, "out of memory");
+                        jlog(WARNING, "out of memory");
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                                 "Can not malloc space for ObBinaryRefRawExpr");
                         return ret;
@@ -458,12 +458,14 @@ void ObSelectStmt::print(FILE* fp, int32_t level, int32_t index)
             case UNION:
                 fprintf(fp, "<UNION ");
                 break;
+    #if 0  /*mysql does not support*/
             case INTERSECT:
                 fprintf(fp, "<INTERSECT ");
                 break;
             case EXCEPT:
                 fprintf(fp, "<EXCEPT ");
                 break;
+    #endif  
             default:
                 break;
         }

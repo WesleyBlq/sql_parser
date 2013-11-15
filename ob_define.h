@@ -364,12 +364,12 @@ namespace oceanbase
         const int OB_ERR_HINT_UNKNOWN = -5063;
 
 
-
+        
         const int JD_ERR_LOGICAL_TREE_WRONG = -5070;
         const int JD_ERR_SHARD_NUM_WRONG    = -5071;
         const int JD_ERR_COLUMN_NOT_MATCH   = -5072;
         const int JD_ERR_SQL_NOT_SUPPORT    = -5073;
-
+        const int JD_ERR_SQL_PARSER_WRONG   = -5074;
         
         const int OB_ERR_SQL_END = -5999;
 #define IS_SQL_ERR(e) (OB_ERR_SQL_END >= e && OB_ERR_SQL_START <= e)
@@ -548,7 +548,13 @@ namespace oceanbase
         static const uint64_t OB_ALL_SYS_CONFIG_TID = 11;
         static const uint64_t OB_ALL_SYS_CONFIG_STAT_TID = 12;
         static const uint64_t OB_ALL_CLIENT_TID = 13;
-        static const uint64_t OB_TABLES_SHOW_TID = 501; // VIRTUAL TABLES start from 501, they should not be mutated
+
+        ///////////////////////////////////////////////////////////
+        //                 VIRUTAL TABLES                        //
+        ///////////////////////////////////////////////////////////
+        // VIRTUAL TABLES ID (500, 700), they should not be mutated
+#define IS_VIRTUAL_TABLE(tid) ((tid) > 500 && (tid) < 700)
+        static const uint64_t OB_TABLES_SHOW_TID = 501;
         static const uint64_t OB_COLUMNS_SHOW_TID = 502;
         static const uint64_t OB_VARIABLES_SHOW_TID = 503;
         static const uint64_t OB_TABLE_STATUS_SHOW_TID = 504;
@@ -557,7 +563,10 @@ namespace oceanbase
         static const uint64_t OB_PARAMETERS_SHOW_TID = 507;
         static const uint64_t OB_SERVER_STATUS_SHOW_TID = 508;
         static const uint64_t OB_ALL_SERVER_STAT_TID = 509;
-        static const uint64_t OB_APP_MIN_TABLE_ID = 1000;
+        static const uint64_t OB_ALL_SERVER_SESSION_TID = 510;
+        static const uint64_t OB_ALL_STATEMENT_TID = 511;
+
+static const uint64_t OB_APP_MIN_TABLE_ID = 1000;
 
 #define IS_SHOW_TABLE(tid) ((tid) >= OB_TABLES_SHOW_TID && (tid) <= OB_SERVER_STATUS_SHOW_TID)
 
@@ -663,7 +672,7 @@ virtual int serialize(char* buf, const int64_t buf_len, int64_t& pos) const = 0;
 
 #define ARRAYSIZEOF(a) (sizeof(a)/sizeof(a[0]))
 
-#define OB_ASSERT(x) do{ if(!(x)) TBSYS_LOG(ERROR, "assert fail, exp=%s", #x); assert(x);} while(false)
+#define OB_ASSERT(x) do{ if(!(x)) jlog(ERROR, "assert fail, exp=%s", #x); assert(x);} while(false)
 
 #define ATOMIC_CAS(val, cmpv, newv) __sync_val_compare_and_swap((val), (cmpv), (newv))
 #define ATOMIC_ADD(val, addv) __sync_add_and_fetch((val), (addv))

@@ -498,7 +498,7 @@ namespace oceanbase
             }
             else if (OB_SUCCESS != (err = serialization::encode_i64(buf, len, tmp_pos, data_len)))
             {
-                TBSYS_LOG(ERROR, "encode_i64(buf=%p, len=%ld, pos=%ld, i=%ld)=>%d", buf, len, tmp_pos, data_len, err);
+                jlog(ERROR, "encode_i64(buf=%p, len=%ld, pos=%ld, i=%ld)=>%d", buf, len, tmp_pos, data_len, err);
             }
             else if (tmp_pos + data_len > len)
             {
@@ -523,7 +523,7 @@ namespace oceanbase
             }
             else if (OB_SUCCESS != (err = serialization::decode_i64(buf, len, tmp_pos, &real_len)))
             {
-                TBSYS_LOG(ERROR, "decode_i64(buf=%p, len=%ld, pos=%ld, i=%ld)=>%d", buf, len, tmp_pos, real_len, err);
+                jlog(ERROR, "decode_i64(buf=%p, len=%ld, pos=%ld, i=%ld)=>%d", buf, len, tmp_pos, real_len, err);
             }
             else if (real_len > data_len || tmp_pos + real_len > len)
             {
@@ -617,7 +617,7 @@ namespace oceanbase
             }
             else
             {
-                TBSYS_LOG(WARN, "no port information %s", buffer);
+                jlog(WARNING, "no port information %s", buffer);
             }
             uint64_t lport = port;
             server_id = lport << 32;
@@ -975,7 +975,7 @@ namespace oceanbase
             if (NULL == src_str || src_str_buf_size <= 0
                     || NULL == match_str || NULL == replace_str)
             {
-                TBSYS_LOG(WARN, "invalid param, src_str=%p, src_str_buf_size=%ld, "
+                jlog(WARNING, "invalid param, src_str=%p, src_str_buf_size=%ld, "
                         "match_str=%p, replace_str=%p",
                         src_str, src_str_buf_size, match_str, replace_str);
                 ret = OB_ERROR;
@@ -991,7 +991,7 @@ namespace oceanbase
                     if (str_len >= OB_MAX_EXPIRE_CONDITION_LENGTH
                             || str_len >= src_str_buf_size)
                     {
-                        TBSYS_LOG(WARN, "str after replace is too large, new_size=%ld, "
+                        jlog(WARNING, "str after replace is too large, new_size=%ld, "
                                 "new_buf_size=%ld, src_str_buf_size=%ld",
                                 str_len, OB_MAX_EXPIRE_CONDITION_LENGTH, src_str_buf_size);
                         ret = OB_ERROR;

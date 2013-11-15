@@ -684,7 +684,7 @@ int ObConstRawExpr::set_value_and_type(const common::ObObj& val)
             break;
         default:
             ret = OB_NOT_SUPPORTED;
-            TBSYS_LOG(WARN, "obj type not support, type=%d", val.get_type());
+            jlog(WARNING, "obj type not support, type=%d", val.get_type());
             break;
     }
     if (OB_LIKELY(OB_SUCCESS == ret))
@@ -855,17 +855,17 @@ int ObConstRawExpr::fill_sql_expression(
                     || (result_set = sql_context->session_info_->get_current_result_set()) == NULL)
             {
                 ret = OB_NOT_INIT;
-                TBSYS_LOG(ERROR, "Session stored param placeholder is needed\n");
+                jlog(ERROR, "Session stored param placeholder is needed\n");
                 break;
             }
             else if ((ret = value_.get_int(item.value_.int_)) != OB_SUCCESS)
             {
-                TBSYS_LOG(ERROR, "invalid question mark value, type=%d", value_.get_type());
+                jlog(ERROR, "invalid question mark value, type=%d", value_.get_type());
                 break;
             }
             else if (item.value_.int_ < 0 || item.value_.int_ >= result_set->get_params().count())
             {
-                TBSYS_LOG(ERROR, "Wrong index of question mark position, pos = %ld\n", item.value_.int_);
+                jlog(ERROR, "Wrong index of question mark position, pos = %ld\n", item.value_.int_);
                 break;
             }
             else
@@ -886,28 +886,28 @@ int ObConstRawExpr::fill_sql_expression(
                     || sql_context->session_info_ == NULL)
             {
                 ret = OB_NOT_INIT;
-                TBSYS_LOG(ERROR, "Session information is needed\n");
+                jlog(ERROR, "Session information is needed\n");
             }
             else if ((ret = value_.get_varchar(var_name)) != OB_SUCCESS)
             {
-                TBSYS_LOG(ERROR, "invalid question mark value, type=%d", value_.get_type());
+                jlog(ERROR, "invalid question mark value, type=%d", value_.get_type());
             }
             else if (item.type_ == T_SYSTEM_VARIABLE
                     && (var_ptr = sql_context->session_info_->get_sys_variable_value(var_name)) == NULL)
             {
                 ret = OB_ERR_VARIABLE_UNKNOWN;
-                TBSYS_LOG(ERROR, "System variable %.*s does not exists", var_name.size(), var_name.data());
+                jlog(ERROR, "System variable %.*s does not exists", var_name.size(), var_name.data());
             }
             else if (item.type_ == T_TEMP_VARIABLE
                     && (var_ptr = sql_context->session_info_->get_variable_value(var_name)) == NULL)
             {
                 ret = OB_ERR_VARIABLE_UNKNOWN;
-                TBSYS_LOG(USER_ERROR, "Variable %.*s does not exists", var_name.size(), var_name.data());
+                jlog(USER_ERROR, "Variable %.*s does not exists", var_name.size(), var_name.data());
             }
             else
             {
                 item.value_.int_ = reinterpret_cast<int64_t> (var_ptr);
-                TBSYS_LOG(DEBUG, "get system variable type=%d name=%.*s ptr=%p val=%s",
+                jlog(DEBUG, "get system variable type=%d name=%.*s ptr=%p val=%s",
                         item.type_, var_name.size(), var_name.data(), var_ptr, to_cstring(*var_ptr));
             }
             break;
@@ -915,7 +915,7 @@ int ObConstRawExpr::fill_sql_expression(
         case T_NULL:
             break;
         default:
-            TBSYS_LOG(WARN, "unexpected expression type %d", item.type_);
+            jlog(WARNING, "unexpected expression type %d", item.type_);
             ret = OB_ERR_EXPR_UNKNOWN;
             break;
     }
@@ -990,7 +990,7 @@ int ObUnaryRefRawExpr::fill_sql_expression(
     item.type_ = get_expr_type();
     if (transformer == NULL || logical_plan == NULL || physical_plan == NULL)
     {
-        TBSYS_LOG(ERROR, "transformer error");
+        jlog(ERROR, "transformer error");
         ret = OB_ERROR;
     }
     else
@@ -1002,7 +1002,7 @@ int ObUnaryRefRawExpr::fill_sql_expression(
     }
     if (ret == OB_SUCCESS && OB_INVALID_INDEX == item.value_.int_)
     {
-        TBSYS_LOG(ERROR, "generating physical plan for sub-query error");
+        jlog(ERROR, "generating physical plan for sub-query error");
         ret = OB_ERROR;
     }
     if (ret == OB_SUCCESS)
@@ -1656,13 +1656,13 @@ int ObSysFunRawExpr::fill_sql_expression(
         ret = exprs_[i]->fill_sql_expression(inter_expr, transformer, logical_plan, physical_plan);
         if (ret != OB_SUCCESS)
         {
-            TBSYS_LOG(WARN, "Add parameters of system function failed, param %d", i + 1);
+            jlog(WARNING, "Add parameters of system function failed, param %d", i + 1);
             break;
         }
     }
     if (ret == OB_SUCCESS && (ret = inter_expr.add_expr_item(item)) != OB_SUCCESS)
     {
-        TBSYS_LOG(WARN, "Add system function %.*s failed", func_name_.size(), func_name_.data());
+        jlog(WARNING, "Add system function %.*s failed", func_name_.size(), func_name_.data());
     }
     return ret;
 }
@@ -1705,7 +1705,7 @@ int ObSqlRawExpr::fill_sql_expression(
     if (!(transformer == NULL && logical_plan == NULL && physical_plan == NULL)
             && !(transformer != NULL && logical_plan != NULL && physical_plan != NULL))
     {
-        TBSYS_LOG(WARN, "(ObTransformer, ObLogicalPlan, ObPhysicalPlan) should be set together");
+        jlog(WARNING, "(ObTransformer, ObLogicalPlan, ObPhysicalPlan) should be set together");
     }
 
     inter_expr.set_tid_cid(table_id_, column_id_);

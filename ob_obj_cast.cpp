@@ -81,7 +81,7 @@ namespace oceanbase
             string varchar = out.get_varchar();
             if (NULL == varchar.data() || varchar.length() <= 0)
             {
-                TBSYS_LOG(WARN, "output buffer for varchar not enough, buf_len=%u", varchar.length());
+                jlog(WARNING, "output buffer for varchar not enough, buf_len=%u", varchar.length());
                 ret = OB_INVALID_ARGUMENT;
             }
             else
@@ -217,7 +217,7 @@ namespace oceanbase
             ObNumber num;
             if (OB_SUCCESS != (ret = num.from(buf)))
             {
-                TBSYS_LOG(WARN, "failed to convert float to decimal, err=%d", ret);
+                jlog(WARNING, "failed to convert float to decimal, err=%d", ret);
             }
             else
             {
@@ -302,7 +302,7 @@ namespace oceanbase
             ObNumber num;
             if (OB_SUCCESS != (ret = num.from(buf)))
             {
-                TBSYS_LOG(WARN, "failed to convert float to decimal, err=%d", ret);
+                jlog(WARNING, "failed to convert float to decimal, err=%d", ret);
             }
             else
             {
@@ -491,7 +491,7 @@ namespace oceanbase
             char* str = strndupa(varchar.data(), varchar.length()); // alloc from the stack, no need to free
             if (NULL == str)
             {
-                TBSYS_LOG(ERROR, "no memory");
+                jlog(ERROR, "no memory");
                 ret = OB_ALLOCATE_MEMORY_FAILED;
             }
             else
@@ -607,7 +607,7 @@ namespace oceanbase
             else
             {
                 const string& varchar = in.get_varchar();
-                TBSYS_LOG(WARN, "failed to convert string `%.*s' to datetime type",
+                jlog(WARNING, "failed to convert string `%.*s' to datetime type",
                         varchar.length(), varchar.data());
                 out.set_datetime(static_cast<ObDateTime> (0));
                 ret = OB_SUCCESS;
@@ -677,7 +677,7 @@ namespace oceanbase
             else
             {
                 const string& varchar = in.get_varchar();
-                TBSYS_LOG(WARN, "failed to convert string `%.*s' to precise_datetime type",
+                jlog(WARNING, "failed to convert string `%.*s' to precise_datetime type",
                         varchar.length(), varchar.data());
                 out.set_precise_datetime(static_cast<ObPreciseDateTime> (0));
                 ret = OB_SUCCESS;
@@ -699,7 +699,7 @@ namespace oceanbase
             else
             {
                 const string& varchar = in.get_varchar();
-                TBSYS_LOG(WARN, "failed to convert string `%.*s' to createtime type",
+                jlog(WARNING, "failed to convert string `%.*s' to createtime type",
                         varchar.length(), varchar.data());
                 out.set_ctime(static_cast<ObCreateTime> (0));
                 ret = OB_SUCCESS;
@@ -721,7 +721,7 @@ namespace oceanbase
             else
             {
                 const string& varchar = in.get_varchar();
-                TBSYS_LOG(WARN, "failed to convert string `%.*s' to modifytime type",
+                jlog(WARNING, "failed to convert string `%.*s' to modifytime type",
                         varchar.length(), varchar.data());
                 out.set_mtime(static_cast<ObModifyTime> (0));
                 ret = OB_SUCCESS;
@@ -775,7 +775,7 @@ namespace oceanbase
             ObNumber num;
             if (OB_SUCCESS != (ret = num.from(varchar.data(), varchar.length())))
             {
-                TBSYS_LOG(WARN, "failed to convert varchar to decimal, err=%d varchar=%.*s",
+                jlog(WARNING, "failed to convert varchar to decimal, err=%d varchar=%.*s",
                         ret, varchar.length(), varchar.data());
             }
             else
@@ -1030,7 +1030,7 @@ namespace oceanbase
             int64_t i64 = 0;
             if (OB_SUCCESS != (ret = in.get_decimal().cast_to_int64(i64)))
             {
-                TBSYS_LOG(WARN, "failed to cast to int64, err=%d", ret);
+                jlog(WARNING, "failed to cast to int64, err=%d", ret);
             }
             else
             {
@@ -1087,7 +1087,7 @@ namespace oceanbase
             int64_t i64 = 0;
             if (OB_SUCCESS != (ret = in.get_decimal().cast_to_int64(i64)))
             {
-                TBSYS_LOG(WARN, "failed to cast to int64, err=%d", ret);
+                jlog(WARNING, "failed to cast to int64, err=%d", ret);
             }
             else
             {
@@ -1104,7 +1104,7 @@ namespace oceanbase
             int64_t i64 = 0;
             if (OB_SUCCESS != (ret = in.get_decimal().cast_to_int64(i64)))
             {
-                TBSYS_LOG(WARN, "failed to cast to int64, err=%d", ret);
+                jlog(WARNING, "failed to cast to int64, err=%d", ret);
             }
             else
             {
@@ -1121,7 +1121,7 @@ namespace oceanbase
             string varchar = out.get_varchar();
             if (varchar.length() < ObNumber::MAX_PRINTABLE_SIZE)
             {
-                TBSYS_LOG(WARN, "output buffer for varchar not enough, buf_len=%d", varchar.length());
+                jlog(WARNING, "output buffer for varchar not enough, buf_len=%d", varchar.length());
                 ret = OB_INVALID_ARGUMENT;
             }
             else
@@ -1141,7 +1141,7 @@ namespace oceanbase
             int64_t i64 = 0;
             if (OB_SUCCESS != (ret = in.get_decimal().cast_to_int64(i64)))
             {
-                TBSYS_LOG(WARN, "failed to cast to int64, err=%d", ret);
+                jlog(WARNING, "failed to cast to int64, err=%d", ret);
             }
             else
             {
@@ -1158,7 +1158,7 @@ namespace oceanbase
             int64_t i64 = 0;
             if (OB_SUCCESS != (ret = in.get_decimal().cast_to_int64(i64)))
             {
-                TBSYS_LOG(WARN, "failed to cast to int64, err=%d", ret);
+                jlog(WARNING, "failed to cast to int64, err=%d", ret);
             }
             else
             {
@@ -1309,11 +1309,11 @@ namespace oceanbase
                 to.assign(casted_cell);
                 if (OB_SUCCESS != (ret = OB_OBJ_CAST[orig_cell.get_type()][expected_type.get_type()](params, from, to)))
                 {
-                    TBSYS_LOG(WARN, "failed to type cast obj, err=%d", ret);
+                    jlog(WARNING, "failed to type cast obj, err=%d", ret);
                 }
                 else if (OB_SUCCESS != (ret = to.to(casted_cell)))
                 {
-                    TBSYS_LOG(WARN, "failed to convert expr_obj to obj, err=%d", ret);
+                    jlog(WARNING, "failed to convert expr_obj to obj, err=%d", ret);
                 }
                 else
                 {
@@ -1349,11 +1349,11 @@ namespace oceanbase
 
                 if (OB_SUCCESS != (ret = OB_OBJ_CAST[cell.get_type()][expected_type](params, from, to)))
                 {
-                    TBSYS_LOG(WARN, "failed to type cast obj, err=%d", ret);
+                    jlog(WARNING, "failed to type cast obj, err=%d", ret);
                 }
                 else if (OB_SUCCESS != (ret = to.to(cell)))
                 {
-                    TBSYS_LOG(WARN, "failed to convert expr_obj to obj, err=%d", ret);
+                    jlog(WARNING, "failed to convert expr_obj to obj, err=%d", ret);
                 }
                 else
                 {

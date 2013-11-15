@@ -122,7 +122,7 @@ namespace oceanbase
                     if (stmt == NULL)
                     {
                         ret = OB_ERR_ILLEGAL_ID;
-                        TBSYS_LOG(WARN, "wrong prepared query id, id = %lu, ret = %d", prepare_stmt->get_prepare_query_id(), ret);
+                        jlog(WARN, "wrong prepared query id, id = %lu, ret = %d", prepare_stmt->get_prepare_query_id(), ret);
                         break;
                     }
                         // only select prepare statement need to fill result set
@@ -143,7 +143,7 @@ namespace oceanbase
                     if (select_stmt == NULL)
                     {
                         ret = OB_ERR_PARSE_SQL;
-                        TBSYS_LOG(WARN, "logical plan of select statement error");
+                        jlog(WARN, "logical plan of select statement error");
                         break;
                     }
                     int32_t size = select_stmt->get_select_item_size();
@@ -152,14 +152,14 @@ namespace oceanbase
                         const SelectItem& select_item = select_stmt->get_select_item(i);
                         if ((ret = ob_write_string(select_item.expr_name_, field.cname_)) != OB_SUCCESS)
                         {
-                            TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", select_item.expr_name_.size(), select_item.expr_name_.data(), ret);
+                            jlog(WARN, "fail to alloc string[%.*s] ret=%d", select_item.expr_name_.size(), select_item.expr_name_.data(), ret);
                             break;
                         }
 
                         ObSqlRawExpr* sql_expr = get_expr(select_item.expr_id_);
                         if (sql_expr == NULL)
                         {
-                            TBSYS_LOG(WARN, "fail to get expr. select_item.expr_id_=%lu", select_item.expr_id_);
+                            jlog(WARN, "fail to get expr. select_item.expr_id_=%lu", select_item.expr_id_);
                             ret = OB_ERR_ILLEGAL_ID;
                             break;
                         }
@@ -169,7 +169,7 @@ namespace oceanbase
                         {
                             if ((ret = ob_write_string(select_item.expr_name_, field.org_cname_)) != OB_SUCCESS)
                             {
-                                TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", select_item.expr_name_.size(), select_item.expr_name_.data(), ret);
+                                jlog(WARN, "fail to alloc string[%.*s] ret=%d", select_item.expr_name_.size(), select_item.expr_name_.data(), ret);
                                 break;
                             }
                         }
@@ -183,19 +183,19 @@ namespace oceanbase
                                 ColumnItem *column_item = select_stmt->get_column_item_by_id(table_id, column_id);
                                 if (column_item == NULL)
                                 {
-                                    TBSYS_LOG(WARN, "fail to get column item by id. table_id=%lu column_id=%lu", table_id, column_id);
+                                    jlog(WARN, "fail to get column item by id. table_id=%lu column_id=%lu", table_id, column_id);
                                     ret = OB_ERR_ILLEGAL_ID;
                                     break;
                                 }
                                 if (OB_SUCCESS != (ret = ob_write_string(column_item->column_name_, field.org_cname_)))
                                 {
-                                    TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", column_item->column_name_.size(), column_item->column_name_.data(), ret);
+                                    jlog(WARN, "fail to alloc string[%.*s] ret=%d", column_item->column_name_.size(), column_item->column_name_.data(), ret);
                                     break;
                                 }
                                 TableItem *table_item = select_stmt->get_table_item_by_id(table_id);
                                 if (table_item == NULL)
                                 {
-                                    TBSYS_LOG(WARN, "fail to get table item by id. table_id=%lu", table_id);
+                                    jlog(WARN, "fail to get table item by id. table_id=%lu", table_id);
                                     ret = OB_ERR_ILLEGAL_ID;
                                     break;
                                 }
@@ -203,7 +203,7 @@ namespace oceanbase
                                 {
                                     if (OB_SUCCESS != (ret = ob_write_string(table_item->alias_name_, field.tname_)))
                                     {
-                                        TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", table_item->alias_name_.size(), table_item->alias_name_.data(), ret);
+                                        jlog(WARN, "fail to alloc string[%.*s] ret=%d", table_item->alias_name_.size(), table_item->alias_name_.data(), ret);
                                         break;
                                     }
                                 }
@@ -211,20 +211,20 @@ namespace oceanbase
                                 {
                                     if (OB_SUCCESS != (ret = ob_write_string(table_item->table_name_, field.tname_)))
                                     {
-                                        TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", table_item->table_name_.size(), table_item->table_name_.data(), ret);
+                                        jlog(WARN, "fail to alloc string[%.*s] ret=%d", table_item->table_name_.size(), table_item->table_name_.data(), ret);
                                         break;
                                     }
                                 }
                                 if (OB_SUCCESS != (ret = ob_write_string(table_item->table_name_, field.org_tname_)))
                                 {
-                                    TBSYS_LOG(WARN, "fail to alloc string[%.*s] ret=%d", table_item->table_name_.size(), table_item->table_name_.data(), ret);
+                                    jlog(WARN, "fail to alloc string[%.*s] ret=%d", table_item->table_name_.size(), table_item->table_name_.data(), ret);
                                     break;
                                 }
                             }
                         }
                         if (OB_SUCCESS != (ret = result_set.add_field_column(field)))
                         {
-                            TBSYS_LOG(WARN, "fail to add field column to result_set. ret=%d", ret);
+                            jlog(WARN, "fail to add field column to result_set. ret=%d", ret);
                             break;
                         }
 
@@ -247,7 +247,7 @@ namespace oceanbase
                     field.type_.set_type(ObVarcharType);
                     if (OB_SUCCESS != (ret = result_set.add_field_column(field)))
                     {
-                        TBSYS_LOG(WARN, "fail to add field column to result_set. ret=%d", ret);
+                        jlog(WARN, "fail to add field column to result_set. ret=%d", ret);
                         break;
                     }
                     break;
@@ -264,21 +264,21 @@ namespace oceanbase
                     ObShowStmt *show_stmt = static_cast<ObShowStmt*> (stmts_[0]);
                     if (show_stmt == NULL)
                     {
-                        TBSYS_LOG(WARN, "fail to get Show statement");
+                        jlog(WARN, "fail to get Show statement");
                         ret = OB_ERR_PARSE_SQL;
                         break;
                     }
                     TableItem *table_item = show_stmt->get_table_item_by_id(show_stmt->get_sys_table_id());
                     if (table_item == NULL)
                     {
-                        TBSYS_LOG(WARN, "fail to get table item by id. table_id=%lu", show_stmt->get_sys_table_id());
+                        jlog(WARN, "fail to get table item by id. table_id=%lu", show_stmt->get_sys_table_id());
                         ret = OB_ERR_ILLEGAL_ID;
                         break;
                     }
                     ObString tname;
                     if (OB_SUCCESS != (ret = ob_write_string(table_item->table_name_, tname)))
                     {
-                        TBSYS_LOG(WARN, "fail to alloc string \"%.*s\" ret=%d", table_item->table_name_.size(), table_item->table_name_.data(), ret);
+                        jlog(WARN, "fail to alloc string \"%.*s\" ret=%d", table_item->table_name_.size(), table_item->table_name_.data(), ret);
                         break;
                     }
                     field.tname_ = tname;
@@ -291,7 +291,7 @@ namespace oceanbase
                         {
                             if (OB_SUCCESS != (ret = ob_write_string(col_item->column_name_, cname)))
                             {
-                                TBSYS_LOG(WARN, "fail to alloc string \"%.*s\" ret=%d", col_item->column_name_.size(), col_item->column_name_.data(), ret);
+                                jlog(WARN, "fail to alloc string \"%.*s\" ret=%d", col_item->column_name_.size(), col_item->column_name_.data(), ret);
                                 break;
                             }
                             field.cname_ = cname;
@@ -299,7 +299,7 @@ namespace oceanbase
                             field.type_.set_type(col_item->data_type_);
                             if (OB_SUCCESS != (ret = result_set.add_field_column(field)))
                             {
-                                TBSYS_LOG(WARN, "fail to add field column to result_set. ret=%d", ret);
+                                jlog(WARN, "fail to add field column to result_set. ret=%d", ret);
                                 break;
                             }
                             field.cname_.assign("");
@@ -315,7 +315,7 @@ namespace oceanbase
                     ObShowStmt *show_stmt = static_cast<ObShowStmt*> (stmts_[0]);
                     if (show_stmt == NULL)
                     {
-                        TBSYS_LOG(WARN, "fail to get Show statement");
+                        jlog(WARN, "fail to get Show statement");
                         ret = OB_ERR_PARSE_SQL;
                         break;
                     }
@@ -332,7 +332,7 @@ namespace oceanbase
                         field.type_.set_type(ObIntType);
                         if (OB_SUCCESS != (ret = result_set.add_field_column(field)))
                         {
-                            TBSYS_LOG(WARN, "fail to add field column to result_set. ret=%d", ret);
+                            jlog(WARN, "fail to add field column to result_set. ret=%d", ret);
                             break;
                         }
                     }
@@ -352,7 +352,7 @@ namespace oceanbase
                                 field.type_.set_type(ObVarcharType);
                             if (OB_SUCCESS != (ret = result_set.add_field_column(field)))
                             {
-                                TBSYS_LOG(WARN, "fail to add field column to result_set. ret=%d", ret);
+                                jlog(WARN, "fail to add field column to result_set. ret=%d", ret);
                                 break;
                             }
                         }
@@ -370,7 +370,7 @@ namespace oceanbase
                     field.type_.set_type(ObVarcharType);
                     if (OB_SUCCESS != (ret = result_set.add_field_column(field)))
                     {
-                        TBSYS_LOG(WARN, "fail to add field column to result_set. ret=%d", ret);
+                        jlog(WARN, "fail to add field column to result_set. ret=%d", ret);
                         break;
                     }
                     break;
@@ -382,27 +382,27 @@ namespace oceanbase
                     if (session_info == NULL)
                     {
                         ret = OB_ERROR;
-                        TBSYS_LOG(ERROR, "Session Info is needed. ret=%d", ret);
+                        jlog(ERROR, "Session Info is needed. ret=%d", ret);
                     }
                     else if (execute_stmt == NULL)
                     {
                         ret = OB_ERR_PARSE_SQL;
-                        TBSYS_LOG(WARN, "fail to get Execute statement");
+                        jlog(WARN, "fail to get Execute statement");
                     }
                     else if ((stored_plan = session_info->get_plan(execute_stmt->get_stmt_name())) == NULL)
                     {
                         ret = OB_ERR_PREPARE_STMT_UNKNOWN;
-                        TBSYS_LOG(USER_ERROR, "statement %.*s not prepared",
+                        jlog(USER_ERROR, "statement %.*s not prepared",
                                 execute_stmt->get_stmt_name().size(), execute_stmt->get_stmt_name().data());
                     }
                     else if ((ret = result_set.from_prepared(*stored_plan)) != OB_SUCCESS)
                     {
-                        TBSYS_LOG(WARN, "fail to fill result set");
+                        jlog(WARN, "fail to fill result set");
                     }
                     else
                     {
-                        TBSYS_LOG(DEBUG, "get physical plan, addr=%p", stored_plan->get_physical_plan());
-                        TBSYS_LOG(DEBUG, "StoredPlan: %s", to_cstring(*stored_plan->get_physical_plan()));
+                        jlog(DEBUG, "get physical plan, addr=%p", stored_plan->get_physical_plan());
+                        jlog(DEBUG, "StoredPlan: %s", to_cstring(*stored_plan->get_physical_plan()));
                     }
                     break;
                 }
@@ -502,7 +502,10 @@ namespace oceanbase
                 string assembled_sql;
                 ObBasicStmt* stmt = stmts_[i];
                 stmt->make_stmt_string(result_plan, assembled_sql);
-                cout << "STMT string: " << assembled_sql << endl;
+                if (assembled_sql.size() > 0)
+                {
+                    cout << "STMT string: " << assembled_sql << endl;
+                }
             }
         }
     }

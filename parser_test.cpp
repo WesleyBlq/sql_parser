@@ -32,19 +32,16 @@ int
 sql_parser(string sql, string current_db_name)
 {
     int ret = 0;
-    QueryActuator query_actuator;
-
-    query_actuator.init_exec_plan(current_db_name);
+    QueryActuator *query_actuator = new QueryActuator(current_db_name);
             
-    FinalExecPlan* final_exec_plan = NULL;
-    if (OB_SUCCESS != (ret = query_actuator.generate_exec_plan(sql)))
+    if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql)))
     {
-        fprintf(stderr, "generate_exec_plan: %s\n", query_actuator.get_result_plan().err_stat_.err_msg_);
+        fprintf(stderr, "generate_exec_plan: %s\n", query_actuator->get_result_plan().err_stat_.err_msg_);
         ret = OB_ERR_GEN_PLAN;
         return ret;
     }
 
-    query_actuator.release_exec_plan();
+    delete query_actuator;
 }
 
 
@@ -71,10 +68,6 @@ ORDER BY persons.lastname";
 
     string sql9 = "SELECT id FROM persons WHERE lastname = 'Attendee' AND address = 'beijing'  AND (id = 147 OR id = 155)";
 
-    string sql8 = "SELECT id FROM persons    \
-UNION ALL   \
-SELECT id FROM order_list";
-
     string sql10 = "UPDATE persons SET address = 'BEIJING' WHERE lastname = 'Wilson'";
     string sql11 = "SELECT COUNT(lastname), address AS addr FROM persons";
 
@@ -94,12 +87,16 @@ SELECT address,lastname FROM persons";
     string sql_test2 = "SELECT id from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing'";
     string sql_test3 = "SELECT id FROM pp";
     
+    string sql_test4 = "SELECT id FROM pp    \
+    UNION distinct   \
+    SELECT id FROM tt";
     //sql_parser(sql3, "qinbo");
     //sql_parser(sql6);
     //sql_parser(sql10);
-    sql_parser(sql_test3, "oxwf");
+    sql_parser(sql_test4, "oxwf");
     //sql_parser(sql14);
     //sql_parser(sql9);
-    //sql_parser(sql8);
+    //sql_parser(sql8, "qinbo");
     return 1;
 }
+

@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 2.7.  */
+/* A Bison parser, made by GNU Bison 2.7.12-4996.  */
 
 /* Bison implementation for Yacc-like parsers in C
    
-      Copyright (C) 1984, 1989-1990, 2000-2012 Free Software Foundation, Inc.
+      Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
    
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@
 #define YYBISON 1
 
 /* Bison version.  */
-#define YYBISON_VERSION "2.7"
+#define YYBISON_VERSION "2.7.12-4996"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -464,12 +464,21 @@ typedef short int yytype_int16;
 # endif
 #endif
 
+#ifndef __attribute__
+/* This feature is available in gcc versions 2.5 and later.  */
+# if (! defined __GNUC__ || __GNUC__ < 2 \
+      || (__GNUC__ == 2 && __GNUC_MINOR__ < 5))
+#  define __attribute__(Spec) /* empty */
+# endif
+#endif
+
 /* Suppress unused-variable warnings by "using" E.  */
 #if ! defined lint || defined __GNUC__
 # define YYUSE(E) ((void) (E))
 #else
 # define YYUSE(E) /* empty */
 #endif
+
 
 /* Identity function, used to suppress warnings about constant conditions.  */
 #ifndef lint
@@ -2171,11 +2180,7 @@ yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, result)
 # else
   YYUSE (yyoutput);
 # endif
-  switch (yytype)
-    {
-      default:
-        break;
-    }
+  YYUSE (yytype);
 }
 
 
@@ -4905,7 +4910,7 @@ yyreduce:
 
     {
     	ParseNode* val_list = NULL;
-      merge_nodes(val_list, result->malloc_pool_, T_VALUE_LIST, (yyvsp[(6) - (6)].node));
+      	merge_nodes(val_list, result->malloc_pool_, T_VALUE_LIST, (yyvsp[(6) - (6)].node));
     	malloc_non_terminal_node((yyval.node), result->malloc_pool_, T_INSERT, 5,
                               (yyvsp[(3) - (6)].node),           /* target relation */
                               (yyvsp[(4) - (6)].node),           /* column list */
@@ -5176,7 +5181,7 @@ yyreduce:
                               NULL,           /* 4. where */
                               NULL,           /* 5. group by */
                               NULL,           /* 6. having */
-                              set_op,   /* 7. set operation */
+                              set_op,   	/* 7. set operation */
                               (yyvsp[(3) - (4)].node),             /* 8. all specified? */
                               (yyvsp[(1) - (4)].node),             /* 9. former select stmt */
                               (yyvsp[(4) - (4)].node),             /* 10. later select stmt */
@@ -5224,7 +5229,7 @@ yyreduce:
                               NULL,           /* 4. where */
                               NULL,           /* 5. group by */
                               NULL,           /* 6. having */
-                              set_op,   /* 7. set operation */
+                              set_op,   	  /* 7. set operation */
                               (yyvsp[(3) - (4)].node),             /* 8. all specified? */
                               (yyvsp[(1) - (4)].node),             /* 9. former select stmt */
                               (yyvsp[(4) - (4)].node),             /* 10. later select stmt */

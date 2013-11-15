@@ -121,7 +121,7 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
 
     if (NULL == stmt || NULL == result_plan)
     {
-        TBSYS_LOG(WARN, "invalid argument. stmt=%p, result_plan=%p", stmt, result_plan);
+        jlog(WARNING, "invalid argument. stmt=%p, result_plan=%p", stmt, result_plan);
         ret = OB_INVALID_ARGUMENT;
     }
 
@@ -141,7 +141,7 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
             {
                 if (OB_SUCCESS != (ret = rowkey_info.get_column_id(rowkey_idx, rowkey_column_id)))
                 {
-                    TBSYS_LOG(WARN, "fail to get table %lu column %ld. ret=%d", table_id, rowkey_idx, ret);
+                    jlog(WARNING, "fail to get table %lu column %ld. ret=%d", table_id, rowkey_idx, ret);
                     snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                             "BUG: Unexpected primary columns.");
                     break;
@@ -149,7 +149,7 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
                 else if (NULL == (rowkey_column_schema = g_metareader->get_column_schema(table_id, rowkey_column_id)))
                 {
                     ret = OB_ENTRY_NOT_EXIST;
-                    TBSYS_LOG(WARN, "fail to get table %lu column %lu", table_id, rowkey_column_id);
+                    jlog(WARNING, "fail to get table %lu column %lu", table_id, rowkey_column_id);
                     snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                             "BUG: Primary key column schema not found");
                     break;
@@ -163,7 +163,7 @@ static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t tabl
                     ret = stmt->add_column_item(*result_plan, column_name);
                     if (ret != OB_SUCCESS)
                     {
-                        TBSYS_LOG(WARN, "fail to add column item '%s' to table %lu", rowkey_column_schema->get_name(), table_id);
+                        jlog(WARNING, "fail to add column item '%s' to table %lu", rowkey_column_schema->get_name(), table_id);
                         break;
                     }
                 }
@@ -191,7 +191,7 @@ int resolve_independ_expr(
         if (sql_expr == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc space for ObSqlRawExpr");
         }
@@ -289,7 +289,7 @@ int resolve_and_exprs(
   if (expr == NULL)  \
   { \
     result_plan->err_stat_.err_code_ = OB_ERR_PARSER_MALLOC_FAILED; \
-    TBSYS_LOG(WARN, "out of memory"); \
+    jlog(WARNING, "out of memory"); \
     snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,  \
         "Fail to malloc new raw expression"); \
   } \
@@ -322,7 +322,7 @@ int resolve_expr(
             str_val.assign(const_cast<char*> (node->str_value_), static_cast<int32_t> (node->value_));
             if (OB_SUCCESS != (ret = ob_write_string(str_val, str)))
             {
-                TBSYS_LOG(WARN, "out of memory");
+                jlog(WARNING, "out of memory");
                 break;
             }
             ObObj val;
@@ -343,7 +343,7 @@ int resolve_expr(
             string str;
             if (OB_SUCCESS != (ret = ob_write_string(make_string(node->str_value_), str)))
             {
-                TBSYS_LOG(WARN, "out of memory");
+                jlog(WARNING, "out of memory");
                 break;
             }
             ObObj val;
@@ -357,7 +357,7 @@ int resolve_expr(
             expr = c_expr;
             if (node->type_ == T_TEMP_VARIABLE)
             {
-                TBSYS_LOG(INFO, "resolve tmp variable, name=%.*s", str.size(), str.data());
+                jlog(INFO, "resolve tmp variable, name=%.*s", str.size(), str.data());
             }
             break;
         }
@@ -392,7 +392,7 @@ int resolve_expr(
             string str;
             if (OB_SUCCESS != (ret = ob_write_string(make_string(node->str_value_), str)))
             {
-                TBSYS_LOG(WARN, "out of memory");
+                jlog(WARNING, "out of memory");
                 break;
             }
             ObObj val;
@@ -1260,7 +1260,7 @@ int resolve_expr(
             if (ret != OB_SUCCESS)
             {
                 ret = OB_ERR_PARSER_MALLOC_FAILED;
-                TBSYS_LOG(WARN, "out of memory");
+                jlog(WARNING, "out of memory");
                 snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                         "Malloc function name failed");
                 break;
@@ -1369,19 +1369,19 @@ int resolve_expr(
                             }
                             else
                             {
-                                TBSYS_LOG(WARN, "fail to get int val. obj.get_type()=%d", obj.get_type());
+                                jlog(WARNING, "fail to get int val. obj.get_type()=%d", obj.get_type());
                                 break;
                             }
                         }
                         else
                         {
-                            TBSYS_LOG(WARN, "fail to get param expression");
+                            jlog(WARNING, "fail to get param expression");
                             break;
                         }
                     }
                     else
                     {
-                        TBSYS_LOG(WARN, "CAST function must only take 2 params");
+                        jlog(WARNING, "CAST function must only take 2 params");
                     }
                 }
                 else if (0 == strncasecmp(oceanbase::sql::ObPostfixExpression::get_sys_func_name(SYS_FUNC_CUR_TIME), func_name.data(), func_name.size()))
@@ -1473,7 +1473,7 @@ int resolve_agg_func(
         if (sql_expr == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc space for ObSqlRawExpr");
         }
@@ -1741,7 +1741,7 @@ int resolve_table(
                 if (joined_table == NULL)
                 {
                     ret = OB_ERR_PARSER_MALLOC_FAILED;
-                    TBSYS_LOG(WARN, "out of memory");
+                    jlog(WARNING, "out of memory");
                     snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                             "Can not malloc space for JoinedTable");
                     break;
@@ -1852,7 +1852,7 @@ int resolve_table_columns(
                                 new_column_item.column_name_)) != OB_SUCCESS)
                         {
                             ret = OB_ERR_PARSER_MALLOC_FAILED;
-                            TBSYS_LOG(WARN, "out of memory");
+                            jlog(WARNING, "out of memory");
                             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                                     "Can not malloc space for column name");
                             break;
@@ -1885,7 +1885,7 @@ int resolve_table_columns(
                         if (sql_expr == NULL)
                         {
                             ret = OB_ERR_PARSER_MALLOC_FAILED;
-                            TBSYS_LOG(WARN, "out of memory");
+                            jlog(WARNING, "out of memory");
                             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                                     "Can not malloc space for ObSqlRawExpr");
                             break;
@@ -1956,7 +1956,7 @@ int resolve_table_columns(
                         if (ret != OB_SUCCESS)
                         {
                             ret = OB_ERR_PARSER_MALLOC_FAILED;
-                            TBSYS_LOG(WARN, "out of memory");
+                            jlog(WARNING, "out of memory");
                             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                                     "Can not malloc space for column name");
                             break;
@@ -1998,7 +1998,7 @@ int resolve_table_columns(
                         if (sql_expr == NULL)
                         {
                             ret = OB_ERR_PARSER_MALLOC_FAILED;
-                            TBSYS_LOG(WARN, "out of memory");
+                            jlog(WARNING, "out of memory");
                             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                                     "Can not malloc space for ObSqlRawExpr");
                             break;
@@ -2153,7 +2153,7 @@ int resolve_select_clause(
             // Same as mysql, we do not check alias name
             // if (!(select_stmt->check_alias_name(logical_plan, sAlias)))
             // {
-            //   TBSYS_LOG(ERROR, "alias name %.s is ambiguous", alias_node->str_value_);
+            //   jlog(ERROR, "alias name %.s is ambiguous", alias_node->str_value_);
             //   return false;
             // }
         }
@@ -2501,7 +2501,7 @@ int resolve_select_stmt(
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc ObLogicalPlan");
         }
@@ -2523,7 +2523,7 @@ int resolve_select_stmt(
         if (select_stmt == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc ObSelectStmt");
         }
@@ -2775,7 +2775,7 @@ int resolve_delete_stmt(
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc ObLogicalPlan");
         }
@@ -2796,7 +2796,7 @@ int resolve_delete_stmt(
         if (delete_stmt == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc ObDeleteStmt");
         }
@@ -2991,7 +2991,7 @@ int resolve_insert_stmt(
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc ObLogicalPlan");
         }
@@ -3014,7 +3014,7 @@ int resolve_insert_stmt(
         if (insert_stmt == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc ObInsertStmt");
         }
@@ -3112,7 +3112,7 @@ int resolve_update_stmt(
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc ObLogicalPlan");
         }
@@ -3133,7 +3133,7 @@ int resolve_update_stmt(
         if (update_stmt == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc ObUpdateStmt");
         }
@@ -3226,7 +3226,7 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
 {
     if (!result_plan)
     {
-        TBSYS_LOG(ERROR, "null result_plan");
+        jlog(ERROR, "null result_plan");
         return OB_ERR_RESOLVE_SQL;
     }
     int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
@@ -3263,7 +3263,7 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
                 break;
             }
             default:
-                TBSYS_LOG(ERROR, "unknown top node type=%d", node->type_);
+                jlog(ERROR, "unknown top node type=%d", node->type_);
                 ret = OB_ERR_UNEXPECTED;
                 break;
         };
@@ -3276,7 +3276,7 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
         if (logical_plan != NULL && logical_plan->get_question_mark_size() > 0)
         {
             ret = OB_ERR_PARSE_SQL;
-            TBSYS_LOG(ERROR, "Uknown column '?'");
+            jlog(ERROR, "Uknown column '?'");
         }
     }
 #endif

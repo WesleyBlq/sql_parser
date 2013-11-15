@@ -99,7 +99,7 @@ inline int ObNumber::mul_uint32(const ObNumber &multiplicand, uint32_t multiplie
             }
             else
             {
-                TBSYS_LOG(WARN, "multiply overflow, carry=%ld", carry);
+                jlog(WARNING, "multiply overflow, carry=%ld", carry);
                 ret = OB_VALUE_OUT_OF_RANGE;
             }
         }
@@ -166,7 +166,7 @@ inline int ObNumber::add_uint32(const ObNumber &n1, uint32_t n2, ObNumber &res)
         }
         else
         {
-            TBSYS_LOG(WARN, "add overflow, carry=%ld", carry);
+            jlog(WARNING, "add overflow, carry=%ld", carry);
             ret = OB_VALUE_OUT_OF_RANGE;
         }
     }
@@ -366,7 +366,7 @@ int ObNumber::from(const char* str, int64_t buf_len)
                 vscale = 0;
                 break;
             default:
-                TBSYS_LOG(WARN, "invalid numeric char=%c", *str);
+                jlog(WARNING, "invalid numeric char=%c", *str);
                 ret = OB_ERR_UNEXPECTED;
                 break;
         }
@@ -378,7 +378,7 @@ int ObNumber::from(const char* str, int64_t buf_len)
     }
     if (SINGLE_PRECISION_NDIGITS < vscale)
     {
-        TBSYS_LOG(WARN, "too many fractional digits, vscale=%hhd", vscale);
+        jlog(WARNING, "too many fractional digits, vscale=%hhd", vscale);
         ret = OB_VALUE_OUT_OF_RANGE;
     }
     else if (OB_SUCCESS == ret)
@@ -436,7 +436,7 @@ int ObNumber::to_int64(int64_t &i64) const
     int ret = OB_SUCCESS;
     if (!can_convert_to_int64())
     {
-        TBSYS_LOG(WARN, "the number cannot be converted to int64, vscale=%hhd nwords=%hhd",
+        jlog(WARNING, "the number cannot be converted to int64, vscale=%hhd nwords=%hhd",
                 vscale_, nwords_);
         ret = OB_VALUE_OUT_OF_RANGE;
     }
@@ -561,7 +561,7 @@ int ObNumber::round_to(int8_t precision, int8_t scale, int8_t &nwords, int8_t &v
     if (vprec > precision)
     {
         ret = OB_VALUE_OUT_OF_RANGE;
-        TBSYS_LOG(WARN, "value is not representable with the precision and scale, p=%hhd s=%hhd vp=%hhd vs=%hhd",
+        jlog(WARNING, "value is not representable with the precision and scale, p=%hhd s=%hhd vp=%hhd vs=%hhd",
                 precision, scale, vprec, this->vscale_);
     }
     else
@@ -618,7 +618,7 @@ int ObNumber::add(const ObNumber &other, ObNumber &res) const
     int8_t res_nwords = static_cast<int8_t> (std::max(n1.nwords_, n2.nwords_) + 1);
     if (res_nwords > MAX_NWORDS)
     {
-        TBSYS_LOG(WARN, "number out of range");
+        jlog(WARNING, "number out of range");
         ret = OB_VALUE_OUT_OF_RANGE;
     }
     else
@@ -706,7 +706,7 @@ int ObNumber::sub(const ObNumber &other, ObNumber &res) const
     ObNumber neg_other = other;
     if (neg_other.nwords_ >= MAX_NWORDS)
     {
-        TBSYS_LOG(WARN, "value out of range for sub");
+        jlog(WARNING, "value out of range for sub");
         ret = OB_VALUE_OUT_OF_RANGE;
     }
     else
@@ -782,7 +782,7 @@ int ObNumber::mul_words(const ObNumber &n1, const ObNumber &n2, ObNumber &res)
     res.nwords_ = static_cast<int8_t> (n1.nwords_ + n2.nwords_ + 1);
     if (OB_UNLIKELY(res.nwords_ > MAX_NWORDS))
     {
-        TBSYS_LOG(WARN, "multiply precision overflow, res_nwords=%hhd", res.nwords_);
+        jlog(WARNING, "multiply precision overflow, res_nwords=%hhd", res.nwords_);
         ret = OB_VALUE_OUT_OF_RANGE;
     }
     else
@@ -1094,7 +1094,7 @@ int ObNumber::div(const ObNumber &other, ObNumber &res) const
     res.set_zero();
     if (other.is_zero())
     {
-        TBSYS_LOG(WARN, "divisor is zero");
+        jlog(WARNING, "divisor is zero");
         ret = OB_DIVISION_BY_ZERO;
     }
     else if (!this->is_zero())
@@ -1122,7 +1122,7 @@ int ObNumber::div(const ObNumber &other, ObNumber &res) const
         {
             if (OB_SUCCESS != (ret = dividend.left_shift(static_cast<int8_t> (res.vscale_ + divisor.vscale_ - dividend.vscale_), true)))
             {
-                TBSYS_LOG(WARN, "left shift overflow, err=%d res_vscale=%hhd other_vscale=%hhd this_vscale=%hhd",
+                jlog(WARNING, "left shift overflow, err=%d res_vscale=%hhd other_vscale=%hhd this_vscale=%hhd",
                         ret, res.vscale_, divisor.vscale_, dividend.vscale_);
             }
         }
@@ -1150,7 +1150,7 @@ int ObNumber::negate(ObNumber &res) const
     int ret = OB_SUCCESS;
     if (this->nwords_ >= MAX_NWORDS)
     {
-        TBSYS_LOG(WARN, "value out of range to do negate");
+        jlog(WARNING, "value out of range to do negate");
         ret = OB_VALUE_OUT_OF_RANGE;
     }
     else

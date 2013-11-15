@@ -63,7 +63,7 @@ void ObExprObj::assign(const ObObj &obj)
             obj.get_ext(v_.ext_);
             break;
         default:
-            TBSYS_LOG(ERROR, "invalid value type=%d", obj.get_type());
+            jlog(ERROR, "invalid value type=%d", obj.get_type());
             break;
     }
 }
@@ -110,7 +110,7 @@ int ObExprObj::to(ObObj &obj) const
             obj.set_ext(v_.ext_);
             break;
         default:
-            TBSYS_LOG(ERROR, "invalid value type=%d", get_type());
+            jlog(ERROR, "invalid value type=%d", get_type());
             ret = OB_ERR_UNEXPECTED;
             break;
     }
@@ -164,7 +164,7 @@ inline int ObExprObj::get_timestamp(int64_t & timestamp) const
             timestamp = v_.createtime_;
             break;
         default:
-            TBSYS_LOG(ERROR, "unexpected branch");
+            jlog(ERROR, "unexpected branch");
             ret = OB_OBJ_TYPE_ERROR;
     }
     return ret;
@@ -258,7 +258,7 @@ int ObExprObj::compare_same_type(const ObExprObj &other) const
             cmp = this->v_.bool_ - other.v_.bool_;
             break;
         default:
-            TBSYS_LOG(ERROR, "invalid type=%d", get_type());
+            jlog(ERROR, "invalid type=%d", get_type());
             break;
     }
     return cmp;
@@ -421,7 +421,7 @@ inline int ObExprObj::type_promotion(ObObjType type_promote_map[ObMaxType][ObMax
     }
     else if (ObMaxType == res_type)
     {
-        TBSYS_LOG(ERROR, "invalid obj type for type promotion, this=%d other=%d", this_type, other_type);
+        jlog(ERROR, "invalid obj type for type promotion, this=%d other=%d", this_type, other_type);
         ret = OB_ERR_UNEXPECTED;
     }
     else
@@ -433,7 +433,7 @@ inline int ObExprObj::type_promotion(ObObjType type_promote_map[ObMaxType][ObMax
             ObObjCastParams params;
             if (OB_SUCCESS != (ret = OB_OBJ_CAST[this_type][res_type](params, this_obj, promoted_obj1)))
             {
-                TBSYS_LOG(WARN, "failed to cast object, err=%d from_type=%d to_type=%d",
+                jlog(WARNING, "failed to cast object, err=%d from_type=%d to_type=%d",
                         ret, this_type, res_type);
             }
             else
@@ -446,7 +446,7 @@ inline int ObExprObj::type_promotion(ObObjType type_promote_map[ObMaxType][ObMax
             ObObjCastParams params;
             if (OB_SUCCESS != (ret = OB_OBJ_CAST[other_type][res_type](params, other, promoted_obj2)))
             {
-                TBSYS_LOG(WARN, "failed to cast object, err=%d from_type=%d to_type=%d",
+                jlog(WARNING, "failed to cast object, err=%d from_type=%d to_type=%d",
                         ret, this_type, res_type);
             }
             else
@@ -468,7 +468,7 @@ inline int ObExprObj::compare_type_promotion(const ObExprObj &this_obj, const Ob
     {
         if (OB_RESULT_UNKNOWN != ret)
         {
-            TBSYS_LOG(WARN, "invalid type promote for compare, err=%d", ret);
+            jlog(WARNING, "invalid type promote for compare, err=%d", ret);
         }
     }
     return ret;
@@ -651,7 +651,7 @@ int ObExprObj::is(const ObExprObj &other, ObExprObj &res) const
     else if (ObBoolType != other.get_type())
     {
         ret = OB_INVALID_ARGUMENT;
-        TBSYS_LOG(WARN, "invalid type for is operator, type=%d", other.get_type());
+        jlog(WARNING, "invalid type for is operator, type=%d", other.get_type());
         res.set_bool(false); // res cannot be UNKNOWN according to the SQL standard
     }
     else
@@ -679,7 +679,7 @@ int ObExprObj::is_not(const ObExprObj &other, ObExprObj &res) const
     else if (ObBoolType != other.get_type())
     {
         ret = OB_INVALID_ARGUMENT;
-        TBSYS_LOG(WARN, "invalid type for is operator, type=%d", other.get_type());
+        jlog(WARNING, "invalid type for is operator, type=%d", other.get_type());
         res.set_bool(false); // res cannot be UNKNOWN according to the SQL standard
     }
     else
@@ -1017,7 +1017,7 @@ inline int ObExprObj::arith_type_promotion(const ObExprObj &this_obj, const ObEx
     {
         if (OB_RESULT_UNKNOWN != ret)
         {
-            TBSYS_LOG(WARN, "invalid type promote for arithmetic, err=%d", ret);
+            jlog(WARNING, "invalid type promote for arithmetic, err=%d", ret);
         }
     }
     return ret;
@@ -1045,7 +1045,7 @@ inline int ObExprObj::add_same_type(const ObExprObj &other, ObExprObj &res) cons
             break;
         default:
             ret = OB_ERR_UNEXPECTED;
-            TBSYS_LOG(ERROR, "unexpected branch");
+            jlog(ERROR, "unexpected branch");
             break;
     }
     return ret;
@@ -1095,7 +1095,7 @@ inline int ObExprObj::sub_same_type(const ObExprObj &other, ObExprObj &res) cons
             break;
         default:
             ret = OB_ERR_UNEXPECTED;
-            TBSYS_LOG(ERROR, "unexpected branch");
+            jlog(ERROR, "unexpected branch");
             break;
     }
     return ret;
@@ -1145,7 +1145,7 @@ inline int ObExprObj::mul_same_type(const ObExprObj &other, ObExprObj &res) cons
             break;
         default:
             ret = OB_ERR_UNEXPECTED;
-            TBSYS_LOG(ERROR, "unexpected branch");
+            jlog(ERROR, "unexpected branch");
             break;
     }
     return ret;
@@ -1320,7 +1320,7 @@ inline int ObExprObj::cast_to_int(int64_t &val) const
 
     if (OB_UNLIKELY(this->get_type() == ObNullType))
     {
-        // TBSYS_LOG(WARN, "should not be null");
+        // jlog(WARNING, "should not be null");
         ret = OB_INVALID_ARGUMENT;
     }
     else
@@ -1330,7 +1330,7 @@ inline int ObExprObj::cast_to_int(int64_t &val) const
         {
             // don't report WARN when type NOT_SUPPORT
             /*
-            TBSYS_LOG(WARN, "failed to cast object, err=%d from_type=%d to_type=%d",
+            jlog(WARNING, "failed to cast object, err=%d from_type=%d to_type=%d",
                 ret, this->get_type(), ObVarcharType);
              */
         }
@@ -1352,7 +1352,7 @@ inline int ObExprObj::cast_to_varchar(string &varchar) const
 
     if (OB_UNLIKELY(this->get_type() == ObNullType))
     {
-        //TBSYS_LOG(WARN, "should not be null");
+        //jlog(WARNING, "should not be null");
         ret = OB_INVALID_ARGUMENT;
     }
     else if (OB_LIKELY(this->get_type() != ObVarcharType))
@@ -1363,7 +1363,7 @@ inline int ObExprObj::cast_to_varchar(string &varchar) const
         {
             // don't report WARN when type NOT_SUPPORT
             /*
-            TBSYS_LOG(WARN, "failed to cast object, err=%d from_type=%d to_type=%d",
+            jlog(WARNING, "failed to cast object, err=%d from_type=%d to_type=%d",
                 ret, this->get_type(), ObVarcharType);
              */
         }
@@ -1372,7 +1372,7 @@ inline int ObExprObj::cast_to_varchar(string &varchar) const
             const string& tmp = casted_obj.get_varchar();
             if (OB_SUCCESS != (ret = ob_write_string(tmp, &varchar)))
             {
-                TBSYS_LOG(WARN, "fail to allocate memory for string. ret=%d", ret);
+                jlog(WARNING, "fail to allocate memory for string. ret=%d", ret);
             }
         }
     }
@@ -1381,7 +1381,7 @@ inline int ObExprObj::cast_to_varchar(string &varchar) const
         const string& tmp1 = casted_obj.get_varchar();
         if (OB_SUCCESS != (ret = ob_write_string(tmp1, &varchar)))
         {
-            TBSYS_LOG(WARN, "fail to allocate memory for string. ret=%d", ret);
+            jlog(WARNING, "fail to allocate memory for string. ret=%d", ret);
         }
     }
 #endif
@@ -1434,7 +1434,7 @@ inline int ObExprObj::div_type_promotion(const ObExprObj &this_obj, const ObExpr
     {
         if (OB_RESULT_UNKNOWN != ret)
         {
-            TBSYS_LOG(WARN, "invalid type promote for compare, err=%d", ret);
+            jlog(WARNING, "invalid type promote for compare, err=%d", ret);
         }
     }
     return ret;
@@ -1459,7 +1459,7 @@ inline int ObExprObj::div_same_type(const ObExprObj &other, ObExprObj &res) cons
             break;
         default:
             ret = OB_ERR_UNEXPECTED;
-            TBSYS_LOG(ERROR, "unexpected branch, type=%d", get_type());
+            jlog(ERROR, "unexpected branch, type=%d", get_type());
             break;
     }
     return ret;
@@ -1517,7 +1517,7 @@ inline int ObExprObj::mod_type_promotion(const ObExprObj &this_obj, const ObExpr
         ObObjCastParams params;
         if (OB_SUCCESS != (ret = OB_OBJ_CAST[this_type][ObIntType](params, this_obj, promoted_obj1)))
         {
-            TBSYS_LOG(WARN, "failed to cast obj to int, err=%d this_type=%d",
+            jlog(WARNING, "failed to cast obj to int, err=%d this_type=%d",
                     ret, this_type);
         }
         else
@@ -1530,7 +1530,7 @@ inline int ObExprObj::mod_type_promotion(const ObExprObj &this_obj, const ObExpr
         ObObjCastParams params;
         if (OB_SUCCESS != (ret = OB_OBJ_CAST[other_type][ObIntType](params, other, promoted_obj2)))
         {
-            TBSYS_LOG(WARN, "failed to cast obj to int, err=%d this_type=%d",
+            jlog(WARNING, "failed to cast obj to int, err=%d this_type=%d",
                     ret, other_type);
         }
         else
@@ -1789,12 +1789,12 @@ int ObExprObj::concat(const ObExprObj &other, ObExprObj &result) const
     {
         if (OB_SUCCESS != (ret = this->cast_to_varchar(this_varchar)))
         {
-            TBSYS_LOG(WARN, "fail to cast obj to varchar. ret=%d", ret);
+            jlog(WARNING, "fail to cast obj to varchar. ret=%d", ret);
             result.set_null();
         }
         else if (OB_SUCCESS != (ret = other.cast_to_varchar(that_varchar)))
         {
-            TBSYS_LOG(WARN, "fail to cast obj to varchar. ret=%d", ret);
+            jlog(WARNING, "fail to cast obj to varchar. ret=%d", ret);
             result.set_null();
         }
         else
@@ -1817,7 +1817,7 @@ int ObExprObj::concat(const ObExprObj &other, ObExprObj &result) const
                 if (OB_SUCCESS != (ret = ob_write_string(tmp_varchar, &varchar)))
                 {
                     result.set_null();
-                    TBSYS_LOG(WARN, "fail to write string to membuf. ret=%d", ret);
+                    jlog(WARNING, "fail to write string to membuf. ret=%d", ret);
                 }
                 else
                 {
@@ -1843,20 +1843,20 @@ int ObExprObj::trim(const ObExprObj &trimType, const ObExprObj &trimPattern, ObE
 
     if (OB_SUCCESS != (err = trimType.get_int(type)))
     {
-        TBSYS_LOG(WARN, "fail to get trim type. err=%d", err);
+        jlog(WARNING, "fail to get trim type. err=%d", err);
     }
     else if (OB_SUCCESS != (err = trimPattern.cast_to_varchar(pattern)))
     {
-        TBSYS_LOG(WARN, "fail to get trim pattern. err=%d", err);
+        jlog(WARNING, "fail to get trim pattern. err=%d", err);
     }
     else if (pattern.length() <= 0)
     {
         err = OB_INVALID_ARGUMENT;
-        TBSYS_LOG(WARN, "trim pattern is empty");
+        jlog(WARNING, "trim pattern is empty");
     }
     else if (OB_SUCCESS != (err = this->cast_to_varchar(src)))
     {
-        TBSYS_LOG(WARN, "fail to get trim source. err=%d", err);
+        jlog(WARNING, "fail to get trim source. err=%d", err);
     }
     else
     {
@@ -2021,11 +2021,11 @@ int ObExprObj::set_decimal(const char* dec_str)
     static const int8_t TEST_SCALE = 4;
     if (OB_SUCCESS != (ret = num.from(dec_str)))
     {
-        TBSYS_LOG(WARN, "failed to construct decimal from string, err=%d str=%s", ret, dec_str);
+        jlog(WARNING, "failed to construct decimal from string, err=%d str=%s", ret, dec_str);
     }
     else if (OB_SUCCESS != (ret = obj.set_decimal(num, TEST_PREC, TEST_SCALE)))
     {
-        TBSYS_LOG(WARN, "obj failed to set decimal, err=%d", ret);
+        jlog(WARNING, "obj failed to set decimal, err=%d", ret);
     }
     else
     {
@@ -2049,7 +2049,7 @@ int ObExprObj::get_int(int64_t& value) const
     ObObj obj;
     if (OB_SUCCESS != (ret = this->to(obj)))
     {
-        TBSYS_LOG(WARN, "failed to convert to obj, err=%d", ret);
+        jlog(WARNING, "failed to convert to obj, err=%d", ret);
     }
     else
     {
@@ -2064,7 +2064,7 @@ int ObExprObj::get_datetime(ObDateTime& value) const
     ObObj obj;
     if (OB_SUCCESS != (ret = this->to(obj)))
     {
-        TBSYS_LOG(WARN, "failed to convert to obj, err=%d", ret);
+        jlog(WARNING, "failed to convert to obj, err=%d", ret);
     }
     else
     {
@@ -2079,7 +2079,7 @@ int ObExprObj::get_precise_datetime(ObPreciseDateTime& value) const
     ObObj obj;
     if (OB_SUCCESS != (ret = this->to(obj)))
     {
-        TBSYS_LOG(WARN, "failed to convert to obj, err=%d", ret);
+        jlog(WARNING, "failed to convert to obj, err=%d", ret);
     }
     else
     {
@@ -2094,7 +2094,7 @@ int ObExprObj::get_varchar(string& value) const
     ObObj obj;
     if (OB_SUCCESS != (ret = this->to(obj)))
     {
-        TBSYS_LOG(WARN, "failed to convert to obj, err=%d", ret);
+        jlog(WARNING, "failed to convert to obj, err=%d", ret);
     }
     else
     {
@@ -2109,7 +2109,7 @@ int ObExprObj::get_float(float &f) const
     ObObj obj;
     if (OB_SUCCESS != (ret = this->to(obj)))
     {
-        TBSYS_LOG(WARN, "failed to convert to obj, err=%d", ret);
+        jlog(WARNING, "failed to convert to obj, err=%d", ret);
     }
     else
     {
@@ -2124,7 +2124,7 @@ int ObExprObj::get_double(double &d) const
     ObObj obj;
     if (OB_SUCCESS != (ret = this->to(obj)))
     {
-        TBSYS_LOG(WARN, "failed to convert to obj, err=%d", ret);
+        jlog(WARNING, "failed to convert to obj, err=%d", ret);
     }
     else
     {
@@ -2157,13 +2157,13 @@ int ObExprObj::unhex(ObExprObj &res)
     {
         res.set_null();
         ret = OB_ERR_UNEXPECTED;
-        TBSYS_LOG(WARN, "type not match, ret=%d", ret);
+        jlog(WARNING, "type not match, ret=%d", ret);
     }
     else if (varchar_.length() % 2 != 0)
     {
         res.set_null();
         ret = OB_INVALID_ARGUMENT;
-        TBSYS_LOG(WARN, "length is odd, ret=%d", ret);
+        jlog(WARNING, "length is odd, ret=%d", ret);
     }
     else
     {
@@ -2174,7 +2174,7 @@ int ObExprObj::unhex(ObExprObj &res)
         {
             res.set_null();
             ret = OB_ALLOCATE_MEMORY_FAILED;
-            TBSYS_LOG(ERROR, "alloc memory failed, ret=%d", ret);
+            jlog(ERROR, "alloc memory failed, ret=%d", ret);
         }
         else
         {
@@ -2215,7 +2215,7 @@ int ObExprObj::unhex(ObExprObj &res)
                 {
                     ret = OB_ERR_UNEXPECTED;
                     res.set_null();
-                    TBSYS_LOG(WARN, "data invalid, ret=%d", ret);
+                    jlog(WARNING, "data invalid, ret=%d", ret);
                     break;
                 }
             }
@@ -2240,7 +2240,7 @@ int ObExprObj::ip_to_int(ObExprObj &res)
     {
         res.set_null();
         ret = OB_ERR_UNEXPECTED;
-        TBSYS_LOG(WARN, "type not match, ret=%d", ret);
+        jlog(WARNING, "type not match, ret=%d", ret);
     }
     else
     {
@@ -2249,7 +2249,7 @@ int ObExprObj::ip_to_int(ObExprObj &res)
         {
             res.set_null();
             ret = OB_INVALID_ARGUMENT;
-            TBSYS_LOG(WARN, "ip format invalid, ret=%d", ret);
+            jlog(WARNING, "ip format invalid, ret=%d", ret);
         }
         else
         {
@@ -2267,7 +2267,7 @@ int ObExprObj::ip_to_int(ObExprObj &res)
             if (cnt != 3)
             {
                 obj.set_null();
-                TBSYS_LOG(WARN, "ip format invalid");
+                jlog(WARNING, "ip format invalid");
             }
             else
             {
@@ -2280,7 +2280,7 @@ int ObExprObj::ip_to_int(ObExprObj &res)
                 else
                 {
                     obj.set_null();
-                    TBSYS_LOG(WARN, "ip format invalid");
+                    jlog(WARNING, "ip format invalid");
                 }
             }
             res.assign(obj);
@@ -2300,7 +2300,7 @@ int ObExprObj::int_to_ip(ObExprObj &res)
     {
         res.set_null();
         ret = OB_ERR_UNEXPECTED;
-        TBSYS_LOG(WARN, "type not match, ret=%d", ret);
+        jlog(WARNING, "type not match, ret=%d", ret);
     }
     else
     {
@@ -2310,7 +2310,7 @@ int ObExprObj::int_to_ip(ObExprObj &res)
         {
             res.set_null();
             ret = OB_ALLOCATE_MEMORY_FAILED;
-            TBSYS_LOG(ERROR, "alloc memory failed, ret=%d", ret);
+            jlog(ERROR, "alloc memory failed, ret=%d", ret);
         }
         else
         {
@@ -2344,7 +2344,7 @@ int ObExprObj::hex(ObExprObj &res)
         {
             res.set_null();
             ret = OB_ALLOCATE_MEMORY_FAILED;
-            TBSYS_LOG(ERROR, "alloc memory failed, ret=%d", ret);
+            jlog(ERROR, "alloc memory failed, ret=%d", ret);
         }
         else
         {
@@ -2366,7 +2366,7 @@ int ObExprObj::hex(ObExprObj &res)
         {
             res.set_null();
             ret = OB_ALLOCATE_MEMORY_FAILED;
-            TBSYS_LOG(ERROR, "alloc memory failed, ret=%d", ret);
+            jlog(ERROR, "alloc memory failed, ret=%d", ret);
         }
         else
         {
@@ -2381,7 +2381,7 @@ int ObExprObj::hex(ObExprObj &res)
     {
         ret = OB_INVALID_ARGUMENT;
         res.set_null();
-        TBSYS_LOG(WARN, "type not match, ret=%d", ret);
+        jlog(WARNING, "type not match, ret=%d", ret);
     }
 #endif
     return ret;
@@ -2418,7 +2418,7 @@ ObObj ObExprObj::type_arithmetic(const ObObj& t1, const ObObj& t2)
     const ObExprObj *p_other = NULL;
     if (OB_SUCCESS != (err = arith_type_promotion(v1, v2, promoted1, promoted2, p_this, p_other)))
     {
-        TBSYS_LOG(WARN, "failed to promote type, err=%d", err);
+        jlog(WARNING, "failed to promote type, err=%d", err);
     }
     else
     {
@@ -2462,7 +2462,7 @@ ObObj ObExprObj::type_div(const ObObj& t1, const ObObj& t2, bool int_div_as_doub
     if (OB_SUCCESS != (err = div_type_promotion(v1, v2, promoted_value1, promoted_value2,
             p_this, p_other, int_div_as_double)))
     {
-        TBSYS_LOG(WARN, "failed to promote type, err=%d", err);
+        jlog(WARNING, "failed to promote type, err=%d", err);
     }
     else
     {
@@ -2491,7 +2491,7 @@ ObObj ObExprObj::type_mod(const ObObj& t1, const ObObj& t2)
     if (OB_SUCCESS != (err = mod_type_promotion(v1, v2, promoted_obj1, promoted_obj2,
             p_this, p_other)))
     {
-        TBSYS_LOG(WARN, "failed to promote type, err=%d type1=%d type2=%d", err, t1.get_type(), t2.get_type());
+        jlog(WARNING, "failed to promote type, err=%d type1=%d type2=%d", err, t1.get_type(), t2.get_type());
     }
     else
     {
@@ -2513,7 +2513,7 @@ ObObj ObExprObj::type_negate(const ObObj& t1)
             ret.meta_.type_ = static_cast<uint8_t> (t1.get_type());
             break;
         default:
-            TBSYS_LOG(WARN, "not supported type for negate, type=%d", t1.get_type());
+            jlog(WARNING, "not supported type for negate, type=%d", t1.get_type());
             break;
     }
     return ret;
@@ -2525,7 +2525,7 @@ ObObj ObExprObj::type_varchar_length(const ObObj& t1)
     ret.meta_.type_ = ObNullType;
     if (ObVarcharType != t1.get_type())
     {
-        TBSYS_LOG(WARN, "not supported type for varchar_length, type=%d", t1.get_type());
+        jlog(WARNING, "not supported type for varchar_length, type=%d", t1.get_type());
     }
     else
     {

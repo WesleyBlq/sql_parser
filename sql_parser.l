@@ -1,5 +1,4 @@
 %option noyywrap nounput noinput nodefault yylineno case-insensitive
-%option noyyalloc noyyrealloc noyyfree
 %option reentrant bison-bridge bison-locations
 %option header-file="sql_parser.lex.h"
 %{
@@ -664,21 +663,3 @@ Timestamp{whitespace}?'[0-9]{4}(-[0-9]{2}){2}[ ][0-9]{2}(:[0-9]{2}){2}[.]?' {
   return ERROR;
 }
 %%
-
-void * yyalloc (size_t bytes, void* yyscanner)
-{
-  ParseResult *p = yyget_extra(yyscanner);
-  return parse_malloc(bytes, p->malloc_pool_);
-}
-
-void * yyrealloc (void * ptr, size_t bytes, void* yyscanner)
-{
-  ParseResult *p = yyget_extra(yyscanner);
-  return parse_realloc(ptr, bytes, p->malloc_pool_);
-}
-
-void yyfree (void * ptr, void * yyscanner)
-{
-  /* Do nothing -- we leave it to the garbage collector. */
-  parse_free(ptr);
-}

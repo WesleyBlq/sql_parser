@@ -38,6 +38,7 @@
 #include "ob_insert_stmt.h"
 #include "ob_update_stmt.h"
 #include "dml_build_plan.h"
+#include "crud_build_plan.h"
 #include "ob_logical_plan.h"
 
 
@@ -57,7 +58,9 @@ private:
     schema_shard* shard_info;
 public:
     void set_exec_unit_sql(string sql);
+    string get_exec_unit_sql();
     void set_exec_uint_shard_info(schema_shard* shard_info);
+    schema_shard* get_exec_unit_shard_info();
 };
 
 /*��ִ�мƻ��ķ�װ*/
@@ -75,25 +78,43 @@ public:
     void set_first_plan_true();
     void is_first_plan();
     void add_exec_plan_unit(ExecPlanUnit* exec_plan_unit);
+    vector<ExecPlanUnit*> get_all_exec_plan_units();
 };
 
 /*ִ�мƻ������class*/
 class FinalExecPlan
 {
 private:
-    vector<SameLevelExecPlan*> exec_plan;
+    vector<SameLevelExecPlan*> same_level_exec_plans;
+    bool    union_is_distinct;
+    int     to_do_exec_plan_sequ;
 
 public:
     //friend class Optimizor;
     FinalExecPlan();
     virtual ~FinalExecPlan();
+    void set_union_is_distinct(bool union_is_distinct);
+    bool get_union_is_distinct();
+
+    int get_TODO_exec_plan_sequ()
+    {
+        return to_do_exec_plan_sequ;
+    }
+
+    void set_TODO_exec_plan_sequ(int to_do_exec_plan_sequ_)
+    {
+        to_do_exec_plan_sequ = to_do_exec_plan_sequ_;
+    }
+    
+    void add_same_level_exec_plan(SameLevelExecPlan* same_level_exec_plan);
+    vector<SameLevelExecPlan*> get_all_same_level_exec_plans();
 };
 
 /*���ڲ���ִ�мƻ��Ķ�����class*/
 class QueryActuator
 {
 public:
-    QueryActuator();
+    QueryActuator(string current_db_name);
     virtual ~QueryActuator();
     FinalExecPlan* popActuator();
     void pushActuator(FinalExecPlan* exec_plan);
@@ -390,20 +411,22 @@ private:
                             schema_shard* single_shard);
     
     /**************************************************
-    Funtion     :   distribute_to_all_shards
+    Funtion     :   distribute_sql_to_all_shards
     Author      :   qinbo
     Date        :   2013.11.6
     Description :   vector elem is already existing
     Input       :   ResultPlan& result_plan,
+                    const uint64_t& query_id,
                     schema_table* table_schema,
                     SameLevelExecPlan* exec_plan
     Output      :   
     return      :
      **************************************************/
-    int distribute_to_all_shards( 
-                        ResultPlan& result_plan,
-                        schema_table* table_schema,
-                        SameLevelExecPlan* exec_plan);
+    int distribute_sql_to_all_shards( 
+                    ResultPlan& result_plan,
+                    const uint64_t& query_id,
+                    schema_table* table_schema,
+                    SameLevelExecPlan* exec_plan);
 };
 
 

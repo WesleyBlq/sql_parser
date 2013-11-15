@@ -47,7 +47,7 @@ namespace oceanbase
                 int ret = common::OB_SUCCESS;
                 if (!stmt)
                 {
-                    TBSYS_LOG(WARN, "fail to allocate space for stmt. %p", stmt);
+                    jlog(WARNING, "fail to allocate space for stmt. %p", stmt);
                     ret = common::OB_ERROR;
                 }
                 stmts_.push_back(stmt);
@@ -59,7 +59,7 @@ namespace oceanbase
                 int ret = common::OB_SUCCESS;
                 if (!expr)
                 {
-                    TBSYS_LOG(WARN, "fail to allocate space for expr. %p", expr);
+                    jlog(WARNING, "fail to allocate space for expr. %p", expr);
                     ret = common::OB_ERROR;
                 }
                 exprs_.push_back(expr);
@@ -73,7 +73,7 @@ namespace oceanbase
                 int ret = common::OB_SUCCESS;
                 if (!expr)
                 {
-                    TBSYS_LOG(WARN, "fail to allocate space for raw expr. %p", expr);
+                    jlog(WARNING, "fail to allocate space for raw expr. %p", expr);
                     ret = common::OB_ERROR;
                 }
                 raw_exprs_store_.push_back(expr);

@@ -33,6 +33,18 @@ void ExecPlanUnit::set_exec_uint_shard_info(schema_shard* shard_info_)
     shard_info = shard_info_;
 }
 
+string ExecPlanUnit::get_exec_unit_sql()
+{
+    return sql;
+}
+
+
+schema_shard* ExecPlanUnit::get_exec_unit_shard_info()
+{
+    return shard_info;
+
+}
+
 /**************************************************
 Funtion     :   SameLevelExecPlan
 Author      :   qinbo
@@ -90,16 +102,31 @@ void SameLevelExecPlan::add_exec_plan_unit(ExecPlanUnit* exec_plan_unit)
 }
 
 /**************************************************
+Funtion     :   get_all_same_level_exec_plans
+Author      :   qinbo
+Date        :   2013.11.
+Description :   get all same level exec plans
+Input       :   
+Output      :   
+return      :
+ **************************************************/
+vector<ExecPlanUnit*> SameLevelExecPlan::get_all_exec_plan_units()
+{
+    return exec_plan_units;
+}
+
+/**************************************************
 Funtion     :   FinalExecPlan
 Author      :   qinbo
 Date        :   2013.11.1
 Description :   
 Input       :   
 Output      :   
+return      :
  **************************************************/
 FinalExecPlan::FinalExecPlan()
 {
-
+    set_union_is_distinct(false);
 }
 
 /**************************************************
@@ -109,17 +136,77 @@ Date        :   2013.11.1
 Description :   
 Input       :   
 Output      :   
+return      :
  **************************************************/
 FinalExecPlan::~FinalExecPlan()
 {
-    for(int32_t i = 0; i < exec_plan.size(); i++)
+    for(int32_t i = 0; i < same_level_exec_plans.size(); i++)
     {
-        exec_plan[i]->~SameLevelExecPlan();
-        parse_free(exec_plan.at(i));
+        same_level_exec_plans[i]->~SameLevelExecPlan();
+        parse_free(same_level_exec_plans.at(i));
     }
-    exec_plan.clear();
+    same_level_exec_plans.clear();
 }
 
+/**************************************************
+Funtion     :   set_union_is_distinct
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   set union is distinct
+Input       :   
+Output      :   
+return      :
+ **************************************************/
+void FinalExecPlan::set_union_is_distinct(bool union_is_distinct_)
+{
+    union_is_distinct = union_is_distinct_;
+}
+
+
+/**************************************************
+Funtion     :   get_union_is_distinct
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   check whether union is distinct
+Input       :   
+Output      :   
+return      :
+ **************************************************/
+bool FinalExecPlan::get_union_is_distinct()
+{
+    return union_is_distinct;
+}
+
+
+
+/**************************************************
+Funtion     :   add_same_level_exec_plan
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   add same_level_exec_plan into fanal_exec_plan
+Input       :   
+Output      :   
+return      :
+ **************************************************/
+void FinalExecPlan::add_same_level_exec_plan(SameLevelExecPlan* same_level_exec_plan)
+{
+    same_level_exec_plans.push_back(same_level_exec_plan);
+}
+
+
+/**************************************************
+Funtion     :   get_all_same_level_exec_plans
+Author      :   qinbo
+Date        :   2013.11.
+Description :   get all same level exec plans
+Input       :   
+Output      :   
+return      :
+ **************************************************/
+vector<SameLevelExecPlan*> FinalExecPlan::get_all_same_level_exec_plans()
+{
+    return same_level_exec_plans;
+}
 
 template <class T>
 int QueryActuator::get_stmt(
@@ -141,15 +228,14 @@ int QueryActuator::get_stmt(
     return ret;
 }
 
-QueryActuator::QueryActuator()
+QueryActuator::QueryActuator(string current_db_name)
 {
-
+    init_exec_plan(current_db_name);
 }
 
 QueryActuator::~QueryActuator()
 {
-
-
+    release_exec_plan();
 }
 
 FinalExecPlan* QueryActuator::popActuator()
@@ -208,7 +294,7 @@ Output      :
  **************************************************/
 int QueryActuator::init_exec_plan(string current_db_name)
 {
-#if 1
+#if 0
     g_metareader->add_DB_schema("qinbo");
     g_metareader->add_table_schema("qinbo", "persons", 100);
     g_metareader->add_column_schema("qinbo", "persons", "lastname", 1111, T_STRING, 0);
@@ -289,6 +375,8 @@ int QueryActuator::release_exec_plan()
         parse_free(final_exec_plan);
         final_exec_plan = NULL;
     }
+
+    memset(&result, 0, sizeof(ParseResult));
 }
 
 /**************************************************
@@ -341,24 +429,31 @@ int QueryActuator::generate_exec_plan(
 
     if (parse_init(&result))
     {
+        ret = JD_ERR_SQL_PARSER_WRONG;
         cout << "parse_init error!!!" << endl;
-        return 1;
+        return ret;
     }
 
     cout << "<<Part 1 : SQL STRING>>" << sql << endl;
     parse_sql(&result, sql.data(), sql.size());
 
-    if (result.result_tree_ == 0)
+    if (result.result_tree_ == NULL)
     {
+        ret = JD_ERR_SQL_PARSER_WRONG;
         cout << "parse_sql error!!!" << endl;
         fprintf(stderr, "%s at %d:%d\n", result.error_msg_, result.line_, result.start_col_);
+        destroy_tree(result.result_tree_);
+        result.result_tree_ = NULL;
+        return ret;
     }
+
+    #if 0
     else
     {
         fprintf(stderr, "\n<<Part 2 : PARSE TREE>>\n");
         print_tree(result.result_tree_, 0);
     }
-
+    #endif
 
     if (result.result_tree_ != NULL)
     {
@@ -384,6 +479,27 @@ int QueryActuator::generate_exec_plan(
                 ret = resolve_update_stmt(&result_plan, result.result_tree_->children_[0], query_id);
                 break;
             }
+            case T_SHOW_TABLES:
+            case T_SHOW_VARIABLES:
+            case T_SHOW_COLUMNS:
+            case T_SHOW_SCHEMA:
+            case T_SHOW_CREATE_TABLE:
+            case T_SHOW_TABLE_STATUS:
+            case T_SHOW_SERVER_STATUS:
+            case T_SHOW_WARNINGS:
+            case T_SHOW_GRANTS:
+            case T_SHOW_PARAMETERS:
+            case T_SHOW_PROCESSLIST :
+            {
+                ret = resolve_show_stmt(&result_plan, result.result_tree_->children_[0], query_id);
+                break;
+            }
+            
+            case T_VARIABLE_SET:
+            {
+                ret = resolve_variable_set_stmt(&result_plan, result.result_tree_->children_[0], query_id);
+                break;
+            }
             default:
                 break;
         }
@@ -391,26 +507,17 @@ int QueryActuator::generate_exec_plan(
 
     if (NULL == result_plan.plan_tree_)
     {
-        fprintf(stderr, "\n<<result_plan.plan_tree_ is NULL>>\n");
-        fprintf(stderr, "RESULT_PLAN ERR INFO: %s\n", result_plan.err_stat_.err_msg_);
-        return 1;
+        fprintf(stderr, "Generate LogicalPlan ErrInfo: %s\n", result_plan.err_stat_.err_msg_);
+        return ret;
     }
-
-    //if (OB_SUCCESS != ret)
-    fprintf(stderr, "RESULT_PLAN ERR INFO: %s\n", result_plan.err_stat_.err_msg_);
+    
+    fprintf(stderr, "\n=======================================\n");
 
     ObLogicalPlan* logic_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     fflush(stderr);
-    fprintf(stderr, "\n<<Part 3 : LOGICAL PLAN>>\n");
+    fprintf(stderr, "\n<<Part 2 : LOGICAL PLAN>>\n");
     logic_plan->print();
     logic_plan->make_stmt_string(result_plan);
-
-    ObSelectStmt *select;
-    if (!get_stmt_instance(result_plan, select))
-    {
-        ret = OB_ERR_GEN_PLAN;
-        return ret;
-    }
 
     if (logic_plan)
     {
@@ -419,12 +526,12 @@ int QueryActuator::generate_exec_plan(
             if ((final_exec_plan = (FinalExecPlan*) parse_malloc(sizeof (FinalExecPlan), NULL)) == NULL)
             {
                 ret = OB_ERR_PARSER_MALLOC_FAILED;
-                TBSYS_LOG(DEBUG, "Can not malloc space for FinalExecPlan");
+                jlog(INFO, "Can not malloc space for FinalExecPlan");
             }
             else
             {
                 final_exec_plan = new(final_exec_plan) FinalExecPlan();
-                TBSYS_LOG(DEBUG, "new physical plan, addr=%p", final_exec_plan);
+                jlog(INFO, "new physical plan, addr=%p", final_exec_plan);
                 new_generated = true;
             }
         }
@@ -434,18 +541,15 @@ int QueryActuator::generate_exec_plan(
         ObBasicStmt *stmt = NULL;
         if (ret == OB_SUCCESS)
         {
-            if (query_id == OB_INVALID_ID)
-                stmt = logic_plan->get_main_stmt();
-            else
-                stmt = logic_plan->get_query(query_id);
+            stmt = logic_plan->get_main_stmt();
             if (stmt == NULL)
             {
                 ret = OB_ERR_ILLEGAL_ID;
-                TBSYS_LOG(DEBUG, "Wrong query id to find query statement");
+                jlog(INFO, "Wrong query id to find query statement");
             }
         }
-        TBSYS_LOG(DEBUG, "generate physical plan for query_id=%lu stmt_type=%d",
-                query_id, stmt->get_stmt_type());
+
+
         if (OB_LIKELY(ret == OB_SUCCESS))
         {
             switch (stmt->get_stmt_type())
@@ -465,9 +569,14 @@ int QueryActuator::generate_exec_plan(
                     break;
                 default:
                     ret = OB_NOT_SUPPORTED;
-                    TBSYS_LOG(DEBUG, "Unknown logical plan, stmt_type=%d", stmt->get_stmt_type());
+                    jlog(INFO, "Unknown logical plan, stmt_type=%d", stmt->get_stmt_type());
                     break;
             }
+        }
+
+        if (OB_SUCCESS != ret)
+        {
+            fprintf(stderr, "Generate ExecPlan ErrInfo: %s\n", result_plan.err_stat_.err_msg_);
         }
 
         if (ret != OB_SUCCESS && new_generated && final_exec_plan != NULL)
@@ -530,32 +639,56 @@ int QueryActuator::gen_exec_plan_select(
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
-        TBSYS_LOG(WARN, "Can not get stmt");
+        jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
                 "Can not get stmt");
         return ret;
     }
 
-    if (select_stmt->is_from_item_with_join())
+    if (ObSelectStmt::UNION == select_stmt->get_set_op())
     {
-        ret = OB_ERR_GEN_PLAN;
-        snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Can not support stmt with JOIN now");
-        return ret;
+        if (select_stmt->is_set_distinct())
+        {
+            physical_plan->set_union_is_distinct(true);
+        }
+        
+        ret = gen_exec_plan_select(result_plan, physical_plan, err_stat, select_stmt->get_left_query_id(), index);
+        if (OB_SUCCESS == ret)
+        {
+            ret = gen_exec_plan_select(result_plan, physical_plan, err_stat, select_stmt->get_right_query_id(), index);
+        }
+    }
+    else if (ObSelectStmt::NONE == select_stmt->get_set_op())
+    {
+        if (select_stmt->is_from_item_with_join())
+        {
+            ret = OB_ERR_GEN_PLAN;
+            snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
+                    "Can not support stmt with JOIN now");
+        }
+        else
+        {
+            /*related to 1 table*/
+            if (1 == select_stmt->get_from_item_size())
+            {
+                ret = generate_select_plan_single_table(result_plan, physical_plan, err_stat, query_id, index);
+            }
+            /*related to >1 tables*/
+            else
+            {
+                ret = generate_select_plan_multi_table(result_plan, physical_plan, err_stat, query_id, index);
+            }
+        }
     }
     else
     {
-        /*related to 1 table*/
-        if (select_stmt->get_from_item_size() == 1)
-        {
-            generate_select_plan_single_table(result_plan, physical_plan, err_stat, query_id, index);
-        }
-            /*related to >1 tables*/
-        else
-        {
-            generate_select_plan_multi_table(result_plan, physical_plan, err_stat, query_id, index);
-        }
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support 'union distinct' query");
+        snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
+                "Now we DO NOT support 'union distinct' query");
     }
+    
+    return ret;
 }
 
 /**************************************************
@@ -595,7 +728,7 @@ int QueryActuator::generate_select_plan_single_table(
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
-        TBSYS_LOG(WARN, "Can not get stmt");
+        jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
                 "Can not get stmt");
         return ret;
@@ -606,7 +739,7 @@ int QueryActuator::generate_select_plan_single_table(
     {
         ret = JD_ERR_LOGICAL_TREE_WRONG;
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Select stmt size is not right");
+                "Table name size is not right");
         return ret;
     }
 
@@ -620,7 +753,7 @@ int QueryActuator::generate_select_plan_single_table(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        TBSYS_LOG(WARN, "out of memory");
+        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                 "Can not malloc space for SameLevelExecPlan");
         return ret;
@@ -628,6 +761,7 @@ int QueryActuator::generate_select_plan_single_table(
     else
     {
         exec_plan = new(exec_plan) SameLevelExecPlan();
+        physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
     /*this table is not distributed table*/
@@ -636,13 +770,14 @@ int QueryActuator::generate_select_plan_single_table(
         if (1 != table_schema->get_all_shards().size())
         {
             ret = JD_ERR_SHARD_NUM_WRONG;
-            TBSYS_LOG(WARN, "shard manage wrong");
+            jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Shard manage wrong");
             return ret;
         }
 
-        return distribute_to_all_shards( result_plan, table_schema, exec_plan);
+        ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+        return ret;
     }
     //this table is distributed table
     else
@@ -651,8 +786,8 @@ int QueryActuator::generate_select_plan_single_table(
         /*if there is no where conditions*/
         if (0 == expr_ids.size())
         {
-            return distribute_to_all_shards( result_plan, table_schema, exec_plan);
-
+            ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+            return ret;
         }
         else
         {
@@ -706,7 +841,7 @@ int QueryActuator::generate_select_plan_single_table(
                     if (exec_plan_unit == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        TBSYS_LOG(WARN, "out of memory");
+                        jlog(WARNING, "out of memory");
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                                 "Can not malloc space for ExecPlanUnit");
                         return ret;
@@ -727,7 +862,8 @@ int QueryActuator::generate_select_plan_single_table(
             }
             else if (WHERE_IS_SUBQUERY == where_ret)
             {
-                return distribute_to_all_shards( result_plan, table_schema, exec_plan);
+                ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+                return ret;
             }
         }
     }
@@ -845,7 +981,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
             router *route_info = (router *) result_plan.route_info;
             if (!route_info->get_route_result(key_relations, &shard_info, NULL))
             {
-                TBSYS_LOG(WARN, "route info manage error");
+                jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                         "Route info manage error");
                 return false;
@@ -860,7 +996,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
 
     if (all_related_shards.size() == 0)
     {
-        TBSYS_LOG(WARN, "shard info manage error");
+        jlog(WARNING, "shard info manage error");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                 "Shard info manage error");
         return false;
@@ -945,7 +1081,7 @@ int QueryActuator::generate_select_plan_multi_table(
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
-        TBSYS_LOG(WARN, "Can not get stmt");
+        jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
                 "Can not get stmt");
         return ret;
@@ -956,7 +1092,7 @@ int QueryActuator::generate_select_plan_multi_table(
     {
         ret = JD_ERR_LOGICAL_TREE_WRONG;
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Select stmt size is not right");
+                "Table name size is not right");
         return ret;
     }
 
@@ -965,7 +1101,7 @@ int QueryActuator::generate_select_plan_multi_table(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        TBSYS_LOG(WARN, "out of memory");
+        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                 "Can not malloc space for SameLevelExecPlan");
         return ret;
@@ -973,6 +1109,7 @@ int QueryActuator::generate_select_plan_multi_table(
     else
     {
         exec_plan = new(exec_plan) SameLevelExecPlan();
+        physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
     vector<uint64_t> expr_ids = select_stmt->get_where_exprs();
@@ -984,7 +1121,7 @@ int QueryActuator::generate_select_plan_multi_table(
         if (0 == all_tables_shards.size())
         {
             ret = JD_ERR_SHARD_NUM_WRONG;
-            TBSYS_LOG(WARN, "shard manage wrong");
+            jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Shard manage wrong");
             return ret;
@@ -1001,7 +1138,7 @@ int QueryActuator::generate_select_plan_multi_table(
                 if (exec_plan_unit == NULL)
                 {
                     ret = OB_ERR_PARSER_MALLOC_FAILED;
-                    TBSYS_LOG(WARN, "out of memory");
+                    jlog(WARNING, "out of memory");
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                             "Can not malloc space for ExecPlanUnit");
                     return ret;
@@ -1078,7 +1215,7 @@ int QueryActuator::generate_select_plan_multi_table(
                 if (exec_plan_unit == NULL)
                 {
                     ret = OB_ERR_PARSER_MALLOC_FAILED;
-                    TBSYS_LOG(WARN, "out of memory");
+                    jlog(WARNING, "out of memory");
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                             "Can not malloc space for ExecPlanUnit");
                     return ret;
@@ -1103,7 +1240,7 @@ int QueryActuator::generate_select_plan_multi_table(
         }
     }
 
-    return 0;
+    return ret;
 }
 
 /**************************************************
@@ -1153,7 +1290,7 @@ bool QueryActuator::reparse_where_with_route_for_multi_tables(
             {
                 ret = JD_ERR_LOGICAL_TREE_WRONG;
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Select stmt size is not right");
+                        "Table name size is not right");
                 return ret;
             }
         
@@ -1161,7 +1298,7 @@ bool QueryActuator::reparse_where_with_route_for_multi_tables(
             if (0 == all_tables_shards.size())
             {
                 ret = JD_ERR_SHARD_NUM_WRONG;
-                TBSYS_LOG(WARN, "shard manage wrong");
+                jlog(WARNING, "shard manage wrong");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                         "Shard manage wrong");
                 return ret;
@@ -1188,8 +1325,8 @@ bool QueryActuator::reparse_where_with_route_for_multi_tables(
                     opted_raw_exprs);
         }
     }
+    
     return ret;
-
 }
 
 /**************************************************
@@ -1259,7 +1396,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
             router *route_info = (router *) result_plan.route_info;
             if (!route_info->get_route_result(key_relations, &shard_info, NULL))
             {
-                TBSYS_LOG(WARN, "route info manage error");
+                jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                         "Route info manage error");
                 return false;
@@ -1274,7 +1411,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
 
     if (all_related_shards.size() == 0)
     {
-        TBSYS_LOG(WARN, "shard info manage error");
+        jlog(WARNING, "shard info manage error");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                 "Shard info manage error");
         return false;
@@ -1649,7 +1786,7 @@ int QueryActuator::gen_exec_plan_update(
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, update_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
-        TBSYS_LOG(WARN, "Can not get stmt");
+        jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
                 "Can not get stmt");
         return ret;
@@ -1664,7 +1801,7 @@ int QueryActuator::gen_exec_plan_update(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        TBSYS_LOG(WARN, "out of memory");
+        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                 "Can not malloc space for SameLevelExecPlan");
         return ret;
@@ -1672,6 +1809,7 @@ int QueryActuator::gen_exec_plan_update(
     else
     {
         exec_plan = new(exec_plan) SameLevelExecPlan();
+        physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
     //this table is not distributed table
@@ -1680,13 +1818,14 @@ int QueryActuator::gen_exec_plan_update(
         if (1 != table_schema->get_all_shards().size())
         {
             ret = JD_ERR_SHARD_NUM_WRONG;
-            TBSYS_LOG(WARN, "shard manage wrong");
+            jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Shard manage wrong");
             return ret;
         }
 
-        return distribute_to_all_shards( result_plan, table_schema, exec_plan);
+        ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+        return ret;
     }
     //this table is distributed table
     else
@@ -1694,7 +1833,7 @@ int QueryActuator::gen_exec_plan_update(
         if (0 == table_schema->get_all_shards().size())
         {
             ret = JD_ERR_SHARD_NUM_WRONG;
-            TBSYS_LOG(WARN, "shard manage wrong");
+            jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Shard manage wrong");
             return ret;
@@ -1727,7 +1866,8 @@ int QueryActuator::gen_exec_plan_update(
         /*if there is no where conditions*/
         if (0 == expr_ids.size())
         {
-            return distribute_to_all_shards( result_plan, table_schema, exec_plan);
+            ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+            return ret;
         }
         else
         {
@@ -1777,7 +1917,7 @@ int QueryActuator::gen_exec_plan_update(
                     if (exec_plan_unit == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        TBSYS_LOG(WARN, "out of memory");
+                        jlog(WARNING, "out of memory");
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                                 "Can not malloc space for ExecPlanUnit");
                         return ret;
@@ -1798,11 +1938,13 @@ int QueryActuator::gen_exec_plan_update(
             }
             else if (WHERE_IS_SUBQUERY == where_ret)
             {
-                return distribute_to_all_shards( result_plan, table_schema, exec_plan);
+                ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+                return ret;
             }
         }
     }
 
+    return ret;
 }
 
 /**************************************************
@@ -1861,7 +2003,7 @@ int QueryActuator::gen_exec_plan_delete(
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, delete_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
-        TBSYS_LOG(WARN, "Can not get stmt");
+        jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
                 "Can not get stmt");
         return ret;
@@ -1875,7 +2017,7 @@ int QueryActuator::gen_exec_plan_delete(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        TBSYS_LOG(WARN, "out of memory");
+        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                 "Can not malloc space for SameLevelExecPlan");
         return ret;
@@ -1883,6 +2025,7 @@ int QueryActuator::gen_exec_plan_delete(
     else
     {
         exec_plan = new(exec_plan) SameLevelExecPlan();
+        physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
     /*this table is not distributed table*/
@@ -1891,13 +2034,14 @@ int QueryActuator::gen_exec_plan_delete(
         if (1 != table_schema->get_all_shards().size())
         {
             ret = JD_ERR_SHARD_NUM_WRONG;
-            TBSYS_LOG(WARN, "shard manage wrong");
+            jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Shard manage wrong");
             return ret;
         }
 
-        return distribute_to_all_shards( result_plan, table_schema, exec_plan);
+        ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+        return ret;
     }
     //this table is distributed table
     else
@@ -1906,7 +2050,8 @@ int QueryActuator::gen_exec_plan_delete(
         /*if there is no where conditions*/
         if (0 == expr_ids.size())
         {
-            return distribute_to_all_shards( result_plan, table_schema, exec_plan);
+            ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+            return ret;
         }
         else
         {
@@ -1955,7 +2100,7 @@ int QueryActuator::gen_exec_plan_delete(
                     if (exec_plan_unit == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        TBSYS_LOG(WARN, "out of memory");
+                        jlog(WARNING, "out of memory");
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                                 "Can not malloc space for ExecPlanUnit");
                         return ret;
@@ -1976,12 +2121,13 @@ int QueryActuator::gen_exec_plan_delete(
             }
             else if (WHERE_IS_SUBQUERY == where_ret)
             {
-                return distribute_to_all_shards( result_plan, table_schema, exec_plan);
+                ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+                return ret;
             }
         }
     }
 
-    return 0;
+    return ret;
 
 }
 
@@ -2023,7 +2169,7 @@ int QueryActuator::gen_exec_plan_insert(
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, insert_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
-        TBSYS_LOG(WARN, "Can not get stmt");
+        jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
                 "Can not get stmt");
         return ret;
@@ -2037,7 +2183,7 @@ int QueryActuator::gen_exec_plan_insert(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        TBSYS_LOG(WARN, "out of memory");
+        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                 "Can not malloc space for SameLevelExecPlan");
         return ret;
@@ -2045,6 +2191,7 @@ int QueryActuator::gen_exec_plan_insert(
     else
     {
         exec_plan = new(exec_plan) SameLevelExecPlan();
+        physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
     //this table is not distributed table
@@ -2053,7 +2200,7 @@ int QueryActuator::gen_exec_plan_insert(
         if (1 != table_schema->get_all_shards().size())
         {
             ret = JD_ERR_SHARD_NUM_WRONG;
-            TBSYS_LOG(WARN, "shard manage wrong");
+            jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Shard manage wrong");
             return ret;
@@ -2063,7 +2210,7 @@ int QueryActuator::gen_exec_plan_insert(
         if (exec_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc space for ExecPlanUnit");
             return ret;
@@ -2094,7 +2241,7 @@ int QueryActuator::gen_exec_plan_insert(
         if (0 == table_schema->get_all_shards().size())
         {
             ret = JD_ERR_SHARD_NUM_WRONG;
-            TBSYS_LOG(WARN, "shard manage wrong");
+            jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Shard manage wrong");
             return ret;
@@ -2164,7 +2311,7 @@ int QueryActuator::gen_exec_plan_insert(
                         router *route_info = (router *) result_plan.route_info;
                         if (!route_info->get_route_result(key_relations, &shard_info, NULL))
                         {
-                            TBSYS_LOG(WARN, "route info manage error");
+                            jlog(WARNING, "route info manage error");
                             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                                     "Route info manage error");
                             return false;
@@ -2195,7 +2342,7 @@ int QueryActuator::gen_exec_plan_insert(
             if (exec_plan_unit == NULL)
             {
                 ret = OB_ERR_PARSER_MALLOC_FAILED;
-                TBSYS_LOG(WARN, "out of memory");
+                jlog(WARNING, "out of memory");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                         "Can not malloc space for ExecPlanUnit");
                 return ret;
@@ -2218,6 +2365,8 @@ int QueryActuator::gen_exec_plan_insert(
             exec_plan->add_exec_plan_unit(exec_plan_unit);
         }
     }
+    
+    return ret;
 }
 
 
@@ -2246,7 +2395,7 @@ bool QueryActuator::vector_elem_exist_already(
 
 
 /**************************************************
-Funtion     :   distribute_to_all_shards
+Funtion     :   distribute_sql_to_all_shards
 Author      :   qinbo
 Date        :   2013.11.6
 Description :   vector elem is already existing
@@ -2256,8 +2405,9 @@ Input       :   ResultPlan& result_plan,
 Output      :   
 return      :
  **************************************************/
-int QueryActuator::distribute_to_all_shards( 
+int QueryActuator::distribute_sql_to_all_shards( 
                     ResultPlan& result_plan,
+                    const uint64_t& query_id,
                     schema_table* table_schema,
                     SameLevelExecPlan* exec_plan)
 {
@@ -2271,13 +2421,13 @@ int QueryActuator::distribute_to_all_shards(
     if (0 == table_schema->get_all_shards().size())
     {
         ret = JD_ERR_SHARD_NUM_WRONG;
-        TBSYS_LOG(WARN, "shard manage wrong");
+        jlog(WARNING, "shard manage wrong");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                 "Shard manage wrong");
         return ret;
     }
 
-    stmt = logical_plan->get_main_stmt();
+    stmt = logical_plan->get_query(query_id);
     
     for (i = 0; i < table_schema->get_all_shards().size(); i++)
     {
@@ -2288,7 +2438,7 @@ int QueryActuator::distribute_to_all_shards(
         if (exec_plan_unit == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            TBSYS_LOG(WARN, "out of memory");
+            jlog(WARNING, "out of memory");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                     "Can not malloc space for ExecPlanUnit");
             return ret;
@@ -2311,6 +2461,8 @@ int QueryActuator::distribute_to_all_shards(
         /*add exec_plan_unit*/
         exec_plan->add_exec_plan_unit(exec_plan_unit);
     }
+
+    return ret;
 }
 
 
