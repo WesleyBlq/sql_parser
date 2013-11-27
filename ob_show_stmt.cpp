@@ -63,7 +63,7 @@ void ObShowStmt::print(FILE* fp, int32_t level, int32_t index)
   if (like_pattern_.size() > 0)
   {
         print_indentation(fp, level + 1);
-        fprintf(fp, "Like ::= '%.*s'\n", like_pattern_.size(), like_pattern_.data());
+        fprintf(fp, "Like ::= '%.*s'\n", (int)like_pattern_.size(), like_pattern_.data());
   }
   if (get_stmt_type() == ObBasicStmt::T_SHOW_WARNINGS)
   {
@@ -76,7 +76,7 @@ void ObShowStmt::print(FILE* fp, int32_t level, int32_t index)
   if (get_stmt_type() == ObBasicStmt::T_SHOW_GRANTS)
   {
     print_indentation(fp, level + 1);
-    fprintf(fp, "User name ::= '%.*s,\n", user_name_.size(), user_name_.data());
+    fprintf(fp, "User name ::= '%.*s,\n", (int)user_name_.size(), user_name_.data());
   }
   print_indentation(fp, level);
   fprintf(fp, "ObShowStmt %d End\n", index);

@@ -81,14 +81,14 @@ namespace oceanbase
             string varchar = out.get_varchar();
             if (NULL == varchar.data() || varchar.length() <= 0)
             {
-                jlog(WARNING, "output buffer for varchar not enough, buf_len=%u", varchar.length());
+                jlog(WARNING, "output buffer for varchar not enough, buf_len=%u", (uint32_t)varchar.length());
                 ret = OB_INVALID_ARGUMENT;
             }
             else
             {
                 va_list args;
                 va_start(args, format);
-                int length = vsnprintf((char*) varchar.data(), varchar.length(), format, args);
+                vsnprintf((char*) varchar.data(), varchar.length(), format, args);
                 va_end(args);
                 /*qinbo*/
                 //string varchar2(varchar.length(), length, varchar.data());
@@ -608,7 +608,7 @@ namespace oceanbase
             {
                 const string& varchar = in.get_varchar();
                 jlog(WARNING, "failed to convert string `%.*s' to datetime type",
-                        varchar.length(), varchar.data());
+                        (uint32_t)varchar.length(), varchar.data());
                 out.set_datetime(static_cast<ObDateTime> (0));
                 ret = OB_SUCCESS;
             }
@@ -678,7 +678,7 @@ namespace oceanbase
             {
                 const string& varchar = in.get_varchar();
                 jlog(WARNING, "failed to convert string `%.*s' to precise_datetime type",
-                        varchar.length(), varchar.data());
+                        (uint32_t)varchar.length(), varchar.data());
                 out.set_precise_datetime(static_cast<ObPreciseDateTime> (0));
                 ret = OB_SUCCESS;
             }
@@ -700,7 +700,7 @@ namespace oceanbase
             {
                 const string& varchar = in.get_varchar();
                 jlog(WARNING, "failed to convert string `%.*s' to createtime type",
-                        varchar.length(), varchar.data());
+                        (uint32_t)varchar.length(), varchar.data());
                 out.set_ctime(static_cast<ObCreateTime> (0));
                 ret = OB_SUCCESS;
             }
@@ -722,7 +722,7 @@ namespace oceanbase
             {
                 const string& varchar = in.get_varchar();
                 jlog(WARNING, "failed to convert string `%.*s' to modifytime type",
-                        varchar.length(), varchar.data());
+                        (uint32_t)varchar.length(), varchar.data());
                 out.set_mtime(static_cast<ObModifyTime> (0));
                 ret = OB_SUCCESS;
             }
@@ -737,10 +737,10 @@ namespace oceanbase
             bool value = false;
             if (varchar.data() != NULL && varchar.length() > 0)
             {
-                static const int64_t len_true = strlen("true");
-                static const int64_t len_t = strlen("T");
-                static const int64_t len_yes = strlen("yes");
-                static const int64_t len_y = strlen("y");
+                static const uint32_t len_true = strlen("true");
+                static const uint32_t len_t = strlen("T");
+                static const uint32_t len_yes = strlen("yes");
+                static const uint32_t len_y = strlen("y");
                 if (varchar.length() == len_true
                         && 0 == strncasecmp(varchar.data(), "true", len_true))
                 {
@@ -776,7 +776,7 @@ namespace oceanbase
             if (OB_SUCCESS != (ret = num.from(varchar.data(), varchar.length())))
             {
                 jlog(WARNING, "failed to convert varchar to decimal, err=%d varchar=%.*s",
-                        ret, varchar.length(), varchar.data());
+                        ret, (uint32_t)varchar.length(), varchar.data());
             }
             else
             {
@@ -1121,12 +1121,12 @@ namespace oceanbase
             string varchar = out.get_varchar();
             if (varchar.length() < ObNumber::MAX_PRINTABLE_SIZE)
             {
-                jlog(WARNING, "output buffer for varchar not enough, buf_len=%d", varchar.length());
+                jlog(WARNING, "output buffer for varchar not enough, buf_len=%d", (uint32_t)varchar.length());
                 ret = OB_INVALID_ARGUMENT;
             }
             else
             {
-                int64_t length = in.get_decimal().to_string((char*) varchar.data(), varchar.length());
+                in.get_decimal().to_string((char*) varchar.data(), varchar.length());
                 string varchar2(varchar);
                 out.set_varchar(varchar2);
             }

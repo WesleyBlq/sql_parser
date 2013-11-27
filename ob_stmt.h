@@ -122,17 +122,17 @@ namespace oceanbase
             ObStmt(StmtType type);
             virtual ~ObStmt();
 
-            int32_t get_table_size() const
+            uint32_t get_table_size() const
             {
                 return table_items_.size();
             }
 
-            int32_t get_column_size() const
+            uint32_t get_column_size() const
             {
                 return column_items_.size();
             }
 
-            int32_t get_condition_size() const
+            uint32_t get_condition_size() const
             {
                 return where_expr_ids_.size();
             }
@@ -161,7 +161,7 @@ namespace oceanbase
                     const string& column_name);
             ColumnItem* get_column_item_by_id(uint64_t table_id, uint64_t column_id);
 
-            const ColumnItem* get_column_item(int32_t index)
+            const ColumnItem* get_column_item(uint32_t index)
             {
                 const ColumnItem *column_item = NULL;
                 if (0 <= index && index < column_items_.size())
@@ -172,13 +172,13 @@ namespace oceanbase
             }
             TableItem* get_table_item_by_id(uint64_t table_id);
 
-            TableItem& get_table_item(int32_t index)
+            TableItem& get_table_item(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < table_items_.size());
                 return table_items_[index];
             }
 
-            uint64_t get_condition_id(int32_t index)
+            uint64_t get_condition_id(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < where_expr_ids_.size());
                 return where_expr_ids_[index];

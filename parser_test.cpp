@@ -87,9 +87,9 @@ SELECT address,lastname FROM persons";
     string sql_test2 = "SELECT id from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing'";
     string sql_test3 = "SELECT id FROM pp";
     
-    string sql_test4 = "SELECT id FROM pp    \
-    UNION distinct   \
-    SELECT id FROM tt";
+    //string sql_test4 = "SELECT id from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing' UNION distinct SELECT id FROM tt";
+    
+    string sql_test4 = "select * from t1 order by id";
     //sql_parser(sql3, "qinbo");
     //sql_parser(sql6);
     //sql_parser(sql10);

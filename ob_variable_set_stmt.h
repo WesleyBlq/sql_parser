@@ -55,8 +55,8 @@ namespace oceanbase
 
         int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
         void add_variable_node(const VariableSetNode& node);
-        int64_t get_variables_size() const;
-        const VariableSetNode& get_variable_node(int32_t index) const;
+        uint32_t get_variables_size() const;
+        const VariableSetNode& get_variable_node(uint32_t index) const;
 
         virtual void print(FILE* fp, int32_t level, int32_t index);
 
@@ -69,13 +69,13 @@ namespace oceanbase
         variable_nodes_.push_back(node);
     }
     
-    inline const ObVariableSetStmt::VariableSetNode& ObVariableSetStmt::get_variable_node(int32_t index) const
+    inline const ObVariableSetStmt::VariableSetNode& ObVariableSetStmt::get_variable_node(uint32_t index) const
     {
         OB_ASSERT(0 <= index && index < variable_nodes_.size());
         return variable_nodes_.at(index);
     }
     
-    inline int64_t ObVariableSetStmt::get_variables_size() const
+    inline uint32_t ObVariableSetStmt::get_variables_size() const
     {
         return variable_nodes_.size();
     }

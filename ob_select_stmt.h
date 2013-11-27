@@ -192,37 +192,37 @@ namespace oceanbase
             ObSelectStmt();
             virtual ~ObSelectStmt();
 
-            int32_t get_select_item_size() const
+            uint32_t get_select_item_size() const
             {
                 return select_items_.size();
             }
 
-            int32_t get_from_item_size() const
+            uint32_t get_from_item_size() const
             {
                 return from_items_.size();
             }
 
-            int32_t get_joined_table_size() const
+            uint32_t get_joined_table_size() const
             {
                 return joined_tables_.size();
             }
 
-            int32_t get_group_expr_size() const
+            uint32_t get_group_expr_size() const
             {
                 return group_expr_ids_.size();
             }
 
-            int32_t get_agg_fun_size() const
+            uint32_t get_agg_fun_size() const
             {
                 return agg_func_ids_.size();
             }
 
-            int32_t get_having_expr_size() const
+            uint32_t get_having_expr_size() const
             {
                 return having_expr_ids_.size();
             }
 
-            int32_t get_order_item_size() const
+            uint32_t get_order_item_size() const
             {
                 return order_items_.size();
             }
@@ -315,13 +315,13 @@ namespace oceanbase
             }
             JoinedTable* get_joined_table(uint64_t table_id);
 
-            const SelectItem& get_select_item(int32_t index)
+            const SelectItem& get_select_item(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < select_items_.size());
                 return select_items_[index];
             }
 
-            const FromItem& get_from_item(int32_t index)
+            const FromItem& get_from_item(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < from_items_.size());
                 return from_items_[index];
@@ -335,25 +335,25 @@ namespace oceanbase
             }
             //END: Added by qinbo
 
-            const OrderItem& get_order_item(int32_t index)
+            const OrderItem& get_order_item(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < order_items_.size());
                 return order_items_[index];
             }
 
-            uint64_t get_group_expr_id(int32_t index)
+            uint64_t get_group_expr_id(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < group_expr_ids_.size());
                 return group_expr_ids_[index];
             }
 
-            uint64_t get_agg_expr_id(int32_t index)
+            uint64_t get_agg_expr_id(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < agg_func_ids_.size());
                 return agg_func_ids_[index];
             }
 
-            uint64_t get_having_expr_id(int32_t index)
+            uint64_t get_having_expr_id(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < having_expr_ids_.size());
                 return having_expr_ids_[index];
@@ -397,7 +397,7 @@ namespace oceanbase
             /*BEGIN: added by qinbo*/
             bool is_from_item_with_join()
             {
-                for (int32_t i = 0; i < from_items_.size(); i++)
+                for (uint32_t i = 0; i < from_items_.size(); i++)
                 {
                     FromItem& item = from_items_[i];
                     if (item.is_joined_)

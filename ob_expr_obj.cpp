@@ -1892,9 +1892,9 @@ int ObExprObj::trim(const ObExprObj &trimType, const ObExprObj &trimPattern, ObE
     return err;
 }
 
-int ObExprObj::lrtrim(const string src, const string pattern, int32_t &start, int32_t &end) const
+int ObExprObj::lrtrim(const string src, const string pattern, size_t  &start, size_t  &end) const
 {
-    int32_t i = 0;
+    size_t  i = 0;
     start = 0;
     end = src.length();
     for (i = 0; i <= src.length() - pattern.length(); i += pattern.length())
@@ -1922,9 +1922,9 @@ int ObExprObj::lrtrim(const string src, const string pattern, int32_t &start, in
     return OB_SUCCESS;
 }
 
-int ObExprObj::ltrim(const string src, const string pattern, int32_t &start) const
+int ObExprObj::ltrim(const string src, const string pattern, size_t  &start) const
 {
-    int32_t i = 0;
+    size_t  i = 0;
     start = 0;
     for (i = 0; i <= src.length() - pattern.length(); i += pattern.length())
     {
@@ -1940,9 +1940,9 @@ int ObExprObj::ltrim(const string src, const string pattern, int32_t &start) con
     return OB_SUCCESS;
 }
 
-int ObExprObj::rtrim(const string src, const string pattern, int32_t &end) const
+int ObExprObj::rtrim(const string src, const string pattern, size_t  &end) const
 {
-    int32_t i = 0;
+    size_t  i = 0;
     end = src.length();
     for (i = src.length() - pattern.length(); i >= 0; i -= pattern.length())
     {

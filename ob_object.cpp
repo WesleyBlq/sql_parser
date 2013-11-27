@@ -779,6 +779,7 @@ const char* ObObj::get_sql_type(ObObjType type)
 
 int64_t ObObj::to_string(char* buffer, const int64_t length) const
 {
+#if 0
     static const char* obj_type_name[] ={
         "null",
         "int",
@@ -794,7 +795,7 @@ int64_t ObObj::to_string(char* buffer, const int64_t length) const
         "bool",
         "decimal"
     };
-
+#endif
     int64_t int_val = 0;
     float float_val = 0.0;
     double double_val = 0.0;
@@ -823,7 +824,7 @@ int64_t ObObj::to_string(char* buffer, const int64_t length) const
                 break;
             case ObVarcharType:
                 get_varchar(str_val);
-                databuff_printf(buffer, length, pos, "%.*s", str_val.length(), str_val.data());
+                databuff_printf(buffer, length, pos, "%.*s", (int32_t)str_val.length(), str_val.data());
                 break;
             case ObFloatType:
                 get_float(float_val, is_add);
