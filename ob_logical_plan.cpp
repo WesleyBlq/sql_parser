@@ -28,7 +28,7 @@ namespace oceanbase
 
         ObLogicalPlan::~ObLogicalPlan()
         {
-            for (uint32_t i = 0; i < stmts_.size(); ++i)
+            for (int32_t i = 0; i < stmts_.size(); ++i)
             {
                 //delete stmts_[i];
                 stmts_[i]->~ObBasicStmt();
@@ -36,7 +36,7 @@ namespace oceanbase
             }
             stmts_.clear();
 
-            for (uint32_t i = 0; i < exprs_.size(); ++i)
+            for (int32_t i = 0; i < exprs_.size(); ++i)
             {
                 //delete exprs_[i];
                 exprs_[i]->~ObSqlRawExpr();
@@ -44,7 +44,7 @@ namespace oceanbase
             }
             exprs_.clear();
 
-            for (uint32_t i = 0; i < raw_exprs_store_.size(); ++i)
+            for (int32_t i = 0; i < raw_exprs_store_.size(); ++i)
             {
                 if (raw_exprs_store_[i])
                 {
@@ -58,8 +58,8 @@ namespace oceanbase
         ObBasicStmt* ObLogicalPlan::get_query(uint64_t query_id) const
         {
             ObBasicStmt *stmt = NULL;
-            uint32_t num = stmts_.size();
-            for (uint32_t i = 0; i < num; i++)
+            int32_t num = stmts_.size();
+            for (int32_t i = 0; i < num; i++)
             {
                 if (stmts_[i]->get_query_id() == query_id)
                 {
@@ -74,8 +74,8 @@ namespace oceanbase
         ObSelectStmt* ObLogicalPlan::get_select_query(uint64_t query_id) const
         {
             ObSelectStmt *select_stmt = NULL;
-            uint32_t num = stmts_.size();
-            for (uint32_t i = 0; i < num; i++)
+            int32_t num = stmts_.size();
+            for (int32_t i = 0; i < num; i++)
             {
                 if (stmts_[i]->get_query_id() == query_id)
                 {
@@ -90,8 +90,8 @@ namespace oceanbase
         ObSqlRawExpr* ObLogicalPlan::get_expr(uint64_t expr_id) const
         {
             ObSqlRawExpr *expr = NULL;
-            uint32_t num = exprs_.size();
-            for (uint32_t i = 0; i < num; i++)
+            int32_t num = exprs_.size();
+            for (int32_t i = 0; i < num; i++)
             {
                 if (exprs_[i]->get_expr_id() == expr_id)
                 {
@@ -146,8 +146,8 @@ namespace oceanbase
                         jlog(WARN, "logical plan of select statement error");
                         break;
                     }
-                    uint32_t size = select_stmt->get_select_item_size();
-                    for (uint32_t i = 0; ret == OB_SUCCESS && i < size; i++)
+                    int32_t size = select_stmt->get_select_item_size();
+                    for (int32_t i = 0; ret == OB_SUCCESS && i < size; i++)
                     {
                         const SelectItem& select_item = select_stmt->get_select_item(i);
                         if ((ret = ob_write_string(select_item.expr_name_, field.cname_)) != OB_SUCCESS)
@@ -283,7 +283,7 @@ namespace oceanbase
                     }
                     field.tname_ = tname;
                     field.org_tname_ = tname;
-                    for (uint32_t i = 0; ret == OB_SUCCESS && i < show_stmt->get_column_size(); i++)
+                    for (int32_t i = 0; ret == OB_SUCCESS && i < show_stmt->get_column_size(); i++)
                     {
                         ObString cname;
                         const ColumnItem *col_item = show_stmt->get_column_item(i);
@@ -342,7 +342,7 @@ namespace oceanbase
                         cname[0] = ObString::make_string("level");
                         cname[1] = ObString::make_string("code");
                         cname[2] = ObString::make_string("message");
-                        for (uint32_t i = 0; ret == OB_SUCCESS && i < 3; i++)
+                        for (int32_t i = 0; ret == OB_SUCCESS && i < 3; i++)
                         {
                             field.cname_ = cname[i];
                             field.org_cname_ = cname[i];
@@ -420,7 +420,7 @@ namespace oceanbase
 
         void ObLogicalPlan::print(FILE* fp, int32_t level) const
         {
-            uint32_t i;
+            int32_t i;
             fprintf(fp, "<LogicalPlan>\n");
             fprintf(fp, "    <StmtList>\n");
 

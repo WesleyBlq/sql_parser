@@ -30,7 +30,7 @@ namespace oceanbase
             fprintf(fp, "UPDATE ::= <%ld>\n", table_id_);
             print_indentation(fp, level + 1);
             fprintf(fp, "SET ::= ");
-            for (uint32_t i = 0; i < update_columns_.size(); i++)
+            for (int64_t i = 0; i < update_columns_.size(); i++)
             {
                 if (i > 0)
                     fprintf(fp, ", <%ld, %ld>", update_columns_.at(i), update_exprs_.at(i));
@@ -53,19 +53,9 @@ namespace oceanbase
          **************************************************/
         int64_t ObUpdateStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
         {
-            int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-            ret = make_update_table_string(result_plan, assembled_sql);
-            if (OB_SUCCESS == ret)
-            {
-                ret = make_update_column_string(result_plan, assembled_sql);
-            }
-            
-            if (OB_SUCCESS == ret)
-            {
-                ret = make_update_where_string(result_plan, assembled_sql);
-            }
-            
-            return ret;
+            make_update_table_string(result_plan, assembled_sql);
+            make_update_column_string(result_plan, assembled_sql);
+            make_update_where_string(result_plan, assembled_sql);
         }
 
         /**************************************************
@@ -96,20 +86,21 @@ namespace oceanbase
          **************************************************/
         int64_t ObUpdateStmt::make_update_table_string(ResultPlan& result_plan, string &assembled_sql)
         {
+            int32_t i = 0;
             int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+            ObSqlRawExpr* sql_expr = NULL;
 
             ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
             if (logical_plan == NULL)
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                        "logical_plan must exist!!!");
             }
 
             assembled_sql.append("UPDATE ");
             assembled_sql.append(ObStmt::get_table_item_by_id(table_id_)->table_name_);
             assembled_sql.append(" SET ");
-            return ret;
         }
 
         /**************************************************
@@ -123,7 +114,7 @@ namespace oceanbase
          **************************************************/
         int64_t ObUpdateStmt::make_update_column_string(ResultPlan& result_plan, string &assembled_sql)
         {
-            uint32_t i = 0;
+            int32_t i = 0;
             int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
             ObSqlRawExpr* sql_expr = NULL;
 
@@ -132,7 +123,7 @@ namespace oceanbase
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                        "logical_plan must exist!!!");
             }
             
             for (i = 0; i < update_columns_.size(); i++)
@@ -146,7 +137,7 @@ namespace oceanbase
                 if (NULL == sql_expr)
                 {
                     ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG, "update expr name error at %s:%d", __FILE__,__LINE__);
+                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG, "update expr name error");
                     return ret;
                 }
 
@@ -162,8 +153,6 @@ namespace oceanbase
                     assembled_sql.append(" ");
                 }
             }
-            
-            return ret;
         }
 
         
@@ -178,7 +167,7 @@ namespace oceanbase
          **************************************************/
         int64_t ObUpdateStmt::make_update_where_string(ResultPlan& result_plan, string &assembled_sql)
         {
-            uint32_t i = 0;
+            int32_t i = 0;
             int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
             ObSqlRawExpr* sql_expr = NULL;
 
@@ -187,7 +176,7 @@ namespace oceanbase
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                        "logical_plan must exist!!!");
             }
             
             vector<uint64_t>& where_exprs = ObStmt::get_where_exprs();
@@ -203,7 +192,7 @@ namespace oceanbase
                     {
                         ret = OB_ERR_LOGICAL_PLAN_FAILD;
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "where expr name error!!! at %s:%d", __FILE__,__LINE__);
+                                "where expr name error!!!");
                         return ret;
                     }
 

@@ -39,69 +39,70 @@ int ObStmt::add_table_item(
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                "logical_plan must exist!!!");
     }
+
 
     TableItem item;
     if (ret == OB_SUCCESS)
     {
         switch (type)
         {
-        case TableItem::ALIAS_TABLE:
-            if (table_name == alias_name)
+            case TableItem::ALIAS_TABLE:
+                if (table_name == alias_name)
+                {
+                    ret = OB_ERR_ILLEGAL_NAME;
+                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                            "table '%.*s' must not alias the same name", table_name.size(), table_name.data());
+                    break;
+                }
+                /* go through */
+            case TableItem::BASE_TABLE:
             {
-                ret = OB_ERR_ILLEGAL_NAME;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "table '%.*s' must not alias the same name at %s:%d", (int32_t)table_name.size(), table_name.data(), __FILE__,__LINE__);
-                break;
-            }
-            /* go through */
-        case TableItem::BASE_TABLE:
-        {
-            string db_name_tmp;
-            db_name_tmp.assign(result_plan.db_name);
-            schema_table *schema_table = g_metareader->get_table_schema(db_name_tmp, table_name);
+                string db_name_tmp;
+                db_name_tmp.assign(result_plan.db_name);
+                schema_table *schema_table = g_metareader->get_table_schema(db_name_tmp, table_name);
 
-            if (NULL == schema_table)
-            {
-                ret = OB_ERR_TABLE_UNKNOWN;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "table '%.*s' does not exist at %s:%d", (int32_t)table_name.size(), table_name.data(), __FILE__,__LINE__);
-                break;
-            }
-            item.ref_id_ = schema_table->get_table_id();
+                if (NULL == schema_table)
+                {
+                    ret = OB_ERR_TABLE_UNKNOWN;
+                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                            "table '%.*s' does not exist", table_name.size(), table_name.data());
+                    break;
+                }
+                item.ref_id_ = schema_table->get_table_id();
 
-            if (item.ref_id_ == OB_INVALID_ID)
-            {
-                ret = OB_ERR_TABLE_UNKNOWN;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "table '%.*s' does not exist at %s:%d", (int32_t)table_name.size(), table_name.data(), __FILE__,__LINE__);
-                break;
-            }
+                if (item.ref_id_ == OB_INVALID_ID)
+                {
+                    ret = OB_ERR_TABLE_UNKNOWN;
+                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                            "table '%.*s' does not exist", table_name.size(), table_name.data());
+                    break;
+                }
 
-            //if (type == TableItem::BASE_TABLE)
-            item.table_id_ = item.ref_id_;
-            // else
-            //   item.table_id_ = logical_plan->generate_table_id();
-            break;
-        }
-        case TableItem::GENERATED_TABLE:
-            if (ref_id == OB_INVALID_ID)
-            {
-                ret = OB_ERR_ILLEGAL_ID;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "illegal ref_id %lu at %s:%d", ref_id, __FILE__,__LINE__);
+                //if (type == TableItem::BASE_TABLE)
+                item.table_id_ = item.ref_id_;
+                // else
+                //   item.table_id_ = logical_plan->generate_table_id();
                 break;
             }
-            item.ref_id_ = ref_id;
-            item.table_id_ = logical_plan->generate_table_id();
-            break;
-        default:
-            /* won't be here */
-            ret = OB_ERR_PARSER_SYNTAX;
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Unknown table type when add_table_item at %s:%d", __FILE__,__LINE__);
-            break;
+            case TableItem::GENERATED_TABLE:
+                if (ref_id == OB_INVALID_ID)
+                {
+                    ret = OB_ERR_ILLEGAL_ID;
+                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                            "illegal ref_id %lu", ref_id);
+                    break;
+                }
+                item.ref_id_ = ref_id;
+                item.table_id_ = logical_plan->generate_table_id();
+                break;
+            default:
+                /* won't be here */
+                ret = OB_ERR_PARSER_SYNTAX;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "Unknown table type when add_table_item");
+                break;
         }
     }
 
@@ -109,8 +110,8 @@ int ObStmt::add_table_item(
     if (ret == OB_SUCCESS)
     {
         TableItem old_item;
-        uint32_t size = table_items_.size();
-        for (uint32_t i = 0; ret == OB_SUCCESS && i < size; ++i)
+        int32_t size = table_items_.size();
+        for (int32_t i = 0; ret == OB_SUCCESS && i < size; ++i)
         {
             old_item = table_items_[i];
             if (alias_name.size() == 0)
@@ -120,7 +121,7 @@ int ObStmt::add_table_item(
                 {
                     ret = OB_ERR_TABLE_DUPLICATE;
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "table %.*s is ambiguous at %s:%d", (int32_t)table_name.size(), table_name.data(), __FILE__,__LINE__);
+                            "table %.*s is ambiguous", table_name.size(), table_name.data());
                     break;
                 }
             }
@@ -131,7 +132,7 @@ int ObStmt::add_table_item(
                 {
                     ret = OB_ERR_TABLE_DUPLICATE;
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "table %.*s is ambiguous at %s:%d", (int32_t)old_item.table_name_.size(), old_item.table_name_.data(), __FILE__,__LINE__);
+                            "table %.*s is ambiguous", old_item.table_name_.size(), old_item.table_name_.data());
                     break;
                 }
             }
@@ -141,7 +142,7 @@ int ObStmt::add_table_item(
                 {
                     ret = OB_ERR_TABLE_DUPLICATE;
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "table %.*s is ambiguous at %s:%d", (int32_t)table_name.size(), table_name.data(), __FILE__,__LINE__);
+                            "table %.*s is ambiguous", table_name.size(), table_name.data());
                     break;
                 }
                 if (alias_name == old_item.table_name_
@@ -149,7 +150,7 @@ int ObStmt::add_table_item(
                 {
                     ret = OB_ERR_TABLE_DUPLICATE;
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "table %.*s is ambiguous at %s:%d", (int32_t)alias_name.size(), alias_name.data(), __FILE__,__LINE__);
+                            "table %.*s is ambiguous", alias_name.size(), alias_name.data());
                     break;
                 }
             }
@@ -161,7 +162,7 @@ int ObStmt::add_table_item(
         if ((ret = ob_write_string(table_name, item.table_name_)) != OB_SUCCESS)
         {
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not make space for table name %.*s at %s:%d", (int32_t)table_name.size(), table_name.data(), __FILE__,__LINE__);
+                    "Can not make space for table name %.*s", table_name.size(), table_name.data());
         }
     }
     if (ret == OB_SUCCESS)
@@ -169,7 +170,7 @@ int ObStmt::add_table_item(
         if ((ret = ob_write_string(alias_name, item.alias_name_)) != OB_SUCCESS)
         {
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not make space for alias name %.*s at %s:%d", (int32_t)alias_name.size(), alias_name.data(), __FILE__,__LINE__);
+                    "Can not make space for alias name %.*s", alias_name.size(), alias_name.data());
         }
     }
     if (ret == OB_SUCCESS)
@@ -185,7 +186,7 @@ int ObStmt::add_table_item(
     {
         if ((ret = tables_hash_.add_column_desc(item.table_id_, OB_INVALID_ID)) != OB_SUCCESS)
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not add table_id to hash table at %s:%d", __FILE__,__LINE__);
+                "Can not add table_id to hash table");
     }
 #endif  
 
@@ -197,8 +198,8 @@ int ObStmt::add_table_item(
 uint64_t ObStmt::get_table_item(const string& table_name, TableItem** table_item)
 {
     // table name mustn't be empty
-    uint32_t num = table_items_.size();
-    for (uint32_t i = 0; i < num; i++)
+    int32_t num = table_items_.size();
+    for (int32_t i = 0; i < num; i++)
     {
         TableItem& item = table_items_[i];
         if (table_name == item.table_name_ || table_name == item.alias_name_)
@@ -215,8 +216,8 @@ uint64_t ObStmt::get_table_item(const string& table_name, TableItem** table_item
 TableItem* ObStmt::get_table_item_by_id(uint64_t table_id)
 {
     TableItem *table_item = NULL;
-    uint32_t num = table_items_.size();
-    for (uint32_t i = 0; i < num; i++)
+    int32_t num = table_items_.size();
+    for (int32_t i = 0; i < num; i++)
     {
         if (table_items_[i].table_id_ == table_id)
         {
@@ -240,8 +241,8 @@ ColumnItem* ObStmt::get_column_item(
             return NULL;
     }
 
-    uint32_t num = column_items_.size();
-    for (uint32_t i = 0; i < num; i++)
+    int32_t num = column_items_.size();
+    for (int32_t i = 0; i < num; i++)
     {
         ColumnItem& column_item = column_items_[i];
         if (column_name == column_item.column_name_ &&
@@ -257,8 +258,8 @@ ColumnItem* ObStmt::get_column_item(
 ColumnItem* ObStmt::get_column_item_by_id(uint64_t table_id, uint64_t column_id)
 {
     ColumnItem *column_item = NULL;
-    uint32_t num = column_items_.size();
-    for (uint32_t i = 0; i < num; i++)
+    int32_t num = column_items_.size();
+    for (int32_t i = 0; i < num; i++)
     {
         if (table_id == column_items_[i].table_id_ && column_id == column_items_[i].column_id_)
         {
@@ -304,7 +305,7 @@ int ObStmt::add_column_item(
         {
             ret = OB_ERR_TABLE_UNKNOWN;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Unknown table name %.*s at %s:%d", (int32_t)table_name->size(), table_name->data(), __FILE__,__LINE__);
+                    "Unknown table name %.*s", table_name->size(), table_name->data());
             return ret;
         }
         column_item.is_name_unique_ = false;
@@ -330,17 +331,17 @@ int ObStmt::add_column_item(
         {
             ret = OB_ERR_COLUMN_UNKNOWN;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Unknown column name %.*s at %s:%d", (int32_t)column_name.size(), column_name.data(), __FILE__,__LINE__);
+                    "Unknown column name %.*s", column_name.size(), column_name.data());
             return ret;
         }
         table_item->has_scan_columns_ = true;
     }
     else
     {
-        uint32_t num = table_items_.size();
+        int32_t num = table_items_.size();
         uint64_t column_id = OB_INVALID_ID;
         ObObjType column_type = ObMinType;
-        for (uint32_t i = 0; i < num; i++)
+        for (int32_t i = 0; i < num; i++)
         {
             TableItem& table_item = get_table_item(i);
             ret = check_table_column(result_plan, column_name, table_item, column_id, column_type);
@@ -350,7 +351,7 @@ int ObStmt::add_column_item(
                 {
                     ret = OB_ERR_COLUMN_DUPLICATE;
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Column name %.*s is ambiguous at %s:%d", (int32_t)column_name.size(), column_name.data(), __FILE__,__LINE__);
+                            "Column name %.*s is ambiguous", column_name.size(), column_name.data());
                     return ret;
                 }
                 column_item.table_id_ = table_item.table_id_;
@@ -367,7 +368,7 @@ int ObStmt::add_column_item(
         {
             ret = OB_ERR_COLUMN_UNKNOWN;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Unknown column name %.*s at %s:%d", (int32_t)column_name.size(), column_name.data(),  __FILE__,__LINE__);
+                    "Unknown column name %.*s", column_name.size(), column_name.data());
             return ret;
         }
     }
@@ -377,7 +378,7 @@ int ObStmt::add_column_item(
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Malloc column name %.*s failed at %s:%d", (int32_t)column_name.size(), column_name.data(),  __FILE__,__LINE__);
+                "Malloc column name %.*s failed", column_name.size(), column_name.data());
         return ret;
     }
     // not be used now
@@ -391,7 +392,7 @@ int ObStmt::add_column_item(
         if (ret != OB_SUCCESS)
         {
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not add column %.*s at %s:%d", column_name.size(), column_name.data(), __FILE__,__LINE__);
+                    "Can not add column %.*s", column_name.size(), column_name.data());
             return ret;
         }
 #endif
@@ -400,8 +401,8 @@ int ObStmt::add_column_item(
     else
     {
         bool bExist = false;
-        uint32_t num = column_items_.size();
-        for (uint32_t i = 0; i < num; i++)
+        int32_t num = column_items_.size();
+        for (int32_t i = 0; i < num; i++)
         {
             ColumnItem& item = column_items_[i];
             if (column_name == item.column_name_)
@@ -419,7 +420,7 @@ int ObStmt::add_column_item(
             if (ret != OB_SUCCESS)
             {
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Can not add column %.*s at %s:%d", column_name.size(), column_name.data(), __FILE__,__LINE__);
+                        "Can not add column %.*s", column_name.size(), column_name.data());
                 return ret;
             }
 #endif
@@ -447,7 +448,7 @@ int ObStmt::check_table_column(
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                "logical_plan must exist!!!");
     }
 
 
@@ -476,7 +477,7 @@ int ObStmt::check_table_column(
                 {
                     ret = OB_ERR_ILLEGAL_ID;
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Wrong query id %lu at %s:%d", table_item.ref_id_, __FILE__,__LINE__);
+                            "Wrong query id %lu", table_item.ref_id_);
                 }
                 ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
                 int32_t num = select_stmt->get_select_item_size();
@@ -494,7 +495,7 @@ int ObStmt::check_table_column(
                         {
                             ret = OB_ERR_COLUMN_DUPLICATE;
                             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "column %.*s is ambiguous at %s:%d", (int32_t)column_name.size(), column_name.data(), __FILE__,__LINE__);
+                                    "column %.*s is ambiguous", column_name.size(), column_name.data());
                             break;
                         }
                     }
@@ -505,14 +506,14 @@ int ObStmt::check_table_column(
                 // won't be here
                 ret = OB_ERR_PARSER_SYNTAX;
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Unknown table type when check_table_column1 at %s:%d", __FILE__,__LINE__);
+                        "Unknown table type when check_table_column1");
                 break;
         }
         if (ret == OB_SUCCESS && column_id == OB_INVALID_ID)
         {
             ret = OB_ERR_COLUMN_UNKNOWN;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Unknown table type when check_table_column2 at %s:%d", __FILE__,__LINE__);
+                    "Unknown table type when check_table_column2");
         }
     }
     return ret;
@@ -531,7 +532,7 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
 {
     OB_ASSERT(index >= 0);
     UNUSED(index);
-    uint32_t i;
+    int32_t i;
     if (table_items_.size() > 0)
     {
         print_indentation(fp, level);
@@ -541,9 +542,9 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
             TableItem& item = table_items_[i];
             print_indentation(fp, level + 1);
             fprintf(fp, "{Num %d, TableId:%lu, TableName:%.*s, ",
-                    i, item.table_id_, (int32_t)item.table_name_.size(), item.table_name_.data());
+                    i, item.table_id_, item.table_name_.size(), item.table_name_.data());
             if (item.alias_name_.size() > 0)
-                fprintf(fp, "AliasName:%.*s, ", (int32_t)item.alias_name_.size(), item.alias_name_.data());
+                fprintf(fp, "AliasName:%.*s, ", item.alias_name_.size(), item.alias_name_.data());
             else
                 fprintf(fp, "AliasName:NULL, ");
             if (item.type_ == TableItem::BASE_TABLE)
@@ -567,7 +568,7 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
             ColumnItem& item = column_items_[i];
             print_indentation(fp, level + 1);
             fprintf(fp, "{Num %d, ColumnId:%lu, ColumnName:%.*s, TableRef:%lu}\n", i,
-                    item.column_id_, (int32_t)item.column_name_.size(), item.column_name_.data(),
+                    item.column_id_, item.column_name_.size(), item.column_name_.data(),
                     item.table_id_);
         }
         print_indentation(fp, level);
@@ -586,7 +587,7 @@ void ObStmt::print(FILE* fp, int32_t level, int32_t index)
 
 int64_t ObStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
 {
-    return OB_SUCCESS;
+
 }
 
 int64_t ObStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql)

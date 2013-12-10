@@ -547,7 +547,7 @@ namespace oceanbase
             {
             }
 
-            ObRawExpr* get_op_expr(uint32_t index) const
+            ObRawExpr* get_op_expr(int32_t index) const
             {
                 ObRawExpr* expr = NULL;
                 if (index >= 0 && index < exprs_.size())
@@ -561,7 +561,7 @@ namespace oceanbase
                 return OB_SUCCESS;
             }
 
-            uint32_t get_expr_size() const
+            int32_t get_expr_size() const
             {
                 return exprs_.size();
             }

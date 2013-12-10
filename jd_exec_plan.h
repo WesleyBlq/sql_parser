@@ -1,14 +1,14 @@
 /************************************************************
   Copyright (C), 2013-2015
   FileName:     jd_exec_plan.h
-  Author:       qinbo      
+  Author:       qinbo(gqinbo@gmail.com)      
   Version :          
   Date:         
-  Description:  exec plan generator
+  Description:  sql������ִ�мƻ�ģ��   
   History: 
       <author>  <time>   <version >     <desc>
-      qinbo    2013/9/15     1.0       build this moudle  
-***********************************************************/
+      qinbo    2013/8/5     1.0         build this moudle  
+ ***********************************************************/
 #ifndef _JD_EXEC_PLAN_H
 #define _JD_EXEC_PLAN_H
 
@@ -154,7 +154,7 @@ public:
     Input       :   
     Output      :   
      **************************************************/
-    void release_exec_plan();
+    int release_exec_plan();
     
     /**************************************************
     Funtion     :   release_exec_plan
@@ -166,8 +166,8 @@ public:
      **************************************************/
     int generate_exec_plan(
             string sql,
-            uint32_t* index = NULL);
-    
+            int32_t* index = NULL);
+
     /**************************************************
     Funtion     :   set_final_exec_plan
     Author      :   qinbo
@@ -240,43 +240,43 @@ private:
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            uint32_t* index);
+            int32_t* index);
     int generate_select_plan_multi_table(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            uint32_t* index);
+            int32_t* index);
     int gen_exec_plan_update(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            uint32_t* index);
+            int32_t* index);
     int gen_exec_plan_replace(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            uint32_t* index);
+            int32_t* index);
     int gen_exec_plan_delete(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            uint32_t* index);
+            int32_t* index);
     int gen_exec_plan_select(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            uint32_t* index);
+            int32_t* index);
     int gen_exec_plan_insert(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            uint32_t* index);
+            int32_t* index);
 
     template <class T>
     int get_stmt(

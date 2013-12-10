@@ -39,7 +39,7 @@ namespace oceanbase
                 return ret;
             }
 
-            int get_update_column_id(uint32_t idx, uint64_t &column_id)
+            int get_update_column_id(int64_t idx, uint64_t &column_id)
             {
                 int ret = common::OB_SUCCESS;
                 if (idx < update_columns_.size())
@@ -63,7 +63,7 @@ namespace oceanbase
                 return ret;
             }
 
-            int get_update_expr_id(uint32_t idx, uint64_t &expr_id)
+            int get_update_expr_id(int64_t idx, uint64_t &expr_id)
             {
                 int ret = common::OB_SUCCESS;
                 if (idx < update_exprs_.size())
@@ -77,7 +77,7 @@ namespace oceanbase
                 return ret;
             }
 
-            uint32_t get_update_column_count(void)
+            int64_t get_update_column_count(void)
             {
                 return update_columns_.size();
             }

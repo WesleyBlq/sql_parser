@@ -58,10 +58,10 @@ OBJS_SQL =  \
 #libsql.a
 
 %o: %c
-	gcc -Wall -g -c -o  $@ $<
+	gcc -g -c -o  $@ $<
 
 %o: %cpp
-	g++ -Wall -g -c -o  $@ $<
+	g++ -g -c -o  $@ $<
 	
 libsql.a: $(OBJS_SQL)
 	ar rv libsql.a ${OBJS_SQL}

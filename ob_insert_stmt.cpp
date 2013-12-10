@@ -21,7 +21,7 @@ ObInsertStmt::ObInsertStmt()
 
 ObInsertStmt::~ObInsertStmt()
 {
-    for (uint32_t i = 0; i < value_vectors_.size(); i++)
+    for (int64_t i = 0; i < value_vectors_.size(); i++)
     {
         vector<uint64_t>& value_row = value_vectors_.at(i);
         value_row.clear();
@@ -39,14 +39,14 @@ void ObInsertStmt::print(FILE* fp, int32_t level, int32_t index)
     {
         print_indentation(fp, level + 1);
         fprintf(fp, "VALUES ::= ");
-        for (uint32_t i = 0; i < value_vectors_.size(); i++)
+        for (int64_t i = 0; i < value_vectors_.size(); i++)
         {
             if (i == 0)
                 fprintf(fp, "<");
             else
                 fprintf(fp, ", <");
             vector<uint64_t>& value_row = value_vectors_.at(i);
-            for (uint32_t j = 0; j < value_row.size(); j++)
+            for (int j = 0; j < value_row.size(); j++)
             {
                 if (j == 0)
                     fprintf(fp, "%ld", value_row.at(j));
@@ -77,6 +77,7 @@ Output      :
  **************************************************/
 int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
 {
+    int32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     string assembled_sql_tmp;
     ObSqlRawExpr* sql_expr = NULL;
@@ -86,7 +87,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                "logical_plan must exist!!!");
     }
 
     if (is_replace_)
@@ -123,10 +124,10 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
     {
         assembled_sql.append("VALUES ");
             
-        for (uint32_t i = 0; i < value_vectors_.size(); i++)
+        for (int64_t i = 0; i < value_vectors_.size(); i++)
         {
             vector<uint64_t>& value_row = value_vectors_.at(i);
-            for (uint32_t j = 0; j < value_row.size(); j++)
+            for (int j = 0; j < value_row.size(); j++)
             {
                 if (j == 0)
                 {
@@ -139,7 +140,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
                 {
                     ret = OB_ERR_LOGICAL_PLAN_FAILD;
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "insert value expr error!!! at %s:%d", __FILE__,__LINE__);
+                            "insert value expr error!!!");
                     return ret;
                 }
 
@@ -172,15 +173,13 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "can not get query stmt by query id!!! at %s:%d", __FILE__,__LINE__);
+                    "can not get query stmt by query id!!!");
             return ret;
         }
 
         query_stmt->make_stmt_string(result_plan, assembled_sql_tmp);
         assembled_sql.append(assembled_sql_tmp);
     }
-    
-    return ret;
 }
 
 /**************************************************

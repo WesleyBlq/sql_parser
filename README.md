@@ -1,7 +1,7 @@
 ﻿说明
 =========
-该项目为mysql sql解析器，词法分析和语法分析基于oceanbase 0.4版本，后续的语法树解析和
-sql语句优化分拆再次拼装代码正在编写，会陆续上传。
+该项目为mysql sql解析器，词法分析和语法分析基于oceanbase 0.4版本，语法树解析和
+sql语句优化分拆及最终生成执行计划为新写，目前执行计划已支持DML操作，另外支持SET/SHOW操作。
 
 编译：
 STEP1：$ sh gen_parser.sh
@@ -9,28 +9,138 @@ STEP2: $ make
 
 执行： $ ./sql_parser
 
-当insert语句如下时，解析后的语法树：
-$ ./sql_parser.exe
-<<Part 1 : SQL STRING>>
-INSERT INTO Persons (LastName, Address) VALUES ('Wilson', 'Champs-Elysees')
 
-<<Part 2 : PARSE TREE>>
-|-T_STMT_LIST
-    |-T_INSERT
-        |-T_IDENT : persons 
-        |-T_COLUMN_LIST
-            |-T_IDENT : lastname
-            |-T_IDENT : address
-        |-T_VALUE_LIST
-            |-T_VALUE_VECTOR
-                |-T_STRING : Wilson
-                |-T_STRING : Champs-Elysees
-        |-NULL
-        |-T_BOOL : FALSE
-
-
-		
-DATE : 2013.6.17
-EMAIL: gqinbo@gmail.com
-
+<BODY style="MARGIN: 10px"><DIV>
+<DIV>&nbsp;</DIV>
+<DIV>当select语句如下时，解析后的语法树：</DIV>
+<DIV>$&nbsp;./sql_parser.exe</DIV>
+<DIV>&lt;&lt;Part&nbsp;1&nbsp;:&nbsp;SQL&nbsp;STRING&gt;&gt;</DIV>
+<DIV>SELECT&nbsp;id&nbsp;FROM&nbsp;pp&nbsp;UNION&nbsp;distinct&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;tt</DIV>
+<DIV>&nbsp;</DIV>
+<DIV>&lt;&lt;Part&nbsp;2&nbsp;:&nbsp;PARSE&nbsp;TREE&gt;&gt;</DIV>
+<DIV>|-T_STMT_LIST</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;|-T_SELECT</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_SET_UNION</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_DISTINCT</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_SELECT</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_PROJECT_LIST</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_PROJECT_STRING</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_IDENT&nbsp;:&nbsp;id</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_FROM_LIST</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_IDENT&nbsp;:&nbsp;pp</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_SELECT</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_PROJECT_LIST</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_PROJECT_STRING</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_IDENT&nbsp;:&nbsp;id</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_FROM_LIST</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-T_IDENT&nbsp;:&nbsp;tt</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-NULL</DIV>
+<DIV>&nbsp;</DIV>
+<DIV>=======================================</DIV>
+<DIV>&nbsp;</DIV>
+<DIV>&lt;&lt;Part&nbsp;2&nbsp;:&nbsp;LOGICAL&nbsp;PLAN&gt;&gt;</DIV>
+<DIV>&lt;LogicalPlan&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&lt;StmtList&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObSelectStmt&nbsp;0&nbsp;Begin</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LEFTQUERY&nbsp;::=&nbsp;&lt;2&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;UNION&nbsp;DISTINCT&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RIGHTQUERY&nbsp;::=&nbsp;&lt;3&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObSelectStmt&nbsp;0&nbsp;End</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObSelectStmt&nbsp;1&nbsp;Begin</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;TableItemList&nbsp;Begin&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{Num&nbsp;0,&nbsp;TableId:2,&nbsp;TableName:pp,&nbsp;AliasName:NULL,&nbsp;Type:BASE_TABLE,&nbsp;RefId:&nbsp;2}</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;TableItemList&nbsp;End&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ColumnItemList&nbsp;Begin&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{Num&nbsp;0,&nbsp;ColumnId:2,&nbsp;ColumnName:id,&nbsp;TableRef:2}</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ColumnItemList&nbsp;End&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SELECT&nbsp;::=&nbsp;&lt;1,&nbsp;id&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FROM&nbsp;::=&nbsp;&lt;2&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObSelectStmt&nbsp;1&nbsp;End</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObSelectStmt&nbsp;2&nbsp;Begin</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;TableItemList&nbsp;Begin&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{Num&nbsp;0,&nbsp;TableId:1,&nbsp;TableName:tt,&nbsp;AliasName:NULL,&nbsp;Type:BASE_TABLE,&nbsp;RefId:&nbsp;1}</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;TableItemList&nbsp;End&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ColumnItemList&nbsp;Begin&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{Num&nbsp;0,&nbsp;ColumnId:1,&nbsp;ColumnName:id,&nbsp;TableRef:1}</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ColumnItemList&nbsp;End&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SELECT&nbsp;::=&nbsp;&lt;2,&nbsp;id&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FROM&nbsp;::=&nbsp;&lt;1&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObSelectStmt&nbsp;2&nbsp;End</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/StmtList&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&lt;ExprList&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ObSqlRawExpr&nbsp;0&nbsp;Begin&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;expr_id&nbsp;=&nbsp;1</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(table_id&nbsp;:&nbsp;column_id)&nbsp;=&nbsp;(NULL&nbsp;:&nbsp;65519)</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObBinaryRefRawExpr</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;T_REF_COLUMN&nbsp;:&nbsp;[table_id,&nbsp;column_id]&nbsp;=&nbsp;[2,&nbsp;2]</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ObSqlRawExpr&nbsp;0&nbsp;End&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ObSqlRawExpr&nbsp;1&nbsp;Begin&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;expr_id&nbsp;=&nbsp;2</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(table_id&nbsp;:&nbsp;column_id)&nbsp;=&nbsp;(NULL&nbsp;:&nbsp;65518)</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObBinaryRefRawExpr</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;T_REF_COLUMN&nbsp;:&nbsp;[table_id,&nbsp;column_id]&nbsp;=&nbsp;[1,&nbsp;1]</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ObSqlRawExpr&nbsp;1&nbsp;End&gt;</DIV>
+<DIV>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/ExprList&gt;</DIV>
+<DIV>&lt;/LogicalPlan&gt;</DIV>
+<DIV>LEFTQUERY&nbsp;::=&nbsp;&lt;2&gt;</DIV>
+<DIV>&lt;UNION&nbsp;DISTINCT&gt;</DIV>
+<DIV>RIGHTQUERY&nbsp;::=&nbsp;&lt;3&gt;</DIV>
+<DIV>STMT&nbsp;string:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;pp&nbsp;</DIV>
+<DIV>STMT&nbsp;string:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;tt&nbsp;</DIV>
+<DIV>&nbsp;</DIV>
+<DIV>&nbsp;</DIV>
+<DIV>生成的执行计划如下：</DIV>
+<DIV>I0100&nbsp;00:00:00.000000&nbsp;11191&nbsp;jd_exec_plan.cpp:531]&nbsp;RAW:&nbsp;new&nbsp;physical&nbsp;plan,&nbsp;addr=0xb5e8790</DIV>
+<DIV>exec_plan_unit&nbsp;shard&nbsp;name:&nbsp;pp1</DIV>
+<DIV>exec_plan_unit&nbsp;SQL&nbsp;name&nbsp;&nbsp;:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;pp1&nbsp;</DIV>
+<DIV>exec_plan_unit&nbsp;shard&nbsp;name:&nbsp;pp2</DIV>
+<DIV>exec_plan_unit&nbsp;SQL&nbsp;name&nbsp;&nbsp;:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;pp2&nbsp;</DIV>
+<DIV>exec_plan_unit&nbsp;shard&nbsp;name:&nbsp;pp3</DIV>
+<DIV>exec_plan_unit&nbsp;SQL&nbsp;name&nbsp;&nbsp;:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;pp3&nbsp;</DIV>
+<DIV>exec_plan_unit&nbsp;shard&nbsp;name:&nbsp;pp4</DIV>
+<DIV>exec_plan_unit&nbsp;SQL&nbsp;name&nbsp;&nbsp;:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;pp4&nbsp;</DIV>
+<DIV>exec_plan_unit&nbsp;shard&nbsp;name:&nbsp;tt1</DIV>
+<DIV>exec_plan_unit&nbsp;SQL&nbsp;name&nbsp;&nbsp;:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;tt1&nbsp;</DIV>
+<DIV>exec_plan_unit&nbsp;shard&nbsp;name:&nbsp;tt2</DIV>
+<DIV>exec_plan_unit&nbsp;SQL&nbsp;name&nbsp;&nbsp;:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;tt2&nbsp;</DIV>
+<DIV>exec_plan_unit&nbsp;shard&nbsp;name:&nbsp;tt3</DIV>
+<DIV>exec_plan_unit&nbsp;SQL&nbsp;name&nbsp;&nbsp;:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;tt3&nbsp;</DIV>
+<DIV>exec_plan_unit&nbsp;shard&nbsp;name:&nbsp;tt4</DIV>
+<DIV>exec_plan_unit&nbsp;SQL&nbsp;name&nbsp;&nbsp;:&nbsp;SELECT&nbsp;id&nbsp;FROM&nbsp;tt4&nbsp; </DIV>
+<DIV></DIV>
+<DIV>DATE&nbsp;:&nbsp;2013.11.15</DIV>
+<DIV>EMAIL:&nbsp;gqinbo@gmail.com</DIV></DIV></BODY>
 

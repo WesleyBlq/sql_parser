@@ -218,9 +218,9 @@ namespace oceanbase
             static ObObj type_arithmetic(const ObObj& t1, const ObObj& t2);
             int substr(const int32_t start_pos, const int32_t expect_length_of_str,
                     ObExprObj &result) const;
-            int lrtrim(const string src, const string pattern, size_t  &start, size_t  &end) const;
-            int ltrim(const string src, const string pattern, size_t  &start) const;
-            int rtrim(const string src, const string pattern, size_t  &end) const;
+            int lrtrim(const string src, const string pattern, int32_t &start, int32_t &end) const;
+            int ltrim(const string src, const string pattern, int32_t &start) const;
+            int rtrim(const string src, const string pattern, int32_t &end) const;
 #if 0
             // functions for testing only
             friend class ::ObExprObj_Math_Test;

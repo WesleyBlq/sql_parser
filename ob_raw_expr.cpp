@@ -717,7 +717,7 @@ void ObConstRawExpr::print(FILE* fp, int32_t level) const
         {
             string str;
             value_.get_varchar(str);
-            fprintf(fp, "%.*s\n", (int32_t)str.size(), str.data());
+            fprintf(fp, "%.*s\n", str.size(), str.data());
             break;
         }
         case T_DATE:
@@ -745,7 +745,7 @@ void ObConstRawExpr::print(FILE* fp, int32_t level) const
         {
             string str;
             value_.get_varchar(str);
-            fprintf(fp, "%.*s\n", (int32_t)str.size(), str.data());
+            fprintf(fp, "%.*s\n", str.size(), str.data());
             break;
         }
         case T_BOOL:
@@ -954,7 +954,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                "logical_plan must exist!!!");
         return ret;
     }
 
@@ -967,7 +967,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_
     {
         ret = OB_ERR_PARSER_SYNTAX;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Sub-query of In operator is not select statment at %s:%d", __FILE__,__LINE__);
+                "Sub-query of In operator is not select statment");
         return ret;
     }
 
@@ -1046,7 +1046,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                    "logical_plan must exist!!!");
             return ret;
         }
 
@@ -1055,7 +1055,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "ref column error!!! at %s:%d", __FILE__,__LINE__);
+                    "ref column error!!!");
             return ret;
         }
 
@@ -1070,7 +1070,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         {
             ret = OB_ERR_SCHEMA_UNSET;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Schema(s) are not set at %s:%d", __FILE__,__LINE__);
+                    "Schema(s) are not set");
             return ret;
         }
 
@@ -1080,7 +1080,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         {
             ret = OB_ERR_SCHEMA_UNSET;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Schema(s) are not set at %s:%d", __FILE__,__LINE__);
+                    "Schema(s) are not set");
             return ret;
         }
 
@@ -1452,7 +1452,7 @@ void ObMultiOpRawExpr::print(FILE* fp, int32_t level) const
     fprintf(fp, "ObMultiOpRawExpr\n");
     for (int i = 0; i < level; ++i) fprintf(fp, "    ");
     fprintf(fp, "%s\n", get_type_name(get_expr_type()));
-    for (uint32_t i = 0; i < exprs_.size(); i++)
+    for (int32_t i = 0; i < exprs_.size(); i++)
     {
         exprs_[i]->print(fp, level + 1);
     }
@@ -1468,11 +1468,13 @@ Output		:	string&  assembled_sql
  **************************************************/
 int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
 {
+    int64_t pos = 0;
+    int64_t ret = OB_SUCCESS;
     string  assembled_sql_tmp;
 
     assembled_sql.append("(");
 
-    for (uint32_t i = 0; i < exprs_.size(); i++)
+    for (int32_t i = 0; i < exprs_.size(); i++)
     {
         exprs_[i]->to_string(result_plan, assembled_sql_tmp);
         assembled_sql.append(assembled_sql_tmp);
@@ -1483,7 +1485,6 @@ int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, string& assembled_s
         }
     }
     assembled_sql.append(")");
-    return OB_SUCCESS;
 }
 
 #if 0
@@ -1763,6 +1764,5 @@ int64_t ObSqlRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) 
         }
 #endif        
     }
-    return OB_SUCCESS;
 }
 
