@@ -147,7 +147,7 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
     vector<SelectItem>  select_items    = select_stmt->fetch_select_from_tree(result_plan, "");
     vector<GroupItem>   group_items     = select_stmt->fetch_group_from_tree(result_plan, "");
     vector<OrderItem>   order_items     = select_stmt->fetch_order_from_tree(result_plan, "");
-    vector<HavingItem>  Having_items    = select_stmt->fetch_having_from_tree(result_plan, "");
+    vector<HavingItem>  having_items    = select_stmt->fetch_having_from_tree(result_plan, "");
     uint32_t            raw_select_num  = select_items.size();
 
     if (group_items.size() > 0)
@@ -157,21 +157,64 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
             GroupItem group_item = group_items.at(i);
             reduce_type = REDUCE_GROUP;
                         
-            if (!select_stmt->try_fetch_select_item_by_column_name(select_items, group_items[i].group_column_, column_off))
+            if (!select_stmt->try_fetch_select_item_by_column_name(select_items, group_item.group_column_, column_off))
             {
-                if(!find_column_if_exist(exist_column_names, group_items[i].group_column_, vector_off))
+                if(!find_column_if_exist(exist_column_names, group_item.group_column_, vector_off))
                 {
-                    //add_group_reduce_info(group_item.group_type_, raw_select_num + exist_column_names.size(), group_item.column_type_);
-                    exist_column_names.push_back(group_items[i].group_column_);
+                    add_group_reduce_info( is_sort_asc(group_item.group_type_), 
+                                        raw_select_num + exist_column_names.size(), 
+                                        trans_ob_sql2_mysql(group_item.column_type_));
+                    exist_column_names.push_back(group_item.group_column_);
                 }
                 else
                 {
-                    //add_group_reduce_info(group_item.group_type_, raw_select_num + vector_off, group_item.column_type_);
+                    add_group_reduce_info(is_sort_asc(group_item.group_type_), 
+                                            raw_select_num + vector_off, 
+                                            trans_ob_sql2_mysql(group_item.column_type_));
                 }
             }
             else
             {
-                //add_group_reduce_info(group_item.group_type_, column_off, group_item.column_type_);
+                add_group_reduce_info(is_sort_asc(group_item.group_type_), 
+                                        column_off, 
+                                        trans_ob_sql2_mysql(group_item.column_type_));
+            }
+        }
+    }
+
+
+    if (having_items.size() > 0)
+    {
+        for (i = 0; i < having_items.size(); i++)
+        {
+            HavingItem having_item = having_items.at(i);
+            if (!select_stmt->try_fetch_select_item_by_column_name(select_items, having_item.having_column_name, column_off))
+            {
+                if(!find_column_if_exist(exist_column_names, having_item.having_column_name, vector_off))
+                {
+                    add_having_reduce_info( raw_select_num + exist_column_names.size(), 
+                                            having_item.aggr_fun_type, 
+                                            having_item.aggr_fun_operate, 
+                                            having_item.aggr_fun_value, 
+                                            trans_ob_sql2_mysql(having_item.column_type_));
+                    exist_column_names.push_back(having_item.having_column_name);
+                }
+                else
+                {
+                    add_having_reduce_info( raw_select_num + vector_off,
+                                            having_item.aggr_fun_type, 
+                                            having_item.aggr_fun_operate, 
+                                            having_item.aggr_fun_value, 
+                                            trans_ob_sql2_mysql(having_item.column_type_));
+                }
+            }
+            else
+            {
+                add_having_reduce_info( column_off, 
+                                        having_item.aggr_fun_type, 
+                                        having_item.aggr_fun_operate, 
+                                        having_item.aggr_fun_value, 
+                                        trans_ob_sql2_mysql(having_item.column_type_));
             }
         }
     }
@@ -189,40 +232,23 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
             {
                 if(!find_column_if_exist(exist_column_names, order_item.order_column_, vector_off))
                 {
-                    //add_order_reduce_info(order_item.order_type_, raw_select_num + exist_column_names.size(), order_item.column_type_);
+                    add_order_reduce_info(is_sort_asc(order_item.order_type_), 
+                                                        raw_select_num + exist_column_names.size(), 
+                                                        trans_ob_sql2_mysql(order_item.column_type_));
                     exist_column_names.push_back(order_item.order_column_);
                 }
                 else
                 {
-                    //add_order_reduce_info(order_item.order_type_, raw_select_num + vector_off, order_item.column_type_);
+                    add_order_reduce_info(is_sort_asc(order_item.order_type_), 
+                                            raw_select_num + vector_off, 
+                                            trans_ob_sql2_mysql(order_item.column_type_));
                 }
             }
             else
             {
-                //add_order_reduce_info(order_item.order_type_, column_off, order_item.column_type_);
-            }
-        }
-    }
-
-    if (Having_items.size() > 0)
-    {
-        for (i = 0; i < Having_items.size(); i++)
-        {
-            if (!select_stmt->try_fetch_select_item_by_column_name(select_items, Having_items[i].having_column_name, column_off))
-            {
-                if(!find_column_if_exist(exist_column_names, Having_items[i].having_column_name, vector_off))
-                {
-                    //add_having_reduce_info(column_off, 0);
-                    exist_column_names.push_back(Having_items[i].having_column_name);
-                }
-                else
-                {
-                    //add_having_reduce_info(column_off, 0);
-                }
-            }
-            else
-            {
-                //add_having_reduce_info(column_off, 0);
+                add_order_reduce_info(is_sort_asc(order_item.order_type_), 
+                                            column_off, 
+                                            trans_ob_sql2_mysql(order_item.column_type_));
             }
         }
     }
@@ -296,6 +322,38 @@ void QueryPostReduce::add_order_reduce_info(bool sort, int32_t pos, enum enum_fi
 {
     this->order.push_back(OrderPostReduce(sort, pos, field_type));
 }
+
+
+enum enum_field_types QueryPostReduce::trans_ob_sql2_mysql(ObObjType ob_sql_type)
+{
+    switch (ob_sql_type)
+    {
+        case ObNullType:
+            return MYSQL_TYPE_NULL;
+        case ObIntType:
+        case ObBoolType:
+            return MYSQL_TYPE_LONGLONG;
+        case ObFloatType:
+        case ObDoubleType:
+            return MYSQL_TYPE_DOUBLE;
+        case ObDateTimeType:
+            return MYSQL_TYPE_TIME;
+        case ObPreciseDateTimeType:
+            return MYSQL_TYPE_DATETIME;
+        case ObVarcharType:
+            return MYSQL_TYPE_VARCHAR;
+        case ObDecimalType:
+            return MYSQL_TYPE_DECIMAL;
+        case ObMinType:
+        case ObCreateTimeType:
+        case ObModifyTimeType:
+        case ObExtendType:
+        case ObSeqType:
+        default:
+            return MYSQL_TYPE_GEOMETRY; //we don't support now
+    }
+}
+
 
 int32_t QueryPostReduce::get_reduce()
 {

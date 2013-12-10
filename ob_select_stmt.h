@@ -73,6 +73,8 @@ namespace oceanbase
             common::ObObjType column_type_;
             string having_column_name;
             SqlItemType aggr_fun_type;
+            uint32_t    aggr_fun_operate;
+            int64_t     aggr_fun_value;
         };
         /*END: added by qinbo*/
         struct JoinedTable
@@ -527,7 +529,9 @@ namespace oceanbase
                                 uint64_t expr_id,
                                 ObObjType &column_type,
                                 SqlItemType &aggr_fun_type,
-                                string& column_name);
+                                uint32_t    &aggr_fun_operate,
+                                int64_t     &aggr_fun_value,
+                                string      &column_name);
         private:
             /* These fields are only used by normal select */
             bool is_distinct_;

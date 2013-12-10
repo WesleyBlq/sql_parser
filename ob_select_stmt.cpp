@@ -1523,7 +1523,9 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
                     uint64_t expr_id,
                     ObObjType &column_type,
                     SqlItemType &aggr_fun_type,
-                    string& column_name)
+                    uint32_t    &aggr_fun_operate,
+                    int64_t     &aggr_fun_value,
+                    string      &column_name)
 {
     int             ret = OB_SUCCESS;
     ObSqlRawExpr*   sql_expr = NULL;
@@ -1547,13 +1549,15 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
                 "select item error!!! at %s:%d", __FILE__,__LINE__);
         return ret;
     }
-        
-    ObBinaryOpRawExpr *select_op    = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
-    ObBinaryRefRawExpr *select_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (select_op->get_first_op_expr()));
     
-    if (select_expr->get_first_ref_id() == OB_INVALID_ID)
+    aggr_fun_operate = sql_expr->get_expr()->get_expr_type();
+    ObBinaryOpRawExpr   *select_op      = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+    ObBinaryRefRawExpr  *first_expr     = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (select_op->get_first_op_expr()));
+    ObConstRawExpr      *second_expr    = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (select_op->get_second_op_expr()));
+    
+    if (first_expr->get_first_ref_id() == OB_INVALID_ID)
     {
-        sql_expr = logical_plan->get_expr_by_ref_sql_expr_raw_id(select_expr->get_related_sql_raw_id());
+        sql_expr = logical_plan->get_expr_by_ref_sql_expr_raw_id(first_expr->get_related_sql_raw_id());
         if (NULL == sql_expr)
         {
             ret = OB_ERR_ILLEGAL_ID;
@@ -1603,6 +1607,18 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     else
     {
         aggr_fun_type = T_INVALID;
+    }
+
+    if (T_INT != second_expr->get_expr_type())
+    {
+        ret = OB_ERR_ILLEGAL_ID;
+        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Aggr func only support INT type value!!! at %s:%d", __FILE__,__LINE__);
+        return ret;
+    }
+    else
+    {
+        second_expr->get_value().get_int(aggr_fun_value);
     }
 
     return ret;

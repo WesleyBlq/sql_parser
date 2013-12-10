@@ -2378,6 +2378,8 @@ int resolve_having_clause(
                                                 having_item.expr_id_,
                                                 having_item.column_type_,
                                                 having_item.aggr_fun_type,
+                                                having_item.aggr_fun_operate,
+                                                having_item.aggr_fun_value,
                                                 having_item.having_column_name
                                                 );
                     if (OB_SUCCESS != ret)

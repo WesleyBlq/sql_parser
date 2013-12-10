@@ -12,6 +12,10 @@
 #include <vector>
 #include "sql_item_type.h"
 #include "ob_select_stmt.h"
+#include <mysql.h>
+
+using namespace oceanbase::common;
+using namespace oceanbase::sql;
 
 #define NO_REDUCE                                       1
 #define REDUCE_GROUP                                    2
@@ -131,6 +135,16 @@ private:
     vector<AggrFuncPostReduce>  func;
     vector<HavingPostReduce>    having;
     bool        find_column_if_exist(vector<string> &columns, string goal_column, uint32_t column_off);
+    bool        is_sort_asc(SqlItemType sort_type)
+    {
+        if ( sort_type == T_SORT_ASC)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    enum enum_field_types trans_ob_sql2_mysql(ObObjType ob_sql_type);
 };
 
 #endif	/* _QUERY_REDUCE_H */
