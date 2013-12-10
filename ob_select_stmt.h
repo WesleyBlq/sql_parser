@@ -24,6 +24,8 @@
 #define OP_SELECT_ALL (OP_SELECT + OP_FROM + OP_TABLE + OP_ON + OP_WHERE + \
                         OP_GROUP + OP_HAVING + OP_ORDER + OP_LIMIT + OP_SUBSELECT)
 
+using namespace oceanbase::common;
+
 namespace oceanbase
 {
     namespace sql
@@ -37,7 +39,7 @@ namespace oceanbase
             string expr_name_;
             common::ObObjType type_;
 
-            string raw_select_item_name;
+            string select_column_name_;
             SqlItemType aggr_fun_type;
         };
 
@@ -51,28 +53,16 @@ namespace oceanbase
 
         struct OrderItem
         {
-            enum OrderType
-            {
-                ASC,
-                DESC
-            };
-
             uint64_t expr_id_;
-            OrderType order_type_;
+            SqlItemType order_type_;
             common::ObObjType column_type_;
-            string order_column;
+            string order_column_;
         };
 
         struct GroupItem
         {
-            enum GroupType
-            {
-                ASC,
-                DESC
-            };
-
             uint64_t expr_id_;
-            GroupType group_type_;
+            SqlItemType group_type_;
             common::ObObjType column_type_;
             string group_column_;
         };
@@ -195,37 +185,37 @@ namespace oceanbase
             ObSelectStmt();
             virtual ~ObSelectStmt();
 
-            int32_t get_select_item_size() const
+            uint32_t get_select_item_size() const
             {
                 return select_items_.size();
             }
 
-            int32_t get_from_item_size() const
+            uint32_t get_from_item_size() const
             {
                 return from_items_.size();
             }
 
-            int32_t get_joined_table_size() const
+            uint32_t get_joined_table_size() const
             {
                 return joined_tables_.size();
             }
 
-            int32_t get_group_expr_size() const
+            uint32_t get_group_expr_size() const
             {
                 return group_expr_ids_.size();
             }
 
-            int32_t get_agg_fun_size() const
+            uint32_t get_agg_fun_size() const
             {
                 return agg_func_ids_.size();
             }
 
-            int32_t get_having_expr_size() const
+            uint32_t get_having_expr_size() const
             {
                 return having_expr_ids_.size();
             }
 
-            int32_t get_order_item_size() const
+            uint32_t get_order_item_size() const
             {
                 return order_items_.size();
             }
@@ -318,13 +308,13 @@ namespace oceanbase
             }
             JoinedTable* get_joined_table(uint64_t table_id);
 
-            const SelectItem& get_select_item(int32_t index)
+            const SelectItem& get_select_item(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < select_items_.size());
                 return select_items_[index];
             }
 
-            const FromItem& get_from_item(int32_t index)
+            const FromItem& get_from_item(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < from_items_.size());
                 return from_items_[index];
@@ -335,7 +325,7 @@ namespace oceanbase
             {
                 for (uint32_t i = 0; i< select_items.size(); i++)
                 {
-                    if (select_items[i].raw_select_item_name == column_name)
+                    if (select_items[i].select_column_name_ == column_name)
                     {
                         offset = i;
                         return true;
@@ -349,7 +339,7 @@ namespace oceanbase
             {
                 for (uint32_t i = 0; i< order_items.size(); i++)
                 {
-                    if (order_items[i].order_column == column_name)
+                    if (order_items[i].order_column_ == column_name)
                     {
                         return true;
                     }
@@ -384,25 +374,25 @@ namespace oceanbase
             }
             //END: Added by qinbo
 
-            const OrderItem& get_order_item(int32_t index)
+            const OrderItem& get_order_item(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < order_items_.size());
                 return order_items_[index];
             }
 
-            uint64_t get_group_expr_id(int32_t index)
+            uint64_t get_group_expr_id(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < group_expr_ids_.size());
                 return group_expr_ids_[index];
             }
 
-            uint64_t get_agg_expr_id(int32_t index)
+            uint64_t get_agg_expr_id(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < agg_func_ids_.size());
                 return agg_func_ids_[index];
             }
 
-            uint64_t get_having_expr_id(int32_t index)
+            uint64_t get_having_expr_id(uint32_t index)
             {
                 OB_ASSERT(0 <= index && index < having_expr_ids_.size());
                 return having_expr_ids_[index];
@@ -443,10 +433,10 @@ namespace oceanbase
                 return ret;
             }
 
-            /*BEGIN: added by qinbo*/
+            //BEGIN: added by qinbo
             bool is_from_item_with_join()
             {
-                for (int32_t i = 0; i < from_items_.size(); i++)
+                for (uint32_t i = 0; i < from_items_.size(); i++)
                 {
                     FromItem& item = from_items_[i];
                     if (item.is_joined_)
@@ -457,7 +447,18 @@ namespace oceanbase
                 return false;
             }
 
-            /*END: added by qinbo*/
+            int add_group_item(GroupItem& group_item)
+            {
+                group_items_.push_back(group_item);
+                return common::OB_SUCCESS;
+            }
+
+            int add_having_item(HavingItem& having_item)
+            {
+                having_items_.push_back(having_item);
+                return common::OB_SUCCESS;
+            }
+            //END: added by qinbo
 
             int add_order_item(OrderItem& order_item)
             {
@@ -495,6 +496,7 @@ namespace oceanbase
                     ObRawExpr*& ret_expr);
 
             int add_select_item(
+                    ResultPlan * result_plan,
                     uint64_t eid,
                     bool is_real_alias,
                     const string& alias_name,
@@ -514,6 +516,18 @@ namespace oceanbase
             int64_t make_order_by_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_having_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_limit_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t get_column_info_by_expr_id(
+                                ResultPlan *result_plan,
+                                uint64_t expr_id,
+                                ObObjType &column_type,
+                                SqlItemType &aggr_fun_type,
+                                string& column_name);
+            int64_t get_having_column_by_expr_id( 
+                                ResultPlan *result_plan,
+                                uint64_t expr_id,
+                                ObObjType &column_type,
+                                SqlItemType &aggr_fun_type,
+                                string& column_name);
         private:
             /* These fields are only used by normal select */
             bool is_distinct_;
@@ -531,7 +545,9 @@ namespace oceanbase
             uint64_t right_query_id_;
 
             /* These fields are used by both normal select and set select */
+            vector<GroupItem> group_items_;
             vector<OrderItem> order_items_;
+            vector<HavingItem> having_items_;
 
             /* -1 means no limit */
             uint64_t limit_count_id_;

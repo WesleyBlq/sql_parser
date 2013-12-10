@@ -161,17 +161,17 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
             {
                 if(!find_column_if_exist(exist_column_names, group_items[i].group_column_, vector_off))
                 {
-                    add_group_reduce_info(group_item.group_type_, raw_select_num + exist_column_names.size(), MYSQL_TYPE_LONG);
+                    //add_group_reduce_info(group_item.group_type_, raw_select_num + exist_column_names.size(), group_item.column_type_);
                     exist_column_names.push_back(group_items[i].group_column_);
                 }
                 else
                 {
-                    add_group_reduce_info(group_item.group_type_, raw_select_num + vector_off, MYSQL_TYPE_LONG);
+                    //add_group_reduce_info(group_item.group_type_, raw_select_num + vector_off, group_item.column_type_);
                 }
             }
             else
             {
-                add_group_reduce_info(group_item.group_type_, column_off, MYSQL_TYPE_LONG);
+                //add_group_reduce_info(group_item.group_type_, column_off, group_item.column_type_);
             }
         }
     }
@@ -185,21 +185,21 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
             {
                 reduce_type = REDUCE_ORDER;
             }
-            if (!select_stmt->try_fetch_select_item_by_column_name(select_items, order_item.order_column, column_off))
+            if (!select_stmt->try_fetch_select_item_by_column_name(select_items, order_item.order_column_, column_off))
             {
-                if(!find_column_if_exist(exist_column_names, order_item.order_column, vector_off))
+                if(!find_column_if_exist(exist_column_names, order_item.order_column_, vector_off))
                 {
-                    add_order_reduce_info(order_item.order_type_, raw_select_num + exist_column_names.size(), MYSQL_TYPE_LONG);
-                    exist_column_names.push_back(order_item.order_column);
+                    //add_order_reduce_info(order_item.order_type_, raw_select_num + exist_column_names.size(), order_item.column_type_);
+                    exist_column_names.push_back(order_item.order_column_);
                 }
                 else
                 {
-                    add_order_reduce_info(order_item.order_type_, raw_select_num + vector_off, MYSQL_TYPE_LONG);
+                    //add_order_reduce_info(order_item.order_type_, raw_select_num + vector_off, order_item.column_type_);
                 }
             }
             else
             {
-                add_order_reduce_info(order_item.order_type_, column_off, MYSQL_TYPE_LONG);
+                //add_order_reduce_info(order_item.order_type_, column_off, order_item.column_type_);
             }
         }
     }
