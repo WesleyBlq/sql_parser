@@ -195,6 +195,7 @@ namespace oceanbase
             static const uint8_t META_NWORDS_MASK = 0x7;
             ObObjMeta meta_;
             int32_t val_len_;
+            string  varchar_val;
 
             union // value实际内容
             {
@@ -206,7 +207,7 @@ namespace oceanbase
                 ObPreciseDateTime precisetime_val;
                 ObModifyTime modifytime_val;
                 ObCreateTime createtime_val;
-                const char *varchar_val;
+                //const char *varchar_val;
                 bool bool_val;
                 uint32_t *dec_words_;
             } value_;
@@ -231,7 +232,10 @@ namespace oceanbase
 
         inline void ObObj::reset()
         {
-            memset(this, 0, sizeof (ObObj));
+            val_len_ = 0;
+            varchar_val.clear();
+            memset(&meta_, 0, sizeof (meta_));
+            memset(&value_, 0, sizeof (value_));
         }
 
         inline void ObObj::set_flag(bool is_add)
@@ -332,6 +336,7 @@ namespace oceanbase
 
         inline void ObObj::set_varchar(const string& value)
         {
+        #if 0
             int32_t src_len = value.length();
             char * ptr = NULL;
             if (OB_UNLIKELY(NULL == value.data() || 0 >= src_len))
@@ -346,10 +351,10 @@ namespace oceanbase
             {
                 memcpy(ptr, value.data(), src_len);
             }
+        #endif
             meta_.type_ = ObVarcharType;
             meta_.op_flag_ = INVALID_OP_FLAG;
-
-            value_.varchar_val = ptr;
+            varchar_val = value;
             val_len_ = value.length();
         }
 
@@ -493,7 +498,7 @@ namespace oceanbase
             int res = OB_OBJ_TYPE_ERROR;
             if (meta_.type_ == ObVarcharType)
             {
-                value.assign(const_cast<char *> (value_.varchar_val), val_len_);
+                value.assign(varchar_val);
                 res = OB_SUCCESS;
             }
             return res;

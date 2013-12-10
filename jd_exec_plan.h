@@ -40,7 +40,7 @@
 #include "dml_build_plan.h"
 #include "crud_build_plan.h"
 #include "ob_logical_plan.h"
-
+#include "query_reduce.h"
 
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
@@ -68,8 +68,10 @@ class SameLevelExecPlan
 {
 private:
     vector<ExecPlanUnit*> exec_plan_units;
-    bool is_1st_plan;
-    char parent_sql_type; /**if need to be reparsed*/
+    QueryPostReduce*    query_post_reduce_info;     //record sql post process info
+    bool                is_1st_plan;
+    char                parent_sql_type;            //if need to be reparsed
+    
 public:
     SameLevelExecPlan();
     virtual ~SameLevelExecPlan();
@@ -79,6 +81,16 @@ public:
     void is_first_plan();
     void add_exec_plan_unit(ExecPlanUnit* exec_plan_unit);
     vector<ExecPlanUnit*> get_all_exec_plan_units();
+    void set_query_post_reduce_info(QueryPostReduce* query_post_reduce_info_)
+    {
+        query_post_reduce_info = query_post_reduce_info_;
+    }
+
+    QueryPostReduce*  get_query_post_reduce_info()
+    {
+        return query_post_reduce_info;
+    }
+    
 };
 
 /*ִ�мƻ������class*/
@@ -90,7 +102,6 @@ private:
     int     to_do_exec_plan_sequ;
 
 public:
-    //friend class Optimizor;
     FinalExecPlan();
     virtual ~FinalExecPlan();
     void set_union_is_distinct(bool union_is_distinct);

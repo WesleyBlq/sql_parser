@@ -522,14 +522,6 @@ int64_t ObSelectStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
 {
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
 
-    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
-    }
-
     if (set_op_ == NONE)
     {
         make_select_item_string(result_plan, assembled_sql);
@@ -572,6 +564,71 @@ int64_t ObSelectStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
 
     return ret;
 }
+
+/**************************************************
+Funtion     :   make_exec_plan_unit_string
+Author      :   qinbo
+Date        :   2013.12.9
+Description :   make select sql
+Input       :   ResultPlan& result_plan,
+                string where_conditions
+                schema_shard *shard_info
+                string &assembled_sql
+Output      :   
+ **************************************************/
+int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql)
+{
+    make_select_item_string(result_plan, assembled_sql);
+    //when post process need column while this column is not in select_itmes, append them
+    append_select_items_reduce_used(result_plan, assembled_sql);
+
+    for (uint32_t i = 0; i < from_items_.size(); i++)
+    {
+        if (0 == i)
+        {
+            assembled_sql.append("FROM ");
+        }
+        
+        FromItem& item = from_items_[i];
+        string table_name = ObStmt::get_table_item_by_id(item.table_id_)->table_name_;
+        if (table_name != shard_info->get_table_name())
+        {
+            assembled_sql.append(shard_info->get_shard_name());
+        }
+        else
+        {
+            assembled_sql.append(table_name);
+        }
+        
+        if (i == from_items_.size() - 1)
+        {
+            assembled_sql.append(" ");
+        }
+        else
+        {
+            assembled_sql.append(", ");
+        }
+    }
+
+    if (where_conditions.empty())
+    {
+        make_where_string(result_plan, assembled_sql);
+    }
+    else
+    {
+        assembled_sql.append(where_conditions);
+    }
+    make_group_by_string(result_plan, assembled_sql);
+    if (!is_group_by_order_by_same(result_plan))
+    {
+        make_order_by_string(result_plan, assembled_sql);
+    }
+    make_having_string(result_plan, assembled_sql);
+    make_limit_string(result_plan, assembled_sql);    
+
+    return OB_SUCCESS;
+}
+
 
 /**************************************************
 Funtion     :   make_select_item_string
@@ -651,6 +708,99 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
     }
     return ret;
 }
+
+
+
+/**************************************************
+Funtion     :   append_select_items_reduce_used
+Author      :   qinbo
+Date        :   2013.12.6
+Description :   this function is used to append extra 
+                column names to exec_plan for sql post 
+                process(such as order by/group by)
+Input       :   ResultPlan& result_plan,
+                string &assembled_sql
+Output      :   
+ **************************************************/
+int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, string &assembled_sql)
+{
+    uint32_t i = 0;
+    int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    if (logical_plan == NULL)
+    {
+        ret = OB_ERR_LOGICAL_PLAN_FAILD;
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+    }
+
+    vector<SelectItem>  select_items    = fetch_select_from_tree(result_plan, "");
+    vector<GroupItem>   group_items     = fetch_group_from_tree(result_plan, "");
+    vector<OrderItem>   order_items     = fetch_order_from_tree(result_plan, "");
+    vector<HavingItem>  Having_items    = fetch_having_from_tree(result_plan, "");
+    vector<string>      exist_column_names;
+    uint32_t            column_off = 0;
+
+    if (group_items.size() > 0)
+    {
+        for (i = 0; i < group_items.size(); i++)
+        {
+            if (!try_fetch_select_item_by_column_name(select_items, group_items[i].group_column_, column_off))
+            {
+                vector<string>::iterator pos;
+                pos = find(exist_column_names.begin(),exist_column_names.end(),group_items[i].group_column_);
+                if(pos == exist_column_names.end())
+                {
+                    assembled_sql.append(",");
+                    assembled_sql.append(group_items[i].group_column_);
+                    assembled_sql.append(" ");
+                    exist_column_names.push_back(group_items[i].group_column_);
+                }
+            }
+        }
+    }
+
+    if (!is_group_by_order_by_same(result_plan))
+    {
+        for (i = 0; i < order_items.size(); i++)
+        {
+            if (!try_fetch_select_item_by_column_name(select_items, order_items[i].order_column, column_off))
+            {
+                vector<string>::iterator pos;
+                pos = find(exist_column_names.begin(),exist_column_names.end(),order_items[i].order_column);
+                if(pos == exist_column_names.end())
+                {
+                    assembled_sql.append(",");
+                    assembled_sql.append(order_items[i].order_column);
+                    assembled_sql.append(" ");
+                    exist_column_names.push_back(order_items[i].order_column);
+                }
+            }
+        }
+    }
+
+    if (having_expr_ids_.size() > 0)
+    {
+        for (i = 0; i < Having_items.size(); i++)
+        {
+            if (!try_fetch_select_item_by_column_name(select_items, Having_items[i].having_column_name, column_off))
+            {
+                vector<string>::iterator pos;
+                pos = find(exist_column_names.begin(),exist_column_names.end(),Having_items[i].having_column_name);
+                if(pos == exist_column_names.end())
+                {
+                    assembled_sql.append(",");
+                    assembled_sql.append(Having_items[i].having_column_name);
+                    assembled_sql.append(" ");
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
 
 /**************************************************
 Funtion     :   make_from_string
@@ -768,7 +918,7 @@ int64_t ObSelectStmt::make_group_by_string(ResultPlan& result_plan, string &asse
 
     if (group_expr_ids_.size() > 0)
     {
-        assembled_sql.append("GROUP BY ");
+        assembled_sql.append(" GROUP BY ");
         for (i = 0; i < group_expr_ids_.size(); i++)
         {
             string  assembled_sql_tmp;
@@ -813,13 +963,12 @@ int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan, string &asse
                 "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
     }
 
-
     for (i = 0; i < order_items_.size(); i++)
     {
         string  assembled_sql_tmp;
         if (i == 0)
         {
-            assembled_sql.append("ORDER BY ");
+            assembled_sql.append(" ORDER BY ");
         }
 
         OrderItem& item = order_items_[i];
@@ -868,7 +1017,7 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan, string &assemb
 
     if (having_expr_ids_.size() > 0)
     {
-        assembled_sql.append("HAVING ");
+        assembled_sql.append(" HAVING ");
         for (i = 0; i < having_expr_ids_.size(); i++)
         {
             string  assembled_sql_tmp;
@@ -1271,6 +1420,102 @@ vector<OrderItem> ObSelectStmt::fetch_order_from_tree(ResultPlan& result_plan, s
 
     return order_items;
 }
+
+
+/**************************************************
+Funtion     :   fetch_having_from_tree
+Author      :   qinbo
+Date        :   2013.12.6
+Description :   fetch having items from tree
+Input       :   ResultPlan& result_plan,
+                string table_name
+Output      :   
+ **************************************************/
+vector<HavingItem> ObSelectStmt::fetch_having_from_tree(ResultPlan& result_plan, string table_name)
+{
+    uint32_t i = 0;
+    ObSqlRawExpr* sql_expr = NULL;
+    vector<HavingItem> having_items;
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    if (logical_plan == NULL)
+    {
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+    }
+
+    for (i = 0; i < having_expr_ids_.size(); i++)
+    {
+        string      assembled_sql_tmp;
+        HavingItem  item;
+
+        sql_expr = logical_plan->get_expr_by_id(having_expr_ids_[i]);
+
+        if (NULL == sql_expr)
+        {
+            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                    "select item error!!! at %s:%d", __FILE__,__LINE__);
+            return having_items;
+        }
+            
+        ObBinaryOpRawExpr *select_op    = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+        ObBinaryRefRawExpr *select_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (select_op->get_first_op_expr()));
+        
+        if (select_expr->get_first_ref_id() == OB_INVALID_ID)
+        {
+            sql_expr = logical_plan->get_expr_by_ref_sql_expr_raw_id(select_expr->get_related_sql_raw_id());
+            if (NULL == sql_expr)
+            {
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "ref column error!!! at %s:%d", __FILE__,__LINE__);
+                return having_items;
+            }
+        
+            if (sql_expr->get_expr()->is_aggr_fun())
+            {
+                ObAggFunRawExpr *agg_fun_raw_expr = dynamic_cast<ObAggFunRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+        
+                if (NULL != agg_fun_raw_expr->get_param_expr())
+                {
+                    if (!agg_fun_raw_expr->get_param_expr()->is_column())
+                    {
+                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                                "select item error!!! at %s:%d", __FILE__,__LINE__);
+                        return having_items;
+                    }
+        
+                    agg_fun_raw_expr->get_param_expr()->to_string(result_plan, assembled_sql_tmp);
+                    item.having_column_name.assign(assembled_sql_tmp);
+                }
+            }
+        }
+        else if (sql_expr->get_expr()->is_column())
+        {
+            sql_expr->get_expr()->to_string(result_plan, assembled_sql_tmp);
+            item.having_column_name.assign(assembled_sql_tmp);
+        }
+        else
+        {
+            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                    "select item error!!! at %s:%d", __FILE__,__LINE__);
+            return having_items;
+        }
+        
+        if (sql_expr->is_contain_aggr())
+        {
+            item.aggr_fun_type = sql_expr->get_contain_aggr_type();
+        }
+        else
+        {
+            item.aggr_fun_type = T_INVALID;
+        }
+    
+        having_items.push_back(item);
+    }
+
+    return having_items;
+}
+
+
 
 /**************************************************
 Funtion     :   fetch_group_from_tree

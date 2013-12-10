@@ -183,4 +183,21 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
     return ret;
 }
 
+/**************************************************
+Funtion     :   make_exec_plan_unit_string
+Author      :   qinbo
+Date        :   2013.12.9
+Description :   make select sql
+Input       :   ResultPlan& result_plan, 
+                string where_conditions, 
+                schema_shard *shard_info,
+                string &assembled_sql
+                
+Output      :   
+ **************************************************/
+int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql)
+{
+    return OB_SUCCESS;
+}
+
 

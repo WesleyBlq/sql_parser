@@ -66,7 +66,9 @@ Output      :
  **************************************************/
 SameLevelExecPlan::SameLevelExecPlan()
 {
-
+    query_post_reduce_info = NULL;
+    //is_1st_plan;
+    //parent_sql_type;            //if need to be reparsed
 }
 
 /**************************************************
@@ -84,6 +86,11 @@ SameLevelExecPlan::~SameLevelExecPlan()
         parse_free(exec_plan_units.at(i));
     }
     exec_plan_units.clear();
+
+    if (NULL != query_post_reduce_info)
+    {
+        parse_free(query_post_reduce_info);
+    }
 }
 
 bool SameLevelExecPlan::get_parent_sql_type()
@@ -364,11 +371,11 @@ Output      :
  **************************************************/
 void QueryActuator::release_exec_plan()
 {
-    if (result_plan.plan_tree_ != NULL)
+    if (result_plan.plan_tree_)
     {
-        //delete (static_cast<logic_plan*>(result_plan->plan_tree_));
+        ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+        logical_plan->~ObLogicalPlan();
         parse_free(result_plan.plan_tree_);
-
         result_plan.plan_tree_ = NULL;
         result_plan.name_pool_ = NULL;
     }
@@ -379,7 +386,7 @@ void QueryActuator::release_exec_plan()
         result.result_tree_ = NULL;
     }
 
-    if (NULL != final_exec_plan)
+    if (final_exec_plan)
     {
         final_exec_plan->~FinalExecPlan();
         parse_free(final_exec_plan);
@@ -723,7 +730,7 @@ int QueryActuator::generate_select_plan_single_table(
     string sql_exec_plan_unit;
     ObSqlRawExpr* sql_expr = NULL;
 
-    /* get statement */
+    // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
@@ -762,7 +769,23 @@ int QueryActuator::generate_select_plan_single_table(
         physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
-    /*this table is not distributed table*/
+    //set sql post process info
+    QueryPostReduce* query_post_reduce_info = (QueryPostReduce*) parse_malloc(sizeof (QueryPostReduce), NULL);
+    if (query_post_reduce_info == NULL)
+    {
+        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Can not malloc space for QueryPostReduce at %s:%d", __FILE__,__LINE__);
+        return ret;
+    }
+    else
+    {
+        query_post_reduce_info = new(query_post_reduce_info) QueryPostReduce();
+        query_post_reduce_info->set_post_reduce_info(result_plan, select_stmt);
+        exec_plan->set_query_post_reduce_info(query_post_reduce_info);
+    }
+
+    //this table is not distributed table
     if (!table_schema->get_is_distributed_table())
     {
         if (1 != table_schema->get_all_shards().size())
@@ -789,7 +812,7 @@ int QueryActuator::generate_select_plan_single_table(
         }
         else
         {
-            /*decompose where conditions into seperate sql which is linked by AND*/
+            //decompose where conditions into seperate sql which is linked by AND
             sql_expr = logical_plan->get_expr_by_id(expr_ids.at(0));
             vector<vector<ObRawExpr*> > atomic_exprs_array;
 
@@ -827,14 +850,10 @@ int QueryActuator::generate_select_plan_single_table(
                         p_map1++;
                     }
 
-                    select_stmt->make_select_item_string(result_plan, assembled_sql);
-                    select_stmt->make_from_string(result_plan, assembled_sql);
-                    append_distributed_where_items(result_plan, assembled_sql, final_exprs_array);
-                    select_stmt->make_group_by_string(result_plan, assembled_sql);
-                    select_stmt->make_order_by_string(result_plan, assembled_sql);
-                    select_stmt->make_having_string(result_plan, assembled_sql);
-                    select_stmt->make_limit_string(result_plan, assembled_sql);
-
+                    string where_conditions;
+                    append_distributed_where_items(result_plan, where_conditions, final_exprs_array);
+                    select_stmt->make_exec_plan_unit_string(result_plan, where_conditions, shard_key, assembled_sql);
+                    
                     ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                     if (exec_plan_unit == NULL)
                     {
@@ -908,7 +927,7 @@ bool QueryActuator::reparse_where_with_route_for_one_table(
                 opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(all_table_shards.at(j), atomic_exprs));
             }
         }
-            /*if there is route sql, this sql should be sent to related shards*/
+        /*if there is route sql, this sql should be sent to related shards*/
         else
         {
             ret = build_shard_exprs_array_with_route_one_table(
@@ -974,7 +993,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
         if (key_relations.size() > 0)
         {
             router *route_info = (router *) result_plan.route_info;
-            if (!route_info->get_route_result(key_relations, &shard_info, NULL))
+            if (!route_info->get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
             {
                 jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -1059,9 +1078,6 @@ int QueryActuator::generate_select_plan_multi_table(
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     vector<string> table_names;
-    string table_name;
-
-    string sql_exec_plan_unit;
     vector<schema_shard*> shards_info;
     schema_shard* shard_info = NULL;
     ObSqlRawExpr* sql_expr = NULL;
@@ -1069,7 +1085,7 @@ int QueryActuator::generate_select_plan_multi_table(
     uint32_t i = 0;
     uint32_t j = 0;
 
-    /* get statement */
+    // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
@@ -1102,6 +1118,23 @@ int QueryActuator::generate_select_plan_multi_table(
         exec_plan = new(exec_plan) SameLevelExecPlan();
         physical_plan->add_same_level_exec_plan(exec_plan);
     }
+
+    //set sql post process info
+    QueryPostReduce* query_post_reduce_info = (QueryPostReduce*) parse_malloc(sizeof (QueryPostReduce), NULL);
+    if (query_post_reduce_info == NULL)
+    {
+        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Can not malloc space for QueryPostReduce at %s:%d", __FILE__,__LINE__);
+        return ret;
+    }
+    else
+    {
+        query_post_reduce_info = new(query_post_reduce_info) QueryPostReduce();
+        query_post_reduce_info->set_post_reduce_info(result_plan,select_stmt);
+        exec_plan->set_query_post_reduce_info(query_post_reduce_info);
+    }
+
 
     vector<uint64_t> expr_ids = select_stmt->get_where_exprs();
 
@@ -1138,13 +1171,13 @@ int QueryActuator::generate_select_plan_multi_table(
                     exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
                 }
 
-                select_stmt->make_stmt_string(result_plan, assembled_sql);
+                select_stmt->make_exec_plan_unit_string(result_plan, "", shard_info, assembled_sql);
 
                 /*generate sql exec plan*/
-                sql_exec_plan_unit.assign(assembled_sql);
-                exec_plan_unit->set_exec_unit_sql(sql_exec_plan_unit);
+                exec_plan_unit->set_exec_unit_sql(assembled_sql);
 
-                cout << "exec_plan_unit SQL name: " << sql_exec_plan_unit << endl;
+                cout << "exec_plan_unit shard name: " << shard_info->get_shard_name() << endl;
+                cout << "exec_plan_unit SQL name  : " << assembled_sql << endl;
                 exec_plan_unit->set_exec_uint_shard_info(shard_info);
 
                 /*add exec_plan_unit*/
@@ -1193,13 +1226,9 @@ int QueryActuator::generate_select_plan_multi_table(
                     p_map1++;
                 }
 
-                select_stmt->make_select_item_string(result_plan, assembled_sql);
-                select_stmt->make_from_string(result_plan, assembled_sql);
-                append_distributed_where_items(result_plan, assembled_sql, final_exprs_array);
-                select_stmt->make_group_by_string(result_plan, assembled_sql);
-                select_stmt->make_order_by_string(result_plan, assembled_sql);
-                select_stmt->make_having_string(result_plan, assembled_sql);
-                select_stmt->make_limit_string(result_plan, assembled_sql);
+                string where_conditions;
+                append_distributed_where_items(result_plan, where_conditions, final_exprs_array);
+                select_stmt->make_exec_plan_unit_string(result_plan, where_conditions, shard_info, assembled_sql);
 
                 ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                 if (exec_plan_unit == NULL)
@@ -1381,7 +1410,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
         if (key_relations.size() > 0)
         {
             router *route_info = (router *) result_plan.route_info;
-            if (!route_info->get_route_result(key_relations, &shard_info, NULL))
+            if (!route_info->get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
             {
                 jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -2281,7 +2310,7 @@ int QueryActuator::gen_exec_plan_insert(
                     if (key_relations.size() > 0)
                     {
                         router *route_info = (router *) result_plan.route_info;
-                        if (!route_info->get_route_result(key_relations, &shard_info, NULL))
+                        if (!route_info->get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
                         {
                             jlog(WARNING, "route info manage error");
                             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -2354,14 +2383,14 @@ bool QueryActuator::vector_elem_exist_already(
                             vector<schema_shard*> vector_shards,
                             schema_shard* single_shard)
 {
-    for (uint32_t i =0; i < vector_shards.size(); i++)
+    vector<schema_shard*>::iterator iter;
+    iter = find(vector_shards.begin(), vector_shards.end(), single_shard);
+    
+    if (iter == vector_shards.end())
     {
-        if (single_shard == vector_shards.at(i))
-        {
-            return true;
-        }
+        return false;
     }
-    return false;
+    return true;
 }
 
 
@@ -2387,7 +2416,6 @@ int QueryActuator::distribute_sql_to_all_shards(
     schema_shard*   shard_info  = NULL;
     ObBasicStmt*    stmt        = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    string  sql_exec_plan_unit;
     
     if (0 == table_schema->get_all_shards().size())
     {
@@ -2418,14 +2446,13 @@ int QueryActuator::distribute_sql_to_all_shards(
             exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
         }
     
-        stmt->make_stmt_string(result_plan, assembled_sql);
+        stmt->make_exec_plan_unit_string(result_plan, "", shard_info, assembled_sql);
     
         /*generate sql exec plan*/
-        sql_exec_plan_unit.assign(assembled_sql);
-        exec_plan_unit->set_exec_unit_sql(sql_exec_plan_unit);
+        exec_plan_unit->set_exec_unit_sql(assembled_sql);
     
         cout << "exec_plan_unit shard name: " << shard_info->get_shard_name() << endl;
-        cout << "exec_plan_unit SQL name  : " << sql_exec_plan_unit << endl;
+        cout << "exec_plan_unit SQL name  : " << assembled_sql << endl;
         exec_plan_unit->set_exec_uint_shard_info(shard_info);
     
         /*add exec_plan_unit*/

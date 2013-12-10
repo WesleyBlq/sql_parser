@@ -1979,7 +1979,7 @@ int resolve_table_columns(
                         expr->set_result_type(column_item->data_type_);
 
                         //BEGIN: added by qinbo
-                        if (select_stmt->get_from_item_size() > 0)
+                        if (select_stmt->get_from_item_size() > 1)
                         {
                             expr->set_op_name_field();
                         }

@@ -52,6 +52,7 @@ OBJS_SQL =  \
 	ob_logical_plan.o\
 	dml_build_plan.o \
 	crud_build_plan.o \
+	query_reduce.o \
 	jd_exec_plan.o
 
 #libsql.a

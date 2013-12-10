@@ -38,7 +38,7 @@ namespace oceanbase
             common::ObObjType type_;
 
             string raw_select_item_name;
-            SqlItemType aggr_fun_type; /*added by qinbo*/
+            SqlItemType aggr_fun_type;
         };
 
         struct LimitItem
@@ -51,7 +51,6 @@ namespace oceanbase
 
         struct OrderItem
         {
-
             enum OrderType
             {
                 ASC,
@@ -60,12 +59,12 @@ namespace oceanbase
 
             uint64_t expr_id_;
             OrderType order_type_;
+            common::ObObjType column_type_;
             string order_column;
         };
 
         struct GroupItem
         {
-
             enum GroupType
             {
                 ASC,
@@ -74,14 +73,20 @@ namespace oceanbase
 
             uint64_t expr_id_;
             GroupType group_type_;
+            common::ObObjType column_type_;
             string group_column_;
         };
 
+        struct HavingItem
+        {
+            uint64_t expr_id_;
+            common::ObObjType column_type_;
+            string having_column_name;
+            SqlItemType aggr_fun_type;
+        };
         /*END: added by qinbo*/
-
         struct JoinedTable
         {
-
             enum JoinType
             {
                 T_FULL,
@@ -176,11 +181,9 @@ namespace oceanbase
 #endif
     namespace sql
     {
-
         class ObSelectStmt : public ObStmt
         {
         public:
-
             enum SetOperator
             {
                 UNION,
@@ -328,7 +331,53 @@ namespace oceanbase
             }
 
             //BEGIN: Added by qinbo
+            const bool try_fetch_select_item_by_column_name(vector<SelectItem> &select_items, string column_name, uint32_t &offset)
+            {
+                for (uint32_t i = 0; i< select_items.size(); i++)
+                {
+                    if (select_items[i].raw_select_item_name == column_name)
+                    {
+                        offset = i;
+                        return true;
+                    }
+                }
 
+                return false;
+            }
+
+            const bool try_fetch_group_from_order_by_column_name(vector<OrderItem> &order_items, string column_name)
+            {
+                for (uint32_t i = 0; i< order_items.size(); i++)
+                {
+                    if (order_items[i].order_column == column_name)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            
+            const bool is_group_by_order_by_same(ResultPlan& result_plan)
+            {
+                vector<GroupItem> group_items = fetch_group_from_tree(result_plan, "");
+                vector<OrderItem> order_items = fetch_order_from_tree(result_plan, "");
+                
+                if (group_items.size() == order_items.size())
+                {
+                    for (uint32_t i=0; i< group_items.size(); i++)
+                    {
+                        if (!try_fetch_group_from_order_by_column_name(order_items, group_items.at(i).group_column_))
+                        {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+
+                return false;
+            }
+            
             const vector<FromItem> &get_all_from_items()
             {
                 return from_items_;
@@ -455,16 +504,16 @@ namespace oceanbase
             int copy_select_items(ObSelectStmt* select_stmt);
             void print(FILE* fp, int32_t level, int32_t index = 0);
 
-            /*BEGIN: added by qinbo*/
             int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql);
             int64_t make_select_item_string(ResultPlan& result_plan, string &assembled_sql);
+            int64_t append_select_items_reduce_used(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_from_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_where_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_group_by_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_order_by_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_having_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_limit_string(ResultPlan& result_plan, string &assembled_sql);
-            /*END: added by qinbo*/
         private:
             /* These fields are only used by normal select */
             bool is_distinct_;
@@ -500,6 +549,7 @@ namespace oceanbase
             vector<string> fetch_where_from_tree(ResultPlan& result_plan, string table_name);
             vector<GroupItem> fetch_group_from_tree(ResultPlan& result_plan, string table_name);
             vector<OrderItem> fetch_order_from_tree(ResultPlan& result_plan, string table_name);
+            vector<HavingItem> fetch_having_from_tree(ResultPlan& result_plan, string table_name);
             LimitItem fetch_limit_from_tree(ResultPlan& result_plan);
 
             void set_follow_order(bool f)

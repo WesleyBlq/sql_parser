@@ -87,13 +87,13 @@ SELECT address,lastname FROM persons";
     string sql_test2 = "SELECT id from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing'";
     string sql_test3 = "SELECT id FROM pp";
     
-    //string sql_test4 = "SELECT id from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing' UNION distinct SELECT id FROM tt";
-    
-    string sql_test4 = "select * from t1 order by id";
+    string sql_test40 = "SELECT * from pp";
+    // UNION distinct SELECT id FROM tt
+    string sql_test4 = "SELECT MAX(id) from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing' GROUP BY name Having SUM(age)>100 ORDER BY age";
     //sql_parser(sql3, "qinbo");
     //sql_parser(sql6);
     //sql_parser(sql10);
-    sql_parser(sql_test4, "oxwf");
+    sql_parser(sql_test40, "oxwf");
     //sql_parser(sql14);
     //sql_parser(sql9);
     //sql_parser(sql8, "qinbo");

@@ -102,6 +102,8 @@ namespace oceanbase
 
             virtual void print(FILE* fp, int32_t level, int32_t index) = 0;
             virtual int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql) = 0;
+            virtual int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql)=0;
+
 
         protected:
             void print_indentation(FILE* fp, int32_t level) const;

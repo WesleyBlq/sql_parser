@@ -79,4 +79,9 @@ int64_t ObVariableSetStmt::make_stmt_string(ResultPlan& result_plan, string &ass
     return OB_SUCCESS;
 }
 
+int64_t ObVariableSetStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql)
+{
+    return OB_SUCCESS;
+}
+
 

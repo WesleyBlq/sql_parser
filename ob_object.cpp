@@ -704,7 +704,7 @@ void ObObj::print_value(FILE* fd)
             fprintf(fd, "%ld", value_.int_val);
             break;
         case ObVarcharType:
-            fprintf(fd, "%.*s", val_len_, value_.varchar_val);
+            fprintf(fd, "%.*s", val_len_, varchar_val.data());
             break;
         case ObFloatType:
             fprintf(fd, "%2f", value_.float_val);

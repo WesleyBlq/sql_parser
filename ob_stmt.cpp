@@ -589,3 +589,8 @@ int64_t ObStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
     return OB_SUCCESS;
 }
 
+int64_t ObStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql)
+{
+    return OB_SUCCESS;
+}
+
