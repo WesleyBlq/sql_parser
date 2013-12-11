@@ -2532,7 +2532,7 @@ int resolve_limit_clause(
         }
         if (ret == OB_SUCCESS)
         {
-            select_stmt->set_limit_offset(limit_count, limit_offset);
+            ret = select_stmt->set_limit_offset(result_plan, limit_count, limit_offset);
         }
     }
     return ret;

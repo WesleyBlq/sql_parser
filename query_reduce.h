@@ -70,7 +70,7 @@ private:
 class HavingPostReduce
 {
 public:
-    HavingPostReduce(int32_t pos, int32_t func, int32_t operate, int32_t value,
+    HavingPostReduce(int32_t pos, int32_t func, int32_t operate, double value,
             enum enum_field_types field_type);
     HavingPostReduce(const HavingPostReduce& orig);
     virtual ~HavingPostReduce();
@@ -98,10 +98,10 @@ public:
     void set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt *select_stmt);
     void set_post_reduce_type(int32_t reduce);                                  //start process sequence type 
     void set_appended_column_num(uint32_t original_field_num, uint32_t real_field_num);   //column nums.
-    void set_limit_reduce_info(uint64_t *row_offset, uint64_t *row_count);                  //limit     
+    void set_limit_reduce_info(uint64_t row_offset, uint64_t row_count);                   //limit     
     void add_group_reduce_info(bool sort, int32_t pos, enum enum_field_types field_type);  //pos: column sequ in select columns 
     void add_aggr_func_reduce_info(int32_t pos, int32_t func, enum enum_field_types field_type);//same to 
-    void add_having_reduce_info(int32_t pos, int32_t func, int32_t operate, int32_t value, enum enum_field_types field_type);
+    void add_having_reduce_info(int32_t pos, int32_t func, int32_t operate, double value, enum enum_field_types field_type);
     void add_order_reduce_info(bool sort, int32_t pos, enum enum_field_types field_type);
 
     int32_t get_reduce();

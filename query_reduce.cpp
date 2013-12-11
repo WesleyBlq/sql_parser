@@ -76,7 +76,7 @@ enum enum_field_types AggrFuncPostReduce::get_field_type()
     return field_type;
 }
 
-HavingPostReduce::HavingPostReduce(int32_t pos, int32_t func, int32_t operate, int32_t value,
+HavingPostReduce::HavingPostReduce(int32_t pos, int32_t func, int32_t operate, double value,
         enum enum_field_types field_type) : pos(pos), func(func), operate(operate),
 value(value), field_type(field_type)
 {
@@ -118,7 +118,8 @@ enum enum_field_types HavingPostReduce::get_field_type()
 
 QueryPostReduce::QueryPostReduce( )
 {
-    
+    row_offset = 0;
+    row_count = 0xFFFFFFFF;
 }
 
 QueryPostReduce::QueryPostReduce(const QueryPostReduce& orig)
@@ -144,11 +145,15 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
         return;
     }
 
-    vector<SelectItem>  select_items    = select_stmt->fetch_select_from_tree(result_plan, "");
-    vector<GroupItem>   group_items     = select_stmt->fetch_group_from_tree(result_plan, "");
-    vector<OrderItem>   order_items     = select_stmt->fetch_order_from_tree(result_plan, "");
-    vector<HavingItem>  having_items    = select_stmt->fetch_having_from_tree(result_plan, "");
+    vector<SelectItem>  select_items    = select_stmt->get_all_select_items();
+    vector<GroupItem>   group_items     = select_stmt->get_all_group_items();
+    vector<OrderItem>   order_items     = select_stmt->get_all_order_items();
+    vector<HavingItem>  having_items    = select_stmt->get_all_having_items();
+    LimitItem           limit_item      = select_stmt->get_limit_item();
     uint32_t            raw_select_num  = select_items.size();
+
+    //set limit 
+    set_limit_reduce_info(limit_item.start, limit_item.end);
 
     if (group_items.size() > 0)
     {
@@ -268,25 +273,10 @@ void QueryPostReduce::set_appended_column_num(uint32_t original_field_num, uint3
     this->real_field_num = real_field_num;
 }
 
-void QueryPostReduce::set_limit_reduce_info(uint64_t *row_offset, uint64_t *row_count)
+void QueryPostReduce::set_limit_reduce_info(uint64_t row_offset, uint64_t row_count)
 {
-    if (row_offset)
-    {
-        this->row_offset = *row_offset;
-    }
-    else
-    {
-        this->row_offset = 0;
-
-    }
-    if (row_count)
-    {
-        this->row_count = *row_count;
-    }
-    else
-    {
-        this->row_count = 0xFFFFFFFF;
-    }
+    this->row_offset = row_offset;
+    this->row_count = row_count;
 }
 
 bool QueryPostReduce::find_column_if_exist(vector<string> &columns, string goal_column, uint32_t column_off)
@@ -313,7 +303,7 @@ void QueryPostReduce::add_aggr_func_reduce_info(int32_t pos, int32_t func, enum 
     this->func.push_back(AggrFuncPostReduce(pos, func, field_type));
 }
 
-void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func, int32_t operate, int32_t value, enum enum_field_types field_type)
+void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func, int32_t operate, double value, enum enum_field_types field_type)
 {
     this->having.push_back(HavingPostReduce(pos, func, operate, value, field_type));
 }

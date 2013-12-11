@@ -74,7 +74,7 @@ namespace oceanbase
             string having_column_name;
             SqlItemType aggr_fun_type;
             uint32_t    aggr_fun_operate;
-            int64_t     aggr_fun_value;
+            double      aggr_fun_value;
         };
         /*END: added by qinbo*/
         struct JoinedTable
@@ -119,6 +119,7 @@ namespace oceanbase
         struct FromItem
         {
             uint64_t table_id_;
+            string   table_name_;
             // false: it is the real table id
             // true: it is the joined table id
             bool is_joined_;
@@ -352,8 +353,8 @@ namespace oceanbase
             
             const bool is_group_by_order_by_same(ResultPlan& result_plan)
             {
-                vector<GroupItem> group_items = fetch_group_from_tree(result_plan, "");
-                vector<OrderItem> order_items = fetch_order_from_tree(result_plan, "");
+                vector<GroupItem> group_items = get_all_group_items();
+                vector<OrderItem> order_items = get_all_order_items();
                 
                 if (group_items.size() == order_items.size())
                 {
@@ -368,11 +369,6 @@ namespace oceanbase
                 }
 
                 return false;
-            }
-            
-            const vector<FromItem> &get_all_from_items()
-            {
-                return from_items_;
             }
             //END: Added by qinbo
 
@@ -424,6 +420,7 @@ namespace oceanbase
                 {
                     FromItem item;
                     item.table_id_ = tid;
+                    item.table_name_ = ObStmt::get_table_item_by_id(tid)->table_name_;
                     item.is_joined_ = is_joined;
                     from_items_.push_back(item);
                     return common::OB_SUCCESS;
@@ -460,6 +457,36 @@ namespace oceanbase
                 having_items_.push_back(having_item);
                 return common::OB_SUCCESS;
             }
+
+            const vector<SelectItem> &get_all_select_items()
+            {
+                return select_items_;
+            }
+
+            const vector<GroupItem> &get_all_group_items()
+            {
+                return group_items_;
+            }
+            
+            const vector<OrderItem> &get_all_order_items()
+            {
+                return order_items_;
+            }
+            
+            const vector<HavingItem> &get_all_having_items()
+            {
+                return having_items_;
+            }
+            
+            const vector<FromItem> &get_all_from_items()
+            {
+                return from_items_;
+            }
+
+            const LimitItem& get_limit_item()
+            {
+                return limit_item_;
+            }
             //END: added by qinbo
 
             int add_order_item(OrderItem& order_item)
@@ -480,11 +507,7 @@ namespace oceanbase
                 return common::OB_SUCCESS;
             }
 
-            void set_limit_offset(const uint64_t& limit, const uint64_t& offset)
-            {
-                limit_count_id_ = limit;
-                limit_offset_id_ = offset;
-            }
+            int set_limit_offset(ResultPlan * result_plan, const uint64_t& limit, const uint64_t& offset);
 
             void set_for_update(bool for_update)
             {
@@ -530,7 +553,7 @@ namespace oceanbase
                                 ObObjType &column_type,
                                 SqlItemType &aggr_fun_type,
                                 uint32_t    &aggr_fun_operate,
-                                int64_t     &aggr_fun_value,
+                                double      &aggr_fun_value,
                                 string      &column_name);
         private:
             /* These fields are only used by normal select */
@@ -538,6 +561,7 @@ namespace oceanbase
             vector<SelectItem> select_items_;
             vector<FromItem> from_items_;
             vector<JoinedTable*> joined_tables_;
+            LimitItem        limit_item_;
             vector<uint64_t> group_expr_ids_;
             vector<uint64_t> having_expr_ids_;
             vector<uint64_t> agg_func_ids_;
@@ -564,14 +588,6 @@ namespace oceanbase
 
             /* for tangchao@jd.com, optimize select */
         public:
-            vector<string> fetch_tables_from_tree(ResultPlan& result_plan);
-            vector<SelectItem> fetch_select_from_tree(ResultPlan& result_plan, string table_name);
-            vector<string> fetch_where_from_tree(ResultPlan& result_plan, string table_name);
-            vector<GroupItem> fetch_group_from_tree(ResultPlan& result_plan, string table_name);
-            vector<OrderItem> fetch_order_from_tree(ResultPlan& result_plan, string table_name);
-            vector<HavingItem> fetch_having_from_tree(ResultPlan& result_plan, string table_name);
-            LimitItem fetch_limit_from_tree(ResultPlan& result_plan);
-
             void set_follow_order(bool f)
             {
                 follow_order = f;

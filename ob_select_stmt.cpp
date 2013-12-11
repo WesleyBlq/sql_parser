@@ -130,6 +130,90 @@ int ObSelectStmt::add_select_item(
     return ret;
 }
 
+int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& limit, const uint64_t& offset)
+{
+    int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
+    ObSqlRawExpr* sql_expr = NULL;
+    ObConstRawExpr *const_raw_expr = NULL;
+
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
+    if (logical_plan == NULL)
+    {
+        ret = OB_ERR_LOGICAL_PLAN_FAILD;
+        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+    }
+
+    limit_count_id_ = limit;
+    limit_offset_id_ = offset;
+
+    if (limit_offset_id_ != OB_INVALID_ID)
+    {
+        sql_expr = logical_plan->get_expr_by_id(limit_offset_id_);
+        if (NULL != sql_expr)
+        {
+            if (sql_expr->get_expr()->is_const())
+            {
+                const_raw_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+                if (ObIntType == const_raw_expr->get_value().get_type())
+                {
+                    const_raw_expr->get_value().get_int(limit_item_.start);
+                }
+                else
+                {
+                    ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                            "limit_offset set error!!! at %s:%d", __FILE__,__LINE__);
+                }
+            }
+            else
+            {
+                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "limit_offset set error!!! at %s:%d", __FILE__,__LINE__);
+            }
+        }
+    }
+
+    if (ret != OB_SUCCESS)
+    {
+        return ret;
+    }
+
+    if (limit_count_id_ != OB_INVALID_ID)
+    {
+        sql_expr = logical_plan->get_expr_by_id(limit_count_id_);
+        if (NULL != sql_expr)
+        {
+            if (limit_offset_id_ != OB_INVALID_ID)
+            {
+                if (sql_expr->get_expr()->is_const())
+                {
+                    const_raw_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+                    if (ObIntType == const_raw_expr->get_value().get_type())
+                    {
+                        const_raw_expr->get_value().get_int(limit_item_.end);
+                    }
+                    else
+                    {
+                        ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                                "limit_count set error!!! at %s:%d", __FILE__,__LINE__);
+                    }
+                }
+                else
+                {
+                    ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                            "limit_count set error!!! at %s:%d", __FILE__,__LINE__);
+                }
+            }
+        }
+    }
+    return ret;
+    
+}
+
 // return the first expr with name alias_name
 
 uint64_t ObSelectStmt::get_alias_expr_id(string& alias_name)
@@ -745,10 +829,10 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
                 "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
     }
 
-    vector<SelectItem>  select_items    = fetch_select_from_tree(result_plan, "");
-    vector<GroupItem>   group_items     = fetch_group_from_tree(result_plan, "");
-    vector<OrderItem>   order_items     = fetch_order_from_tree(result_plan, "");
-    vector<HavingItem>  Having_items    = fetch_having_from_tree(result_plan, "");
+    vector<SelectItem>  select_items    = get_all_select_items();
+    vector<GroupItem>   group_items     = get_all_group_items();
+    vector<OrderItem>   order_items     = get_all_order_items();
+    vector<HavingItem>  Having_items    = get_all_having_items();
     vector<string>      exist_column_names;
     uint32_t            column_off = 0;
 
@@ -1181,228 +1265,6 @@ int64_t ObSelectStmt::make_where_string(ResultPlan& result_plan, string &assembl
     return ret;
 }
 
-/**************************************************
-Funtion     :   fetch_tables_from_tree
-Author      :   qinbo
-Date        :   2013.9.24
-Description :   fetch table names from tree
-Input       :   ResultPlan& result_plan,
-Output      :   
- **************************************************/
-vector<string> ObSelectStmt::fetch_tables_from_tree(ResultPlan& result_plan)
-{
-    uint32_t i = 0;
-    vector<string> table_names;
-
-    if (is_from_item_with_join())
-    {
-        return table_names;
-    }
-
-    for (i = 0; i < from_items_.size(); i++)
-    {
-        FromItem& item = from_items_[i];
-        string table_item = ObStmt::get_table_item_by_id(item.table_id_)->table_name_;
-        table_names.push_back(table_item);
-    }
-
-    return table_names;
-}
-
-/**************************************************
-Funtion     :   fetch_select_from_tree
-Author      :   qinbo
-Date        :   2013.9.24
-Description :   fetch select items from tree
-Input       :   ResultPlan& result_plan,
-                string table_name
-Output      :   
- **************************************************/
-vector<SelectItem> ObSelectStmt::fetch_select_from_tree(ResultPlan& result_plan, string table_name)
-{
-    return select_items_;
-}
-
-/**************************************************
-Funtion     :   fetch_where_from_tree
-Author      :   qinbo
-Date        :   2013.9.24
-Description :   fetch where items from tree
-Input       :   ResultPlan& result_plan,
-                string table_name
-Output      :   
- **************************************************/
-vector<string> ObSelectStmt::fetch_where_from_tree(ResultPlan& result_plan, string table_name)
-{
-    uint32_t i = 0;
-    ObSqlRawExpr* sql_expr = NULL;
-    vector<string> where_items;
-    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
-    }
-
-    vector<uint64_t>& where_exprs = ObStmt::get_where_exprs();
-
-    for (i = 0; i < where_exprs.size(); i++)
-    {
-        string  assembled_sql_tmp;
-        sql_expr = logical_plan->get_expr_by_id(where_exprs[i]);
-        if (NULL == sql_expr)
-        {
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "where expr name error!!! at %s:%d", __FILE__,__LINE__);
-            return where_items;
-        }
-
-        sql_expr->to_string(result_plan, assembled_sql_tmp);
-        where_items.push_back(assembled_sql_tmp);
-    }
-
-    return where_items;
-}
-
-/**************************************************
-Funtion     :   fetch_group_from_tree
-Author      :   qinbo
-Date        :   2013.9.24
-Description :   fetch group by items from tree
-Input       :   ResultPlan& result_plan,
-                string table_name
-Output      :   
- **************************************************/
-vector<GroupItem> ObSelectStmt::fetch_group_from_tree(ResultPlan& result_plan, string table_name)
-{
-    return group_items_;
-}
-
-/**************************************************
-Funtion     :   fetch_order_from_tree
-Author      :   qinbo
-Date        :   2013.9.24
-Description :   fetch order by items from tree
-Input       :   ResultPlan& result_plan,
-                string table_name
-Output      :   
- **************************************************/
-vector<OrderItem> ObSelectStmt::fetch_order_from_tree(ResultPlan& result_plan, string table_name)
-{
-    return order_items_;
-}
-
-
-/**************************************************
-Funtion     :   fetch_having_from_tree
-Author      :   qinbo
-Date        :   2013.12.6
-Description :   fetch having items from tree
-Input       :   ResultPlan& result_plan,
-                string table_name
-Output      :   
- **************************************************/
-vector<HavingItem> ObSelectStmt::fetch_having_from_tree(ResultPlan& result_plan, string table_name)
-{
-    return having_items_;
-}
-
-
-
-/**************************************************
-Funtion     :   fetch_group_from_tree
-Author      :   qinbo
-Date        :   2013.9.24
-Description :   fetch group by items from tree
-Input       :   ResultPlan& result_plan,
-                string table_name
-Output      :   
- **************************************************/
-LimitItem
-ObSelectStmt::fetch_limit_from_tree(ResultPlan& result_plan)
-{
-    LimitItem limit_item;
-    int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    ObSqlRawExpr* sql_expr = NULL;
-    ObConstRawExpr *const_raw_expr = NULL;
-    bool is_add = false;
-
-    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
-    }
-
-    if (has_limit())
-    {
-        if (limit_offset_id_ != OB_INVALID_ID)
-        {
-            sql_expr = logical_plan->get_expr_by_id(limit_offset_id_);
-            if (NULL != sql_expr)
-            {
-                if (sql_expr->get_expr()->is_const())
-                {
-                    const_raw_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
-                    if (ObIntType == const_raw_expr->get_value().get_type())
-                    {
-                        const_raw_expr->get_value().get_int(limit_item.start, is_add);
-                    }
-                    else
-                    {
-                        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "limit_offset set error!!! at %s:%d", __FILE__,__LINE__);
-                    }
-                }
-                else
-                {
-                    ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "limit_offset set error!!! at %s:%d", __FILE__,__LINE__);
-                }
-            }
-        }
-
-        if (ret != OB_SUCCESS)
-        {
-            return limit_item;
-        }
-
-        if (limit_count_id_ != OB_INVALID_ID)
-        {
-            sql_expr = logical_plan->get_expr_by_id(limit_count_id_);
-            if (NULL != sql_expr)
-            {
-                if (limit_offset_id_ != OB_INVALID_ID)
-                {
-                    if (sql_expr->get_expr()->is_const())
-                    {
-                        const_raw_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
-                        if (ObIntType == const_raw_expr->get_value().get_type())
-                        {
-                            const_raw_expr->get_value().get_int(limit_item.end, is_add);
-                        }
-                        else
-                        {
-                            ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "limit_count set error!!! at %s:%d", __FILE__,__LINE__);
-                        }
-                    }
-                    else
-                    {
-                        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "limit_count set error!!! at %s:%d", __FILE__,__LINE__);
-                    }
-                }
-            }
-        }
-    }
-    return limit_item;
-}
 
 /**************************************************
 Funtion     :   get_column_info_by_expr_id
@@ -1524,12 +1386,14 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
                     ObObjType &column_type,
                     SqlItemType &aggr_fun_type,
                     uint32_t    &aggr_fun_operate,
-                    int64_t     &aggr_fun_value,
+                    double      &aggr_fun_value,
                     string      &column_name)
 {
     int             ret = OB_SUCCESS;
     ObSqlRawExpr*   sql_expr = NULL;
     string          assembled_sql_tmp;
+    int64_t         int_value   = 0;
+    float           float_value = 0.0;
     
     ObLogicalPlan*  logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
     if (logical_plan == NULL)
@@ -1609,16 +1473,32 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
         aggr_fun_type = T_INVALID;
     }
 
-    if (T_INT != second_expr->get_expr_type())
+
+    if ((T_INT != second_expr->get_expr_type())
+        &&(T_FLOAT != second_expr->get_expr_type())
+        &&(T_DOUBLE != second_expr->get_expr_type()))
     {
         ret = OB_ERR_ILLEGAL_ID;
         snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Aggr func only support INT type value!!! at %s:%d", __FILE__,__LINE__);
+                "Aggr func only support INT/FLOAT/DOUBLE/DECIMAL type value!!! at %s:%d", __FILE__,__LINE__);
         return ret;
     }
     else
     {
-        second_expr->get_value().get_int(aggr_fun_value);
+        if (T_INT == second_expr->get_expr_type())
+        {
+            second_expr->get_value().get_int(int_value);
+            aggr_fun_value = (double)int_value;
+        }
+        else if (T_FLOAT == second_expr->get_expr_type())
+        {
+            second_expr->get_value().get_float(float_value);
+            aggr_fun_value = (double)float_value;
+        } 
+        else if (T_DOUBLE == second_expr->get_expr_type())
+        {
+            second_expr->get_value().get_double(aggr_fun_value);
+        }
     }
 
     return ret;

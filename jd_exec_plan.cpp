@@ -1,3 +1,14 @@
+/************************************************************
+  Copyright (C), 2013-2015
+  FileName:     jd_exec_plan.cpp
+  Author:       qinbo      
+  Version :          
+  Date:         
+  Description:  exec plan generator
+  History: 
+      <author>  <time>   <version >     <desc>
+      qinbo    2013/9/15     1.0       build this moudle  
+***********************************************************/
 
 #include <algorithm>
 #include "jd_exec_plan.h"
@@ -70,7 +81,7 @@ Output      :
  **************************************************/
 SameLevelExecPlan::~SameLevelExecPlan()
 {
-    for(int32_t i = 0; i < exec_plan_units.size(); i++)
+    for(uint32_t i = 0; i < exec_plan_units.size(); i++)
     {
         parse_free(exec_plan_units.at(i));
     }
@@ -84,7 +95,7 @@ SameLevelExecPlan::~SameLevelExecPlan()
 
 bool SameLevelExecPlan::get_parent_sql_type()
 {
-
+    return false;
 }
 
 void SameLevelExecPlan::set_parent_sql_type(uint8_t parent_sql_type)
@@ -147,7 +158,7 @@ return      :
  **************************************************/
 FinalExecPlan::~FinalExecPlan()
 {
-    for(int32_t i = 0; i < same_level_exec_plans.size(); i++)
+    for(uint32_t i = 0; i < same_level_exec_plans.size(); i++)
     {
         same_level_exec_plans[i]->~SameLevelExecPlan();
         parse_free(same_level_exec_plans.at(i));
@@ -247,7 +258,7 @@ QueryActuator::~QueryActuator()
 
 FinalExecPlan* QueryActuator::popActuator()
 {
-
+    return NULL;;
 
 }
 
@@ -261,7 +272,7 @@ void QueryActuator::pushActuator(FinalExecPlan* exec_plan)
 bool QueryActuator::is_all_plan_done()
 {
 
-
+    return false;;
 
 }
 
@@ -281,8 +292,7 @@ void QueryActuator::set_next_plan_reparsed()
 
 bool QueryActuator::get_next_plan_reparsed()
 {
-
-
+    return false;;
 }
 
 void QueryActuator::reparse_next_plan()
@@ -359,7 +369,7 @@ Description :   generate exec plan
 Input       :   
 Output      :   
  **************************************************/
-int QueryActuator::release_exec_plan()
+void QueryActuator::release_exec_plan()
 {
     if (result_plan.plan_tree_)
     {
@@ -426,7 +436,7 @@ Output      :
  **************************************************/
 int QueryActuator::generate_exec_plan(
         string sql,
-        int32_t* index)
+        uint32_t* index)
 {
     int&        ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     bool        new_generated = false;
@@ -441,7 +451,7 @@ int QueryActuator::generate_exec_plan(
         return ret;
     }
 
-    cout << "<<Part 1 : SQL STRING>>" << sql << endl;
+    cout << "<<Part 1 : SQL STRING>>" << endl << sql << endl;
     parse_sql(&result, sql.data(), sql.size());
 
     if (result.result_tree_ == NULL)
@@ -453,14 +463,11 @@ int QueryActuator::generate_exec_plan(
         result.result_tree_ = NULL;
         return ret;
     }
-
-    #if 0
     else
     {
-        fprintf(stderr, "\n<<Part 2 : PARSE TREE>>\n");
+        cout << "<<Part 2 : PARSE TREE>>" << endl;
         print_tree(result.result_tree_, 0);
     }
-    #endif
 
     if (result.result_tree_ != NULL)
     {
@@ -512,9 +519,8 @@ int QueryActuator::generate_exec_plan(
         }
     }
 
-    if (NULL == result_plan.plan_tree_)
+    if ((!result_plan.plan_tree_)||(OB_SUCCESS != ret))
     {
-        fprintf(stderr, "Generate LogicalPlan ErrInfo: %s\n", result_plan.err_stat_.err_msg_);
         return ret;
     }
     
@@ -533,7 +539,8 @@ int QueryActuator::generate_exec_plan(
             if ((final_exec_plan = (FinalExecPlan*) parse_malloc(sizeof (FinalExecPlan), NULL)) == NULL)
             {
                 ret = OB_ERR_PARSER_MALLOC_FAILED;
-                jlog(INFO, "Can not malloc space for FinalExecPlan");
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                    "Can not malloc space for FinalExecPlan at %s:%d", __FILE__,__LINE__);
             }
             else
             {
@@ -552,7 +559,8 @@ int QueryActuator::generate_exec_plan(
             if (stmt == NULL)
             {
                 ret = OB_ERR_ILLEGAL_ID;
-                jlog(INFO, "Wrong query id to find query statement");
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                    "Wrong query id to find query statement at %s:%d", __FILE__,__LINE__);
             }
         }
 
@@ -579,11 +587,6 @@ int QueryActuator::generate_exec_plan(
                     jlog(INFO, "Unknown logical plan, stmt_type=%d", stmt->get_stmt_type());
                     break;
             }
-        }
-
-        if (OB_SUCCESS != ret)
-        {
-            fprintf(stderr, "Generate ExecPlan ErrInfo: %s\n", result_plan.err_stat_.err_msg_);
         }
 
         if (ret != OB_SUCCESS && new_generated && final_exec_plan != NULL)
@@ -635,20 +638,20 @@ int QueryActuator::gen_exec_plan_select(
         FinalExecPlan* physical_plan,
         ErrStat& err_stat,
         const uint64_t& query_id,
-        int32_t* index)
+        uint32_t* index)
 {
     int ret = err_stat.err_code_ = OB_SUCCESS;
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    router *route_info = static_cast<router*> (result_plan.route_info);
+    //router *route_info = static_cast<router*> (result_plan.route_info);
 
-    /* get statement */
+    //get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Can not get stmt");
+                "Can not get stmt at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
@@ -671,7 +674,7 @@ int QueryActuator::gen_exec_plan_select(
         {
             ret = OB_ERR_GEN_PLAN;
             snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                    "Can not support stmt with JOIN now");
+                    "Can not support stmt with JOIN now at %s:%d", __FILE__,__LINE__);
         }
         else
         {
@@ -692,9 +695,9 @@ int QueryActuator::gen_exec_plan_select(
         ret = JD_ERR_SQL_NOT_SUPPORT;
         jlog(WARNING, "Now we DO NOT support 'union distinct' query");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Now we DO NOT support 'union distinct' query");
+                "Now we DO NOT support 'union distinct' query at %s:%d", __FILE__,__LINE__);
     }
-    
+
     return ret;
 }
 
@@ -714,22 +717,17 @@ int QueryActuator::generate_select_plan_single_table(
         FinalExecPlan* physical_plan,
         ErrStat& err_stat,
         const uint64_t& query_id,
-        int32_t* index)
+        uint32_t* index)
 {
     int ret = err_stat.err_code_ = OB_SUCCESS;
     int where_ret = WHERE_IS_OR_AND;
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    router *route_info = static_cast<router*> (result_plan.route_info);
-    vector<string> table_names;
+    vector<FromItem> from_items;
     string table_name;
-
     string db_name;
     string sql_exec_plan_unit;
-    schema_shard* shard_info = NULL;
     ObSqlRawExpr* sql_expr = NULL;
-    ObRawExpr* raw_expr = NULL;
-    int i = 0;
 
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
@@ -737,20 +735,20 @@ int QueryActuator::generate_select_plan_single_table(
         ret = OB_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Can not get stmt");
+                "Can not get stmt at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
-    table_names = select_stmt->fetch_tables_from_tree(result_plan);
-    if (table_names.size() > 1)
+    from_items = select_stmt->get_all_from_items();
+    if (from_items.size() > 1)
     {
         ret = JD_ERR_LOGICAL_TREE_WRONG;
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Table name size is not right");
+                "From table size is not right at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
-    table_name = table_names.at(0);
+    table_name = from_items.at(0).table_name_;
     db_name.assign(result_plan.db_name);
 
     schema_db* db_schema = g_metareader->get_DB_schema(db_name);
@@ -760,9 +758,8 @@ int QueryActuator::generate_select_plan_single_table(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not malloc space for SameLevelExecPlan");
+                "Can not malloc space for SameLevelExecPlan at %s:%d", __FILE__,__LINE__);
         return ret;
     }
     else
@@ -795,7 +792,7 @@ int QueryActuator::generate_select_plan_single_table(
             ret = JD_ERR_SHARD_NUM_WRONG;
             jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Shard manage wrong");
+                    "Shard manage wrong at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -847,7 +844,7 @@ int QueryActuator::generate_select_plan_single_table(
                         final_exprs_array.push_back((*p_map2).second);
                     }
 
-                    for (i = 0; i < opted_raw_exprs.count(p_map1->first); i++)
+                    for (uint32_t i = 0; i < opted_raw_exprs.count(p_map1->first); i++)
                     {
                         p_map1++;
                     }
@@ -860,9 +857,8 @@ int QueryActuator::generate_select_plan_single_table(
                     if (exec_plan_unit == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        jlog(WARNING, "out of memory");
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "Can not malloc space for ExecPlanUnit");
+                                "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
                         return ret;
                     }
                     else
@@ -907,8 +903,7 @@ bool QueryActuator::reparse_where_with_route_for_one_table(
         vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
         multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs)
 {
-    ObRawExpr* raw_expr = NULL;
-    int ret = false;
+    bool ret = false;
     vector<schema_shard*> all_table_shards = table_schema->get_all_shards();
 
     if (un_opt_raw_exprs.size() == 0)
@@ -916,7 +911,7 @@ bool QueryActuator::reparse_where_with_route_for_one_table(
         return ret;
     }
 
-    for (int i = 0; i < un_opt_raw_exprs.size(); i++)
+    for (uint32_t i = 0; i < un_opt_raw_exprs.size(); i++)
     {
         vector<ObRawExpr*> atomic_exprs = un_opt_raw_exprs.at(i);
         vector<ObRawExpr*> partition_sql_exprs;
@@ -926,7 +921,7 @@ bool QueryActuator::reparse_where_with_route_for_one_table(
         /*if there is no route sql, this sql should be sent to all shards*/
         if (partition_sql_exprs.size() == 0)
         {
-            for (int j = 0; j < all_table_shards.size(); j++)
+            for (uint32_t j = 0; j < all_table_shards.size(); j++)
             {
                 opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(all_table_shards.at(j), atomic_exprs));
             }
@@ -966,11 +961,10 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
         multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs)
 {
     ObRawExpr* raw_expr = NULL;
-    int ret = false;
     vector<vector<schema_shard*> > all_related_shards;
     vector<schema_shard*> shard_tmp1(MAX_SQL_EXEC_PLAN_SHARD_NUM);
     vector<schema_shard*> shard_tmp2;
-    int i = 0;
+    uint32_t i = 0;
 
     for (i = 0; i < partition_sql_exprs.size(); i++)
     {
@@ -1002,7 +996,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
             {
                 jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Route info manage error");
+                        "Route info manage error at %s:%d", __FILE__,__LINE__);
                 return false;
             }
         }
@@ -1017,7 +1011,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
     {
         jlog(WARNING, "shard info manage error");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Shard info manage error");
+                "Shard info manage error at %s:%d", __FILE__,__LINE__);
         return false;
     }
 
@@ -1076,28 +1070,19 @@ int QueryActuator::generate_select_plan_multi_table(
         FinalExecPlan* physical_plan,
         ErrStat& err_stat,
         const uint64_t& query_id,
-        int32_t* index)
+        uint32_t* index)
 {
     int ret = err_stat.err_code_ = OB_SUCCESS;
     int where_ret = WHERE_IS_OR_AND;
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    router *route_info = static_cast<router*> (result_plan.route_info);
-    vector<string> table_names;
-<<<<<<< HEAD
-=======
-    string table_name;
-
-    char buf[SQL_PLAN_BUF_SIZE] = {0};
-    string sql_exec_plan_unit;
->>>>>>> parent of 85226b2... 修改gcc编译告警
+    vector<FromItem> from_items;
     vector<schema_shard*> shards_info;
     schema_shard* shard_info = NULL;
     ObSqlRawExpr* sql_expr = NULL;
-    ObRawExpr* raw_expr = NULL;
     vector<vector<schema_shard*> >all_tables_shards;
-    int i = 0;
-    int j = 0;
+    uint32_t i = 0;
+    uint32_t j = 0;
 
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
@@ -1109,12 +1094,12 @@ int QueryActuator::generate_select_plan_multi_table(
         return ret;
     }
 
-    table_names = select_stmt->fetch_tables_from_tree(result_plan);
-    if (table_names.size() < 1)
+    from_items = select_stmt->get_all_from_items();
+    if (from_items.size() <= 1)
     {
         ret = JD_ERR_LOGICAL_TREE_WRONG;
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Table name size is not right");
+            "From table size is not right at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
@@ -1123,9 +1108,8 @@ int QueryActuator::generate_select_plan_multi_table(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not malloc space for SameLevelExecPlan");
+                "Can not malloc space for SameLevelExecPlan at %s:%d", __FILE__,__LINE__);
         return ret;
     }
     else
@@ -1156,13 +1140,13 @@ int QueryActuator::generate_select_plan_multi_table(
     /*if there is no where conditions*/
     if (0 == expr_ids.size())
     {
-        generate_all_table_shards(result_plan, table_names, all_tables_shards);
+        generate_all_table_shards(result_plan, from_items, all_tables_shards);
         if (0 == all_tables_shards.size())
         {
             ret = JD_ERR_SHARD_NUM_WRONG;
             jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Shard manage wrong");
+                    "Shard manage wrong at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -1177,9 +1161,8 @@ int QueryActuator::generate_select_plan_multi_table(
                 if (exec_plan_unit == NULL)
                 {
                     ret = OB_ERR_PARSER_MALLOC_FAILED;
-                    jlog(WARNING, "out of memory");
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Can not malloc space for ExecPlanUnit");
+                            "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
                     return ret;
                 }
                 else
@@ -1250,9 +1233,8 @@ int QueryActuator::generate_select_plan_multi_table(
                 if (exec_plan_unit == NULL)
                 {
                     ret = OB_ERR_PARSER_MALLOC_FAILED;
-                    jlog(WARNING, "out of memory");
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Can not malloc space for ExecPlanUnit");
+                            "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
                     return ret;
                 }
                 else
@@ -1296,14 +1278,13 @@ bool QueryActuator::reparse_where_with_route_for_multi_tables(
                         multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs)
 {
     int             ret = false;
-    schema_table*   table_schema = NULL;
     schema_shard*   shard_info = NULL;
     vector<schema_shard*>   shards_info;
-    vector<string>          table_names;
+    vector<FromItem>        from_items;
     vector<vector<schema_shard*> >all_tables_shards;
-    int i = 0;
-    int j = 0;
-    int k = 0;
+    uint32_t i = 0;
+    uint32_t j = 0;
+    uint32_t k = 0;
     
     if (un_opt_raw_exprs.size() == 0)
     {
@@ -1320,22 +1301,22 @@ bool QueryActuator::reparse_where_with_route_for_multi_tables(
         //if there is no route sql, this sql should be sent to all shards
         if (partition_sql_exprs.size() == 0)
         {
-            table_names = select_stmt->fetch_tables_from_tree(result_plan);
-            if (table_names.size() < 1)
+            from_items = select_stmt->get_all_from_items();
+            if (from_items.size() <= 1)
             {
                 ret = JD_ERR_LOGICAL_TREE_WRONG;
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Table name size is not right");
+                        "From table size is not right at %s:%d", __FILE__,__LINE__);
                 return ret;
             }
         
-            generate_all_table_shards(result_plan, table_names, all_tables_shards);
+            generate_all_table_shards(result_plan, from_items, all_tables_shards);
             if (0 == all_tables_shards.size())
             {
                 ret = JD_ERR_SHARD_NUM_WRONG;
                 jlog(WARNING, "shard manage wrong");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Shard manage wrong");
+                        "Shard manage wrong at %s:%d", __FILE__,__LINE__);
                 return ret;
             }
             
@@ -1383,13 +1364,12 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
         multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs)
 {
     ObRawExpr* raw_expr = NULL;
-    int ret = false;
     vector<vector<schema_shard*> > all_related_shards;
     vector<schema_shard*> shard_tmp1;
     vector<schema_shard*> shard_tmp2;
     vector<schema_shard*> shard_tmp3;
     schema_table*   table_schema = NULL;
-    int i = 0;
+    uint32_t i = 0;
 
     for (i = 0; i < partition_sql_exprs.size(); i++)
     {
@@ -1433,7 +1413,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
             {
                 jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Route info manage error");
+                        "Route info manage error at %s:%d", __FILE__,__LINE__);
                 return false;
             }
         }
@@ -1448,7 +1428,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
     {
         jlog(WARNING, "shard info manage error");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Shard info manage error");
+                "Shard info manage error at %s:%d", __FILE__,__LINE__);
         return false;
     }
 
@@ -1498,30 +1478,30 @@ Input       :   ResultPlan& result_plan,
 Output      :   
  **************************************************/
 void QueryActuator::generate_all_table_shards(ResultPlan& result_plan,
-                                              vector<string> table_names,
+                                              vector<FromItem> from_items,
                                               vector<vector<schema_shard*> > &all_tables_shards)
 {
-    string db_name;
-    string table_name;
-    int i = 0;
-    int j = 0;
+    string   db_name;
+    FromItem from_item;
+    uint32_t i = 0;
+    uint32_t j = 0;
     db_name.assign(result_plan.db_name);
     schema_db* db_schema = g_metareader->get_DB_schema(db_name);
     schema_table* table_schema = NULL;
     vector<vector<schema_shard*> > all_tables_shards_tmp;
     vector<vector<schema_shard*> > all_tables_shards_tmp2;
     vector<schema_shard*> a_tables_shards_tmp;
-    int combination_count = 1;
+    uint32_t combination_count = 1;
 
-    for (i = 0; i < table_names.size(); i++)
+    for (i = 0; i < from_items.size(); i++)
     {
-        table_name = table_names.at(i);
-        table_schema = db_schema->get_table_from_db(table_name);
+        from_item = from_items.at(i);
+        table_schema = db_schema->get_table_from_db(from_item.table_name_);
         all_tables_shards_tmp.push_back(table_schema->get_all_shards());
     }
 
-    int indexes_len = all_tables_shards_tmp.size();
-    int *indexes = new int[indexes_len];
+    uint32_t indexes_len = all_tables_shards_tmp.size();
+    uint32_t *indexes = new uint32_t[indexes_len];
 
     //all table's shards ȫ���
     for (i = 0; i < all_tables_shards_tmp.size(); i++)
@@ -1542,7 +1522,7 @@ void QueryActuator::generate_all_table_shards(ResultPlan& result_plan,
 
         all_tables_shards_tmp2.push_back(expanded_shards);
 
-        int k = indexes_len - 1;
+        uint32_t k = indexes_len - 1;
         for (; k >= 0; k--)
         {
             vector<schema_shard*> curr_shards = all_tables_shards_tmp.at(k);
@@ -1598,7 +1578,7 @@ return      :
  **************************************************/
 int QueryActuator::decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array)
 {
-    int32_t i = 0;
+    uint32_t i = 0;
 
     if (sql_expr->is_or_expr())
     {
@@ -1760,14 +1740,14 @@ void QueryActuator::append_distributed_where_items(ResultPlan& result_plan,
 
     sql.append(" WHERE ");
     
-    for (int i = 0; i < atomic_exprs_array.size(); i++)
+    for (uint32_t i = 0; i < atomic_exprs_array.size(); i++)
     {
         if (i > 0)
         {
             sql.append(" OR ");
         }
         vector<ObRawExpr*> atomic_exprs = atomic_exprs_array.at(i);
-        for (int j = 0; j < atomic_exprs.size(); j++)
+        for (uint32_t j = 0; j < atomic_exprs.size(); j++)
         {
             string assembled_sql_tmp;
             
@@ -1798,22 +1778,19 @@ int QueryActuator::gen_exec_plan_update(
         FinalExecPlan* physical_plan,
         ErrStat& err_stat,
         const uint64_t& query_id,
-        int32_t* index)
+        uint32_t* index)
 {
     int ret = err_stat.err_code_ = OB_SUCCESS;
     int where_ret = WHERE_IS_OR_AND;
     ObUpdateStmt *update_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    router *route_info = static_cast<router*> (result_plan.route_info);
 
     string db_name;
     string table_name;
     string sql_exec_plan_unit;
     vector<schema_shard*> all_related_shards;
-    schema_shard*   shard_info = NULL;
     schema_column*  column_info = NULL;
     ObSqlRawExpr*   sql_expr = NULL;
-    ObRawExpr*      raw_expr = NULL;
     uint64_t        column_id= 0;
     uint64_t        i = 0;
     
@@ -1823,7 +1800,7 @@ int QueryActuator::gen_exec_plan_update(
         ret = OB_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Can not get stmt");
+                "Can not get stmt at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
@@ -1836,9 +1813,8 @@ int QueryActuator::gen_exec_plan_update(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not malloc space for SameLevelExecPlan");
+                "Can not malloc space for SameLevelExecPlan at %s:%d", __FILE__,__LINE__);
         return ret;
     }
     else
@@ -1855,7 +1831,7 @@ int QueryActuator::gen_exec_plan_update(
             ret = JD_ERR_SHARD_NUM_WRONG;
             jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Shard manage wrong");
+                    "Shard manage wrong at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -1870,7 +1846,7 @@ int QueryActuator::gen_exec_plan_update(
             ret = JD_ERR_SHARD_NUM_WRONG;
             jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Shard manage wrong");
+                    "Shard manage wrong at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -1878,7 +1854,7 @@ int QueryActuator::gen_exec_plan_update(
         {
             ret = JD_ERR_SQL_NOT_SUPPORT;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "MUST set column name in UPDATE OPERATION");
+                    "MUST set column name in UPDATE OPERATION at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -1891,7 +1867,7 @@ int QueryActuator::gen_exec_plan_update(
                 {
                     ret = JD_ERR_SQL_NOT_SUPPORT;
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Can not update partition key column");
+                            "Can not update partition key column at %s:%d", __FILE__,__LINE__);
                     return ret;
                 }
             }
@@ -1952,9 +1928,8 @@ int QueryActuator::gen_exec_plan_update(
                     if (exec_plan_unit == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        jlog(WARNING, "out of memory");
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "Can not malloc space for ExecPlanUnit");
+                                "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
                         return ret;
                     }
                     else
@@ -1997,7 +1972,7 @@ int QueryActuator::gen_exec_plan_replace(
         FinalExecPlan* physical_plan,
         ErrStat& err_stat,
         const uint64_t& query_id,
-        int32_t* index)
+        uint32_t* index)
 {
     return gen_exec_plan_insert(result_plan, physical_plan, result_plan.err_stat_, query_id, index);
 }
@@ -2017,22 +1992,18 @@ int QueryActuator::gen_exec_plan_delete(
         FinalExecPlan* physical_plan,
         ErrStat& err_stat,
         const uint64_t& query_id,
-        int32_t* index)
+        uint32_t* index)
 {
     int ret = err_stat.err_code_ = OB_SUCCESS;
     int where_ret = WHERE_IS_OR_AND;
     ObDeleteStmt *delete_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    router *route_info = static_cast<router*> (result_plan.route_info);
     string table_name;
 
     string db_name;
-    char buf[SQL_PLAN_BUF_SIZE] = {0};
     string sql_exec_plan_unit;
-    schema_shard* shard_info = NULL;
     ObSqlRawExpr* sql_expr = NULL;
-    ObRawExpr*  raw_expr = NULL;
-    int i = 0;
+    uint32_t    i = 0;
 
     /* get statement */
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, delete_stmt)))
@@ -2040,7 +2011,7 @@ int QueryActuator::gen_exec_plan_delete(
         ret = OB_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Can not get stmt");
+                "Can not get stmt at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
@@ -2052,9 +2023,8 @@ int QueryActuator::gen_exec_plan_delete(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not malloc space for SameLevelExecPlan");
+                "Can not malloc space for SameLevelExecPlan at %s:%d", __FILE__,__LINE__);
         return ret;
     }
     else
@@ -2071,7 +2041,7 @@ int QueryActuator::gen_exec_plan_delete(
             ret = JD_ERR_SHARD_NUM_WRONG;
             jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Shard manage wrong");
+                    "Shard manage wrong at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -2135,9 +2105,8 @@ int QueryActuator::gen_exec_plan_delete(
                     if (exec_plan_unit == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        jlog(WARNING, "out of memory");
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "Can not malloc space for ExecPlanUnit");
+                                "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
                         return ret;
                     }
                     else
@@ -2181,12 +2150,11 @@ int QueryActuator::gen_exec_plan_insert(
         FinalExecPlan* physical_plan,
         ErrStat& err_stat,
         const uint64_t& query_id,
-        int32_t* index)
+        uint32_t* index)
 {
     int ret = err_stat.err_code_ = OB_SUCCESS;
     ObInsertStmt *insert_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    router *route_info = static_cast<router*> (result_plan.route_info);
 
     string table_name;
     string sql_exec_plan_unit;
@@ -2196,9 +2164,8 @@ int QueryActuator::gen_exec_plan_insert(
     ObSqlRawExpr*   sql_expr = NULL;
     ObRawExpr*      raw_expr = NULL;
     bool            has_find_shard_column = false;
-    int             i = 0;
-    int             j = 0;
-    int             k = 0;
+    uint32_t        i = 0;
+    uint32_t        j = 0;
     
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, insert_stmt)))
@@ -2206,7 +2173,7 @@ int QueryActuator::gen_exec_plan_insert(
         ret = OB_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
-                "Can not get stmt");
+                "Can not get stmt at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
@@ -2218,9 +2185,8 @@ int QueryActuator::gen_exec_plan_insert(
     if (exec_plan == NULL)
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        jlog(WARNING, "out of memory");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not malloc space for SameLevelExecPlan");
+                "Can not malloc space for SameLevelExecPlan at %s:%d", __FILE__,__LINE__);
         return ret;
     }
     else
@@ -2237,7 +2203,7 @@ int QueryActuator::gen_exec_plan_insert(
             ret = JD_ERR_SHARD_NUM_WRONG;
             jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Shard manage wrong");
+                    "Shard manage wrong at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -2245,9 +2211,8 @@ int QueryActuator::gen_exec_plan_insert(
         if (exec_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            jlog(WARNING, "out of memory");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc space for ExecPlanUnit");
+                    "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
             return ret;
         }
         else
@@ -2278,7 +2243,7 @@ int QueryActuator::gen_exec_plan_insert(
             ret = JD_ERR_SHARD_NUM_WRONG;
             jlog(WARNING, "shard manage wrong");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Shard manage wrong");
+                    "Shard manage wrong at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -2286,7 +2251,7 @@ int QueryActuator::gen_exec_plan_insert(
         {
             ret = JD_ERR_SQL_NOT_SUPPORT;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "MUST set column name in INSERT OPERATION");
+                    "MUST set column name in INSERT OPERATION at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -2315,7 +2280,7 @@ int QueryActuator::gen_exec_plan_insert(
                     {
                         ret = JD_ERR_COLUMN_NOT_MATCH;
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "insert value does not match with config info!!!");
+                                "insert value does not match with config info!!! at %s:%d", __FILE__,__LINE__);
                         return ret;
                     }
                     
@@ -2348,12 +2313,12 @@ int QueryActuator::gen_exec_plan_insert(
                         {
                             jlog(WARNING, "route info manage error");
                             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Route info manage error");
+                                    "Route info manage error at %s:%d", __FILE__,__LINE__);
                             return false;
                         }
                     }
 
-                    for (int tmp = 0; tmp < shard_info.size(); tmp++ )
+                    for (uint32_t tmp = 0; tmp < shard_info.size(); tmp++ )
                     {
                         if(!vector_elem_exist_already(all_related_shards, shard_info.at(tmp)))
                         {
@@ -2377,9 +2342,8 @@ int QueryActuator::gen_exec_plan_insert(
             if (exec_plan_unit == NULL)
             {
                 ret = OB_ERR_PARSER_MALLOC_FAILED;
-                jlog(WARNING, "out of memory");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Can not malloc space for ExecPlanUnit");
+                        "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
                 return ret;
             }
             else
@@ -2418,14 +2382,10 @@ bool QueryActuator::vector_elem_exist_already(
                             vector<schema_shard*> vector_shards,
                             schema_shard* single_shard)
 {
-<<<<<<< HEAD
     vector<schema_shard*>::iterator iter;
     iter = find(vector_shards.begin(), vector_shards.end(), single_shard);
     
     if (iter == vector_shards.end())
-=======
-    for (int i =0; i < vector_shards.size(); i++)
->>>>>>> parent of 85226b2... 修改gcc编译告警
     {
         return false;
     }
@@ -2450,7 +2410,7 @@ int QueryActuator::distribute_sql_to_all_shards(
                     schema_table* table_schema,
                     SameLevelExecPlan* exec_plan)
 {
-    int i   = 0;
+    uint32_t i   = 0;
     int ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     schema_shard*   shard_info  = NULL;
     ObBasicStmt*    stmt        = NULL;
@@ -2461,7 +2421,7 @@ int QueryActuator::distribute_sql_to_all_shards(
         ret = JD_ERR_SHARD_NUM_WRONG;
         jlog(WARNING, "shard manage wrong");
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Shard manage wrong");
+                "Shard manage wrong at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
@@ -2476,9 +2436,8 @@ int QueryActuator::distribute_sql_to_all_shards(
         if (exec_plan_unit == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            jlog(WARNING, "out of memory");
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc space for ExecPlanUnit");
+                    "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
             return ret;
         }
         else

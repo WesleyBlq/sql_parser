@@ -1,14 +1,14 @@
 /************************************************************
   Copyright (C), 2013-2015
   FileName:     jd_exec_plan.h
-  Author:       qinbo(gqinbo@gmail.com)      
+  Author:       qinbo      
   Version :          
   Date:         
-  Description:  sql������ִ�мƻ�ģ��   
+  Description:  exec plan generator
   History: 
       <author>  <time>   <version >     <desc>
-      qinbo    2013/8/5     1.0         build this moudle  
- ***********************************************************/
+      qinbo    2013/9/15     1.0       build this moudle  
+***********************************************************/
 #ifndef _JD_EXEC_PLAN_H
 #define _JD_EXEC_PLAN_H
 
@@ -154,7 +154,7 @@ public:
     Input       :   
     Output      :   
      **************************************************/
-    int release_exec_plan();
+    void release_exec_plan();
     
     /**************************************************
     Funtion     :   release_exec_plan
@@ -166,8 +166,8 @@ public:
      **************************************************/
     int generate_exec_plan(
             string sql,
-            int32_t* index = NULL);
-
+            uint32_t* index = NULL);
+    
     /**************************************************
     Funtion     :   set_final_exec_plan
     Author      :   qinbo
@@ -240,43 +240,43 @@ private:
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            int32_t* index);
+            uint32_t* index);
     int generate_select_plan_multi_table(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            int32_t* index);
+            uint32_t* index);
     int gen_exec_plan_update(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            int32_t* index);
+            uint32_t* index);
     int gen_exec_plan_replace(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            int32_t* index);
+            uint32_t* index);
     int gen_exec_plan_delete(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            int32_t* index);
+            uint32_t* index);
     int gen_exec_plan_select(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            int32_t* index);
+            uint32_t* index);
     int gen_exec_plan_insert(
             ResultPlan& result_plan,
             FinalExecPlan* physical_plan,
             ErrStat& err_stat,
             const uint64_t& query_id,
-            int32_t* index);
+            uint32_t* index);
 
     template <class T>
     int get_stmt(
@@ -401,13 +401,13 @@ private:
     Date        :   2013.10.24
     Description :   generate all tables' shards
     Input       :   ResultPlan& result_plan,
-                    vector<schema_table*> table_infos,
+                    vector<FromItem> from_items,
                     vector<vector<schema_shard*> > &all_tables_shards
     Output      :   
      **************************************************/
     void generate_all_table_shards(ResultPlan& result_plan,
-            vector<string> table_names,
-            vector<vector<schema_shard*> > &all_tables_shards);
+                                    vector<FromItem> from_items,
+                                    vector<vector<schema_shard*> > &all_tables_shards);
     /**************************************************
     Funtion     :   vector_elem_exist_already
     Author      :   qinbo
