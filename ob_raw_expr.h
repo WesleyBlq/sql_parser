@@ -87,30 +87,30 @@ namespace oceanbase
             Author      :   qinbo
             Date        :   2013.9.25
             Description :   this expr is sharding column
-            Input       :   
+            Input       :   ResultPlan& result_plan
             Output      :   
              **************************************************/
-            bool is_column_and_sharding_key() const;
+            bool is_column_and_sharding_key(ResultPlan& result_plan) const;
 
             /**************************************************
             Funtion     :   get_table_name_in_sharding_column
             Author      :   qinbo
             Date        :   2013.10.29
             Description :   get expr's related table name
-            Input       :   
+            Input       :   ResultPlan& result_plan
             Output      :   
              **************************************************/
-            bool get_table_name_in_sharding_column(string &table_name) const;
+            bool get_table_name_in_sharding_column(ResultPlan& result_plan, string &table_name) const;
 
             /**************************************************
             Funtion     :   get_column_and_sharding_key
             Author      :   qinbo
             Date        :   2013.9.25
             Description :   get this expr's column name when this is sharding column
-            Input       :   
+            Input       :   ResultPlan& result_plan, string &column_name
             Output      :   
              **************************************************/
-            bool get_column_and_sharding_key(string &column_name) const;
+            bool get_column_and_sharding_key(ResultPlan& result_plan, string &column_name) const;
 
             /**************************************************
             Funtion     :   is_contain_filter
@@ -128,11 +128,11 @@ namespace oceanbase
             Author      :   qinbo
             Date        :   2013.9.11
             Description :   this expr is need to get route or not
-            Input       :   
+            Input       :   ResultPlan& result_plan
             Output      :   
              **************************************************/
             // Format like "C1 IN "5, 6,7"
-            bool is_contain_filter_need_route() const;
+            bool is_contain_filter_need_route(ResultPlan& result_plan) const;
 
 
             /**************************************************
@@ -140,10 +140,11 @@ namespace oceanbase
             Author      :   qinbo
             Date        :   2013.9.11
             Description :   this expr is need to get route or not
-            Input       :   
+            Input       :   ResultPlan& result_plan
             Output      :   
              **************************************************/
-            bool is_need_to_get_route() const;
+            bool is_need_to_get_route(ResultPlan& result_plan) const;
+            
             // Format like "C1 = 5"
             bool is_equal_filter() const;
 
@@ -152,11 +153,11 @@ namespace oceanbase
             Author      :   qinbo
             Date        :   2013.9.11
             Description :   this expr is need to get route or not
-            Input       :   
+            Input       :   ResultPlan& result_plan
             Output      :   
              **************************************************/
             // Format like "C1 IN "5, 6,7"
-            bool is_equal_filter_need_route() const;
+            bool is_equal_filter_need_route(ResultPlan& result_plan) const;
 
             // Format like "C1 between 5 and 10"
             bool is_range_filter() const;
@@ -170,7 +171,7 @@ namespace oceanbase
             Output      :   
              **************************************************/
             // Format like "C1 IN "5, 6,7"
-            bool is_range_filter_need_route() const;
+            bool is_range_filter_need_route(ResultPlan& result_plan) const;
 
 
             // Only format like "T1.c1 = T2.c1", not "T1.c1 - T2.c1 = 0"
@@ -178,34 +179,14 @@ namespace oceanbase
             bool is_aggr_fun() const;
 
             /**************************************************
-            Funtion     :   set_db_name
-            Author      :   qinbo
-            Date        :   2013.9.11
-            Description :   store current db name
-            Input       :   
-            Output      :   
-             **************************************************/
-            void set_db_name(string db_name);
-
-            /**************************************************
-            Funtion     :   get_db_name
-            Author      :   qinbo
-            Date        :   2013.9.11
-            Description :   get current db name
-            Input       :   
-            Output      :   
-             **************************************************/
-            string get_db_name() const;
-
-            /**************************************************
             Funtion     :   try_get_table_name
             Author      :   qinbo
             Date        :   2013.10.29
             Description :   try get table name
-            Input       :   
+            Input       :   ResultPlan& result_plan ,string &table_name
             Output      :   
              **************************************************/
-            bool try_get_table_name(string &table_name) const;
+            bool try_get_table_name(ResultPlan& result_plan ,string &table_name) const;
             
             /*virtual int fill_sql_expression(
                 ObSqlExpression& inter_expr,
@@ -217,10 +198,10 @@ namespace oceanbase
             Author      :   qinbo
             Date        :   2013.10.14
             Description :   convert ob style expr to route used key relation
-            Input       :   key_data& key_relation
+            Input       :   ResultPlan& result_plan, key_data& key_relation
             Output      :   
              **************************************************/
-            bool convert_ob_expr_to_route(key_data& key_relation) const;
+            bool convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_relation) const;
             virtual void print(FILE* fp, int32_t level) const = 0;
             /*added by qinbo*/
             virtual int64_t to_string(ResultPlan& result_plan, string& assembled_sql) const = 0;
@@ -547,7 +528,7 @@ namespace oceanbase
             {
             }
 
-            ObRawExpr* get_op_expr(int32_t index) const
+            ObRawExpr* get_op_expr(uint32_t index) const
             {
                 ObRawExpr* expr = NULL;
                 if (index >= 0 && index < exprs_.size())
@@ -561,7 +542,7 @@ namespace oceanbase
                 return OB_SUCCESS;
             }
 
-            int32_t get_expr_size() const
+            uint32_t get_expr_size() const
             {
                 return exprs_.size();
             }

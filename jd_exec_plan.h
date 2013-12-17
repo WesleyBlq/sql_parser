@@ -50,6 +50,9 @@ using namespace oceanbase::sql;
 #define WHERE_IS_OR_AND     0
 #define WHERE_IS_SUBQUERY   1
 
+#define SEND_SQL_TO_CONFIG_SERVER   0
+#define SEND_SQL_TO_DATA_NODE       1
+
 /*��ִ�е�Ԫ�ķ�װ*/
 class ExecPlanUnit
 {
@@ -57,10 +60,28 @@ private:
     string sql;
     schema_shard* shard_info;
 public:
-    void set_exec_unit_sql(string sql);
-    string get_exec_unit_sql();
-    void set_exec_uint_shard_info(schema_shard* shard_info);
-    schema_shard* get_exec_unit_shard_info();
+    ExecPlanUnit();
+    virtual ~ExecPlanUnit();
+    
+    void set_exec_unit_sql(string sql_)
+    {
+        sql = sql_;
+    }
+    
+    string get_exec_unit_sql()
+    {
+        return sql;
+    }
+    
+    void set_exec_uint_shard_info(schema_shard* shard_info_)
+    {
+        shard_info = shard_info_;
+    }
+    
+    schema_shard* get_exec_unit_shard_info()
+    {
+        return shard_info;
+    }
 };
 
 /*��ִ�мƻ��ķ�װ*/
@@ -71,6 +92,7 @@ private:
     QueryPostReduce*    query_post_reduce_info;     //record sql post process info
     bool                is_1st_plan;
     char                parent_sql_type;            //if need to be reparsed
+    uint8_t             sql_sent_goal;              //where this sql should be sent
     
 public:
     SameLevelExecPlan();
@@ -91,6 +113,15 @@ public:
         return query_post_reduce_info;
     }
     
+    void set_sql_sent_goal(uint8_t sql_sent_goal_)
+    {
+        sql_sent_goal = sql_sent_goal_;
+    }
+    
+    uint8_t get_sql_sent_goal()
+    {
+        return sql_sent_goal;
+    }
 };
 
 /*ִ�мƻ������class*/
@@ -373,13 +404,14 @@ private:
     Author      :   qinbo
     Date        :   2013.10.18
     Description :   find all expr that need to be partitioned
-    Input       :   vector<ObRawExpr*>  atomic_exprs,
+    Input       :   ResultPlan& result_plan, 
+                    vector<ObRawExpr*>  atomic_exprs,
                     vector<ObRawExpr*>  &partition_sql_exprs
     Output      :   
      **************************************************/
-    int search_partition_sql_exprs(
-            vector<ObRawExpr*> atomic_exprs,
-            vector<ObRawExpr*> &partition_sql_exprs);
+    int search_partition_sql_exprs( ResultPlan& result_plan,
+                                    vector<ObRawExpr*> &atomic_exprs,
+                                    vector<ObRawExpr*> &partition_sql_exprs);
     
     /**************************************************
     Funtion     :   append_distributed_where_items
@@ -392,8 +424,8 @@ private:
     Output      :   
      **************************************************/
     void append_distributed_where_items(ResultPlan& result_plan,
-            string &sql,
-            vector<vector<ObRawExpr*> > &atomic_exprs_array);
+                                        string &sql,
+                                        vector<vector<ObRawExpr*> > &atomic_exprs_array);
     
     /**************************************************
     Funtion     :   generate_all_table_shards
@@ -405,7 +437,7 @@ private:
                     vector<vector<schema_shard*> > &all_tables_shards
     Output      :   
      **************************************************/
-    void generate_all_table_shards(ResultPlan& result_plan,
+    void generate_all_table_shards( ResultPlan& result_plan,
                                     vector<FromItem> from_items,
                                     vector<vector<schema_shard*> > &all_tables_shards);
     /**************************************************
@@ -417,9 +449,8 @@ private:
                     schema_shard* single_shard
     Output      :   
      **************************************************/
-    bool vector_elem_exist_already( 
-                            vector<schema_shard*> vector_shards,
-                            schema_shard* single_shard);
+    bool vector_elem_exist_already( vector<schema_shard*> vector_shards,
+                                    schema_shard* single_shard);
     
     /**************************************************
     Funtion     :   distribute_sql_to_all_shards
@@ -438,6 +469,22 @@ private:
                     const uint64_t& query_id,
                     schema_table* table_schema,
                     SameLevelExecPlan* exec_plan);
+
+    /**************************************************
+    Funtion     :   send_sql_to_config_server
+    Author      :   qinbo
+    Date        :   2013.12.11
+    Description :   send sql(show/set command) to config server
+    Input       :   ResultPlan& result_plan,
+                    FinalExecPlan* physical_plan,
+                    string sql
+    Output      :   
+    return      :   
+     **************************************************/
+    int send_sql_to_config_server( 
+                            ResultPlan& result_plan,
+                            FinalExecPlan* physical_plan,
+                            string sql);
 };
 
 

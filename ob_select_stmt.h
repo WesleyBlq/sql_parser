@@ -24,6 +24,9 @@
 #define OP_SELECT_ALL (OP_SELECT + OP_FROM + OP_TABLE + OP_ON + OP_WHERE + \
                         OP_GROUP + OP_HAVING + OP_ORDER + OP_LIMIT + OP_SUBSELECT)
 
+//sql sent to shard should have max rows num MAX_LIMIT_ROWS
+#define MAX_LIMIT_ROWS  1000000
+
 using namespace oceanbase::common;
 
 namespace oceanbase
@@ -507,7 +510,7 @@ namespace oceanbase
                 return common::OB_SUCCESS;
             }
 
-            int set_limit_offset(ResultPlan * result_plan, const uint64_t& limit, const uint64_t& offset);
+            int set_limit_offset(ResultPlan * result_plan, const uint64_t& offset, const uint64_t& count);
 
             void set_for_update(bool for_update)
             {
@@ -585,41 +588,6 @@ namespace oceanbase
             bool for_update_;
 
             uint64_t gen_joined_tid_;
-
-            /* for tangchao@jd.com, optimize select */
-        public:
-            void set_follow_order(bool f)
-            {
-                follow_order = f;
-            }
-
-            void set_follow_group(bool f)
-            {
-                follow_group = f;
-            }
-
-            void set_follow_agg(bool f)
-            {
-                follow_aggregate = f;
-            }
-
-            void set_order_by_primary(bool f)
-            {
-                order_by_primary = f;
-            }
-
-            void set_limit(long f)
-            {
-                limit = f;
-            }
-
-        private:
-            /* follow down */
-            bool follow_order; /* true need do order by secondary. */
-            bool follow_group; /* true need do group secondary. */
-            bool follow_aggregate; /* true need do function. */
-            bool order_by_primary; /* order by */
-            long limit; /* */
         };
     }
 }

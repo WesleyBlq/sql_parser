@@ -26,7 +26,7 @@ namespace oceanbase
             uint64_t get_table_id() const;
             uint64_t get_insert_query_id() const;
             int64_t get_value_row_size() const;
-            const vector<uint64_t>& get_value_row(int64_t idx) const;
+            const vector<uint64_t>& get_value_row(uint32_t idx) const;
             /**************************************************
             Funtion     :   get_all_value_rows
             Author      :   qinbo
@@ -96,7 +96,7 @@ namespace oceanbase
             return value_vectors_.size();
         }
 
-        inline const vector<uint64_t>& ObInsertStmt::get_value_row(int64_t idx) const
+        inline const vector<uint64_t>& ObInsertStmt::get_value_row(uint32_t idx) const
         {
             OB_ASSERT(idx >= 0 && idx < value_vectors_.size());
             return value_vectors_.at(idx);

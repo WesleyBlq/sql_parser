@@ -147,15 +147,6 @@ namespace oceanbase
             ObSqlRawExpr* get_expr_by_id(uint64_t expr_id);
 
             /**************************************************
-            Funtion     :   get_expr_by_ref_sql_expr_raw_id
-            Author      :   qinbo
-            Date        :   2013.9.10
-            Description :   get expr by sql_expr_raw_id
-            Input       :   int64_t expr_id
-            Output      :   ObSqlRawExpr* 
-             **************************************************/
-            ObSqlRawExpr* get_expr_by_ref_sql_expr_raw_id(uint64_t sql_expr_raw_id);
-            /**************************************************
             Funtion     :   make_stmt_string
             Author      :   qinbo
             Date        :   2013.9.10

@@ -270,8 +270,6 @@ int resolve_and_exprs(
 #define CREATE_RAW_EXPR(expr, type_name, result_plan)    \
 ({    \
   ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_); \
-  string current_db_name;   \
-  current_db_name = result_plan->db_name; \
   expr = (type_name*)parse_malloc(sizeof(type_name), NULL);   \
   if (expr != NULL) \
   { \
@@ -280,10 +278,6 @@ int resolve_and_exprs(
     { \
       expr = NULL;  /* no memory leak, bulk dealloc */ \
     } \
-    else \
-    {   \
-      expr->set_db_name(current_db_name); \
-    }   \
   } \
   if (expr == NULL)  \
   { \
@@ -621,6 +615,8 @@ int resolve_expr(
                 {
                     ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
                     uint64_t expr_id = select_stmt->get_alias_expr_id(column_name);
+                    
+                    cout << "get_alias_expr_id" <<expr_id << endl;
                     if (expr_id != OB_INVALID_ID)
                     {
                         ObSqlRawExpr* alias_expr = logical_plan->get_expr(expr_id);
@@ -649,10 +645,21 @@ int resolve_expr(
                             if (CREATE_RAW_EXPR(b_expr, ObBinaryRefRawExpr, result_plan) == NULL)
                                 break;
                             b_expr->set_expr_type(T_REF_COLUMN);
+                            
+                            ObBinaryRefRawExpr *column_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (alias_expr->get_expr()));
+                            
                             b_expr->set_result_type(alias_expr->get_result_type());
+                            //BEGIN:    Modified by qinbo
+                            #if 0
                             b_expr->set_first_ref_id(alias_expr->get_table_id());
                             b_expr->set_second_ref_id(alias_expr->get_column_id());
+                            cout << "alias_expr->get_result_type()"<<alias_expr->get_result_type() <<endl;
+                            cout << "alias_expr->get_column_id()"<<column_expr->get_second_ref_id() <<endl;
+                            #endif
+                            b_expr->set_first_ref_id(column_expr->get_first_ref_id());
+                            b_expr->set_second_ref_id(column_expr->get_second_ref_id());
                             expr = b_expr;
+                            //END:      Modified by qinbo
                             //sql_expr->get_tables_set().add_members(alias_expr->get_tables_set());
                             sql_expr->set_contain_alias(true);
                         }
@@ -2127,41 +2134,39 @@ int resolve_select_clause(
         if (project_node->type_ == T_ALIAS)
         {
             OB_ASSERT(project_node->num_child_ == 2);
+            expr_name.assign(
+                         const_cast<char*>(project_node->str_value_),
+                         static_cast<int32_t>(strlen(project_node->str_value_))
+                         );
+
             alias_node = project_node->children_[1];
             project_node = project_node->children_[0];
             is_real_alias = true;
 
-            expr_name.assign(
-                    const_cast<char*> (project_node->str_value_),
-                    static_cast<int32_t> (strlen(project_node->str_value_))
-                    );
-
             /* check if the alias name is legal */
             OB_ASSERT(alias_node->type_ == T_IDENT);
             alias_name.assign(
-                    (char*) (alias_node->str_value_),
-                    static_cast<int32_t> (strlen(alias_node->str_value_))
-                    );
+                (char*)(alias_node->str_value_),
+                static_cast<int32_t>(strlen(alias_node->str_value_))
+                );
             // Same as mysql, we do not check alias name
             // if (!(select_stmt->check_alias_name(logical_plan, sAlias)))
             // {
-            //   jlog(ERROR, "alias name %.s is ambiguous", alias_node->str_value_);
+            //   TBSYS_LOG(ERROR, "alias name %.s is ambiguous", alias_node->str_value_);
             //   return false;
             // }
         }
-            /* it is not real alias name, we just record them for convenience */
+        /* it is not real alias name, we just record them for convenience */
         else
         {
             if (project_node->type_ == T_IDENT)
-            {
                 alias_node = project_node;
-            }
             else if (project_node->type_ == T_OP_NAME_FIELD)
             {
                 expr_name.assign(
-                        const_cast<char*> (project_node->str_value_),
-                        static_cast<int32_t> (strlen(project_node->str_value_))
-                        );
+                           const_cast<char*>(project_node->str_value_),
+                           static_cast<int32_t>(strlen(project_node->str_value_))
+                           );
                 alias_node = project_node->children_[1];
                 OB_ASSERT(alias_node->type_ == T_IDENT);
             }
@@ -2169,9 +2174,9 @@ int resolve_select_clause(
             /* original column name of based table, it has been checked in expression resolve */
             if (alias_node)
                 alias_name.assign(
-                    (char*) (alias_node->str_value_),
-                    static_cast<int32_t> (strlen(alias_node->str_value_))
-                    );
+                  (char*)(alias_node->str_value_),
+                  static_cast<int32_t>(strlen(alias_node->str_value_))
+                  );
         }
 
         if (project_node->type_ == T_EXPR_LIST && project_node->num_child_ != 1)
@@ -2386,10 +2391,6 @@ int resolve_having_clause(
                     {
                         break;
                     }
-                    else
-                    {
-                        cout << "having" << endl;
-                    }
                     select_stmt->add_having_item(having_item);
                 }
             }
@@ -2478,6 +2479,9 @@ int resolve_limit_clause(
 {
 
     int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
+    uint64_t limit_count = OB_INVALID_ID;
+    uint64_t limit_offset = OB_INVALID_ID;
+    
     if (node)
     {
         OB_ASSERT(result_plan != NULL);
@@ -2486,8 +2490,6 @@ int resolve_limit_clause(
         ParseNode* limit_node = node->children_[0];
         ParseNode* offset_node = node->children_[1];
         OB_ASSERT(limit_node != NULL || offset_node != NULL);
-        uint64_t limit_count = OB_INVALID_ID;
-        uint64_t limit_offset = OB_INVALID_ID;
 
         // resolve the question mark with less value first
         if (limit_node != NULL && limit_node->type_ == T_QUESTIONMARK
@@ -2530,11 +2532,13 @@ int resolve_limit_clause(
                 }
             }
         }
-        if (ret == OB_SUCCESS)
-        {
-            ret = select_stmt->set_limit_offset(result_plan, limit_count, limit_offset);
-        }
     }
+    
+    if (ret == OB_SUCCESS)
+    {
+        ret = select_stmt->set_limit_offset(result_plan, limit_offset, limit_count);
+    }
+    
     return ret;
 }
 

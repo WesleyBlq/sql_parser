@@ -55,10 +55,10 @@ Funtion     :   is_column_and_sharding_key
 Author      :   qinbo
 Date        :   2013.9.25
 Description :   this expr is sharding column
-Input       :   
+Input       :   ResultPlan& result_plan
 Output      :   
  **************************************************/
-bool ObRawExpr::is_column_and_sharding_key() const
+bool ObRawExpr::is_column_and_sharding_key(ResultPlan& result_plan) const
 {
     if (!is_column())
     {
@@ -67,9 +67,7 @@ bool ObRawExpr::is_column_and_sharding_key() const
 
     ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (this));
 
-    string db_name_tmp = get_db_name();
-
-    schema_table* table_schema = g_metareader->get_table_schema_by_id(db_name_tmp, binary_ref_raw_expr->get_first_ref_id());
+    schema_table* table_schema = g_metareader->get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
     if (NULL == table_schema)
     {
         return false;
@@ -94,21 +92,19 @@ Funtion     :   get_table_name_in_sharding_column
 Author      :   qinbo
 Date        :   2013.10.29
 Description :   get expr's related table name
-Input       :   
+Input       :   ResultPlan& result_plan, string &table_name
 Output      :   
  **************************************************/
-bool ObRawExpr::get_table_name_in_sharding_column(string &table_name) const
+bool ObRawExpr::get_table_name_in_sharding_column(ResultPlan& result_plan, string &table_name) const
 {
-    if (!is_column_and_sharding_key())
+    if (!is_column_and_sharding_key(result_plan))
     {
         return false;
     }
     
     ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (this));
 
-    string db_name_tmp = get_db_name();
-
-    schema_table* table_schema = g_metareader->get_table_schema_by_id(db_name_tmp, binary_ref_raw_expr->get_first_ref_id());
+    schema_table* table_schema = g_metareader->get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
     if (NULL == table_schema)
     {
         return false;
@@ -123,10 +119,10 @@ Funtion     :   get_column_and_sharding_key
 Author      :   qinbo
 Date        :   2013.9.25
 Description :   get this expr's column name when this is sharding column
-Input       :   
+Input       :   ResultPlan& result_plan, string &column_name
 Output      :   
  **************************************************/
-bool ObRawExpr::get_column_and_sharding_key(string &column_name) const
+bool ObRawExpr::get_column_and_sharding_key(ResultPlan& result_plan, string &column_name) const
 {
     if (!is_column())
     {
@@ -135,9 +131,7 @@ bool ObRawExpr::get_column_and_sharding_key(string &column_name) const
 
     ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (this));
 
-    string db_name_tmp = get_db_name();
-
-    schema_table* table_schema = g_metareader->get_table_schema_by_id(db_name_tmp, binary_ref_raw_expr->get_first_ref_id());
+    schema_table* table_schema = g_metareader->get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
     if (NULL == table_schema)
     {
         return false;
@@ -175,16 +169,16 @@ Description :   this expr is need to get route or not
 Input       :   
 Output      :   
  **************************************************/
-bool ObRawExpr::is_equal_filter_need_route() const
+bool ObRawExpr::is_equal_filter_need_route(ResultPlan& result_plan) const
 {
     bool ret = false;
     if (type_ == T_OP_EQ || type_ == T_OP_IS)
     {
         ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
         if (((binary_expr->get_first_op_expr()->is_const())
-                && binary_expr->get_second_op_expr()->is_column_and_sharding_key())
+                && binary_expr->get_second_op_expr()->is_column_and_sharding_key(result_plan))
                 || (binary_expr->get_second_op_expr()->is_const())
-                &&(binary_expr->get_first_op_expr()->is_column_and_sharding_key()))
+                &&(binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan)))
         {
             ret = true;
         }
@@ -238,7 +232,7 @@ Description :   this expr is need to get route or not
 Input       :   
 Output      :   
  **************************************************/
-bool ObRawExpr::is_contain_filter_need_route() const
+bool ObRawExpr::is_contain_filter_need_route(ResultPlan& result_plan) const
 {
     bool ret = false;
     int32_t expr_size = 0;
@@ -263,7 +257,7 @@ bool ObRawExpr::is_contain_filter_need_route() const
             }
         }
 
-        if (binary_expr->get_first_op_expr()->is_column_and_sharding_key())
+        if (binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan))
         {
             return true;
         }
@@ -307,16 +301,16 @@ Description :   this expr is need to get route or not
 Input       :   
 Output      :   
  **************************************************/
-bool ObRawExpr::is_range_filter_need_route() const
+bool ObRawExpr::is_range_filter_need_route(ResultPlan& result_plan) const
 {
     bool ret = false;
     if (type_ >= T_OP_LE && type_ <= T_OP_GT)
     {
         ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
         if (((binary_expr->get_first_op_expr()->is_const())
-                && binary_expr->get_second_op_expr()->is_column_and_sharding_key())
+                && binary_expr->get_second_op_expr()->is_column_and_sharding_key(result_plan))
                 || (binary_expr->get_second_op_expr()->is_const())
-                &&(binary_expr->get_first_op_expr()->is_column_and_sharding_key()))
+                &&(binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan)))
         {
             ret = true;
         }
@@ -324,7 +318,7 @@ bool ObRawExpr::is_range_filter_need_route() const
     else if (type_ == T_OP_BTW)
     {
         ObTripleOpRawExpr *triple_expr = dynamic_cast<ObTripleOpRawExpr *> (const_cast<ObRawExpr *> (this));
-        if (triple_expr->get_first_op_expr()->is_column_and_sharding_key()
+        if (triple_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan)
                 && triple_expr->get_second_op_expr()->is_const()
                 && triple_expr->get_third_op_expr()->is_const())
         {
@@ -355,76 +349,64 @@ bool ObRawExpr::is_aggr_fun() const
     return ret;
 }
 
-/**************************************************
-Funtion     :   set_db_name
-Author      :   qinbo
-Date        :   2013.9.11
-Description :   store current db name
-Input       :   
-Output      :   
- **************************************************/
-void ObRawExpr::set_db_name(string db_name)
-{
-    this->current_db_name = db_name;
-}
 
 /**************************************************
 Funtion     :   try_get_table_name
 Author      :   qinbo
 Date        :   2013.10.29
 Description :   try get table name
-Input       :   
+Input       :   ResultPlan& result_plan ,string &table_name
 Output      :   
  **************************************************/
-bool ObRawExpr::try_get_table_name(string &table_name) const
+bool ObRawExpr::try_get_table_name(ResultPlan& result_plan ,string &table_name) const
 {
-    if (!is_need_to_get_route())
+    if (!is_need_to_get_route(result_plan))
     {
         return false;
     }
 
-    if (is_equal_filter_need_route())
+    if (is_equal_filter_need_route(result_plan))
     {
         ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
-        if (binary_expr->get_first_op_expr()->is_column_and_sharding_key())
+        if (binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan))
         {
-            return(binary_expr->get_first_op_expr()->get_table_name_in_sharding_column(table_name));
+            return(binary_expr->get_first_op_expr()->get_table_name_in_sharding_column(result_plan ,table_name));
         }
         else
         {   
-            return(binary_expr->get_second_op_expr()->get_table_name_in_sharding_column(table_name));
+            return(binary_expr->get_second_op_expr()->get_table_name_in_sharding_column(result_plan ,table_name));
         }
     }
-    else if (is_contain_filter_need_route())
+    else if (is_contain_filter_need_route(result_plan))
     {
         ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
-        if (binary_expr->get_first_op_expr()->is_column_and_sharding_key())
+        if (binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan))
         {
-            return(binary_expr->get_first_op_expr()->get_table_name_in_sharding_column(table_name));
+            return(binary_expr->get_first_op_expr()->get_table_name_in_sharding_column(result_plan ,table_name));
         }
         else
         {   
-            return(binary_expr->get_second_op_expr()->get_table_name_in_sharding_column(table_name));
+            return(binary_expr->get_second_op_expr()->get_table_name_in_sharding_column(result_plan ,table_name));
         }
     }
-    else if (is_range_filter_need_route())
+    else if (is_range_filter_need_route(result_plan))
     {
         if (type_ >= T_OP_LE && type_ <= T_OP_GT)
         {
             ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
-            if (binary_expr->get_first_op_expr()->is_column_and_sharding_key())
+            if (binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan))
             {
-                return(binary_expr->get_first_op_expr()->get_table_name_in_sharding_column(table_name));
+                return(binary_expr->get_first_op_expr()->get_table_name_in_sharding_column(result_plan ,table_name));
             }
             else
             {   
-                return(binary_expr->get_second_op_expr()->get_table_name_in_sharding_column(table_name));
+                return(binary_expr->get_second_op_expr()->get_table_name_in_sharding_column(result_plan ,table_name));
             }
         }
         else if (type_ == T_OP_BTW)
         {
             ObTripleOpRawExpr *triple_expr = dynamic_cast<ObTripleOpRawExpr *> (const_cast<ObRawExpr *> (this));
-            return(triple_expr->get_first_op_expr()->get_table_name_in_sharding_column(table_name));
+            return(triple_expr->get_first_op_expr()->get_table_name_in_sharding_column(result_plan ,table_name));
         }
     }
     return false;
@@ -432,31 +414,18 @@ bool ObRawExpr::try_get_table_name(string &table_name) const
 
 
 /**************************************************
-Funtion     :   get_db_name
-Author      :   qinbo
-Date        :   2013.9.11
-Description :   get current db name
-Input       :   
-Output      :   
- **************************************************/
-string ObRawExpr::get_db_name() const
-{
-    return current_db_name;
-}
-
-/**************************************************
 Funtion		:	is_need_to_get_route
 Author		:	qinbo
 Date		:	2013.9.11
 Description	:   this expr is need to get route or not
-Input		:	
+Input		:	ResultPlan& result_plan
 Output		:	
  **************************************************/
-bool ObRawExpr::is_need_to_get_route() const
+bool ObRawExpr::is_need_to_get_route(ResultPlan& result_plan) const
 {
-    if (is_equal_filter_need_route() ||
-            is_contain_filter_need_route() ||
-            is_range_filter_need_route())
+    if (is_equal_filter_need_route(result_plan) ||
+            is_contain_filter_need_route(result_plan) ||
+            is_range_filter_need_route(result_plan))
     {
         return true;
     }
@@ -469,25 +438,25 @@ Funtion     :   convert_ob_expr_to_route
 Author      :   qinbo
 Date        :   2013.10.14
 Description :   convert ob style expr to route used key relation
-Input       :   key_data& key_relation
+Input       :   ResultPlan& result_plan, key_data& key_relation
 Output      :   
  **************************************************/
-bool ObRawExpr::convert_ob_expr_to_route(key_data& key_relation) const
+bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_relation) const
 {
     string column_name;
 
-    if (!this->is_need_to_get_route())
+    if (!this->is_need_to_get_route(result_plan))
     {
         return false;
     }
 
-    if (this->is_equal_filter_need_route())
+    if (this->is_equal_filter_need_route(result_plan))
     {
         key_relation.key_value_num = 1;
         ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
         if (binary_expr->get_first_op_expr()->is_const())
         {
-            if (binary_expr->get_second_op_expr()->get_column_and_sharding_key(column_name)
+            if (binary_expr->get_second_op_expr()->get_column_and_sharding_key(result_plan, column_name)
                     &&(key_relation.sharding_key == column_name))
             {
                 key_relation.key_relation = this->get_expr_type();
@@ -498,7 +467,7 @@ bool ObRawExpr::convert_ob_expr_to_route(key_data& key_relation) const
         }
         else if (binary_expr->get_second_op_expr()->is_const())
         {
-            if (binary_expr->get_first_op_expr()->get_column_and_sharding_key(column_name)
+            if (binary_expr->get_first_op_expr()->get_column_and_sharding_key(result_plan, column_name)
                     &&(key_relation.sharding_key == column_name))
             {
                 key_relation.key_relation = this->get_expr_type();
@@ -508,10 +477,10 @@ bool ObRawExpr::convert_ob_expr_to_route(key_data& key_relation) const
         }
 
     }
-    else if (this->is_contain_filter_need_route())
+    else if (this->is_contain_filter_need_route(result_plan))
     {
         ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
-        if (binary_expr->get_first_op_expr()->get_column_and_sharding_key(column_name)
+        if (binary_expr->get_first_op_expr()->get_column_and_sharding_key(result_plan, column_name)
                 &&(key_relation.sharding_key == column_name))
         {
             key_relation.key_relation = this->get_expr_type();
@@ -534,7 +503,7 @@ bool ObRawExpr::convert_ob_expr_to_route(key_data& key_relation) const
             }
         }
     }
-    else if (this->is_range_filter_need_route())
+    else if (this->is_range_filter_need_route(result_plan))
     {
         if (this->get_expr_type() >= T_OP_LE && this->get_expr_type() <= T_OP_GT)
         {
@@ -542,7 +511,7 @@ bool ObRawExpr::convert_ob_expr_to_route(key_data& key_relation) const
             ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
             if (binary_expr->get_first_op_expr()->is_const())
             {
-                if (binary_expr->get_second_op_expr()->get_column_and_sharding_key(column_name)
+                if (binary_expr->get_second_op_expr()->get_column_and_sharding_key(result_plan, column_name)
                         &&(key_relation.sharding_key == column_name))
                 {
                     key_relation.key_relation = this->get_expr_type();
@@ -553,7 +522,7 @@ bool ObRawExpr::convert_ob_expr_to_route(key_data& key_relation) const
             }
             else if (binary_expr->get_second_op_expr()->is_const())
             {
-                if (binary_expr->get_first_op_expr()->get_column_and_sharding_key(column_name)
+                if (binary_expr->get_first_op_expr()->get_column_and_sharding_key(result_plan, column_name)
                         &&(key_relation.sharding_key == column_name))
                 {
                     key_relation.key_relation = this->get_expr_type();
@@ -567,7 +536,7 @@ bool ObRawExpr::convert_ob_expr_to_route(key_data& key_relation) const
         {
             key_relation.key_value_num = 2;
             ObTripleOpRawExpr *triple_expr = dynamic_cast<ObTripleOpRawExpr *> (const_cast<ObRawExpr *> (this));
-            if (triple_expr->get_first_op_expr()->get_column_and_sharding_key(column_name)
+            if (triple_expr->get_first_op_expr()->get_column_and_sharding_key(result_plan, column_name)
                     &&(key_relation.sharding_key == column_name))
             {
                 key_relation.key_relation = this->get_expr_type();
@@ -717,7 +686,7 @@ void ObConstRawExpr::print(FILE* fp, int32_t level) const
         {
             string str;
             value_.get_varchar(str);
-            fprintf(fp, "%.*s\n", str.size(), str.data());
+            fprintf(fp, "%.*s\n", (int32_t)str.size(), str.data());
             break;
         }
         case T_DATE:
@@ -745,7 +714,7 @@ void ObConstRawExpr::print(FILE* fp, int32_t level) const
         {
             string str;
             value_.get_varchar(str);
-            fprintf(fp, "%.*s\n", str.size(), str.data());
+            fprintf(fp, "%.*s\n", (int32_t)str.size(), str.data());
             break;
         }
         case T_BOOL:
@@ -789,10 +758,10 @@ int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql
         case T_STRING:
         case T_BINARY:
         {
-            assembled_sql.append("\"");
+            assembled_sql.append("\'");
             value_.to_string(buf_tmp, RAW_EXPR_BUF_SIZE);
             assembled_sql.append(buf_tmp, RAW_EXPR_BUF_SIZE);
-            assembled_sql.append("\"");
+            assembled_sql.append("\'");
             break;
         }
         default:
@@ -954,7 +923,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!!");
+                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
@@ -967,7 +936,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_
     {
         ret = OB_ERR_PARSER_SYNTAX;
         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Sub-query of In operator is not select statment");
+                "Sub-query of In operator is not select statment at %s:%d", __FILE__,__LINE__);
         return ret;
     }
 
@@ -1046,16 +1015,16 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "logical_plan must exist!!!");
+                    "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
-        sql_expr = logical_plan->get_expr_by_ref_sql_expr_raw_id(related_sql_raw_id);
+        sql_expr = logical_plan->get_expr_by_id(related_sql_raw_id);
         if (NULL == sql_expr)
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "ref column error!!!");
+                    "ref column error!!! at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -1064,23 +1033,21 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
     }
     else
     {
-        string db_name_tmp = get_db_name();
-        schema_table* table_schema = g_metareader->get_table_schema_by_id(db_name_tmp, first_id_);
+        schema_table* table_schema = g_metareader->get_table_schema_by_id(result_plan.db_name, first_id_);
         if (NULL == table_schema)
         {
             ret = OB_ERR_SCHEMA_UNSET;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Schema(s) are not set");
+                    "Schema(s) are not set at %s:%d", __FILE__,__LINE__);
             return ret;
         }
-
 
         schema_column* column_schema = table_schema->get_column_from_table_by_id(second_id_);
         if (column_schema == NULL)
         {
             ret = OB_ERR_SCHEMA_UNSET;
             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Schema(s) are not set");
+                    "Schema(s) are not set at %s:%d", __FILE__,__LINE__);
             return ret;
         }
 
@@ -1452,7 +1419,7 @@ void ObMultiOpRawExpr::print(FILE* fp, int32_t level) const
     fprintf(fp, "ObMultiOpRawExpr\n");
     for (int i = 0; i < level; ++i) fprintf(fp, "    ");
     fprintf(fp, "%s\n", get_type_name(get_expr_type()));
-    for (int32_t i = 0; i < exprs_.size(); i++)
+    for (uint32_t i = 0; i < exprs_.size(); i++)
     {
         exprs_[i]->print(fp, level + 1);
     }
@@ -1468,13 +1435,11 @@ Output		:	string&  assembled_sql
  **************************************************/
 int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
 {
-    int64_t pos = 0;
-    int64_t ret = OB_SUCCESS;
     string  assembled_sql_tmp;
 
     assembled_sql.append("(");
 
-    for (int32_t i = 0; i < exprs_.size(); i++)
+    for (uint32_t i = 0; i < exprs_.size(); i++)
     {
         exprs_[i]->to_string(result_plan, assembled_sql_tmp);
         assembled_sql.append(assembled_sql_tmp);
@@ -1485,6 +1450,7 @@ int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, string& assembled_s
         }
     }
     assembled_sql.append(")");
+    return OB_SUCCESS;
 }
 
 #if 0
@@ -1750,19 +1716,7 @@ int64_t ObSqlRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) 
     if (NULL != expr_)
     {
         expr_->to_string(result_plan, assembled_sql);
-#if 0        
-        key_relation.sharding_key.assign("lastname");
-        if (convert_ob_expr_to_route(key_relation))
-        {
-            fprintf(stderr, "key_relation relate is %d\n", key_relation.key_relation);
-
-            fprintf(stderr, "key_relation num is %d\n", key_relation.key_value_num);
-            for (int i = 0; i < key_relation.key_value_num; i++)
-            {
-                fprintf(stderr, "key_relation value is %s\n", key_relation.value.key_str[i]);
-            }
-        }
-#endif        
     }
+    return OB_SUCCESS;
 }
 

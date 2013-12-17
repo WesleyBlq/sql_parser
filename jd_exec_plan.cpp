@@ -17,44 +17,34 @@ extern meta_reader *g_metareader;
 
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
+using namespace std;
 
 /**************************************************
-Funtion     :   set_exec_unit_sql
+Funtion     :   ExecPlanUnit
 Author      :   qinbo
-Date        :   2013.10.18
-Description :   set exec plan unit sql 
-Input       :   string sql_
+Date        :   2013.12.11
+Description :   
+Input       :   
 Output      :   
  **************************************************/
-void ExecPlanUnit::set_exec_unit_sql(string sql_)
-{
-    sql.assign(sql_);
+ExecPlanUnit::ExecPlanUnit()
+{   
+    shard_info      = NULL;
 }
 
 /**************************************************
-Funtion     :   set_exec_unit_sql
+Funtion     :   ~ExecPlanUnit
 Author      :   qinbo
-Date        :   2013.10.18
-Description :   set exec plan unit shard info 
-Input       :   schema_shard* shard_info_
+Date        :   2013.12.11
+Description :   
+Input       :   
 Output      :   
  **************************************************/
-void ExecPlanUnit::set_exec_uint_shard_info(schema_shard* shard_info_)
-{
-    shard_info = shard_info_;
+ExecPlanUnit::~ExecPlanUnit()
+{   
+    
 }
 
-string ExecPlanUnit::get_exec_unit_sql()
-{
-    return sql;
-}
-
-
-schema_shard* ExecPlanUnit::get_exec_unit_shard_info()
-{
-    return shard_info;
-
-}
 
 /**************************************************
 Funtion     :   SameLevelExecPlan
@@ -66,7 +56,8 @@ Output      :
  **************************************************/
 SameLevelExecPlan::SameLevelExecPlan()
 {
-    query_post_reduce_info = NULL;
+    query_post_reduce_info  = NULL;
+    sql_sent_goal           = SEND_SQL_TO_DATA_NODE;
     //is_1st_plan;
     //parent_sql_type;            //if need to be reparsed
 }
@@ -352,11 +343,13 @@ int QueryActuator::init_exec_plan(string current_db_name)
 
     schema_column->set_sharding_key_status(false);
 #endif
+    memset(&result, 0, sizeof(ParseResult));
     result_plan.name_pool_ = NULL;
     result_plan.route_info = (void*) route;
     result_plan.plan_tree_ = NULL;
     result_plan.db_name    = current_db_name;
-
+    final_exec_plan        = NULL;
+    
     return 0;
 
 }
@@ -392,8 +385,6 @@ void QueryActuator::release_exec_plan()
         parse_free(final_exec_plan);
         final_exec_plan = NULL;
     }
-
-    memset(&result, 0, sizeof(ParseResult));
 }
 
 /**************************************************
@@ -581,6 +572,20 @@ int QueryActuator::generate_exec_plan(
                     break;
                 case ObBasicStmt::T_UPDATE:
                     ret = gen_exec_plan_update(result_plan, final_exec_plan, result_plan.err_stat_, query_id, index);
+                    break;
+                case ObBasicStmt::T_SHOW_TABLES:
+                case ObBasicStmt::T_SHOW_VARIABLES:
+                case ObBasicStmt::T_SHOW_COLUMNS:
+                case ObBasicStmt::T_SHOW_SCHEMA:
+                case ObBasicStmt::T_SHOW_CREATE_TABLE:
+                case ObBasicStmt::T_SHOW_TABLE_STATUS:
+                case ObBasicStmt::T_SHOW_SERVER_STATUS:
+                case ObBasicStmt::T_SHOW_WARNINGS:
+                case ObBasicStmt::T_SHOW_GRANTS:
+                case ObBasicStmt::T_SHOW_PARAMETERS:
+                case ObBasicStmt::T_SHOW_PROCESSLIST :
+                case ObBasicStmt::T_VARIABLE_SET:
+                    ret = send_sql_to_config_server(result_plan, final_exec_plan, sql);
                     break;
                 default:
                     ret = OB_NOT_SUPPORTED;
@@ -916,7 +921,7 @@ bool QueryActuator::reparse_where_with_route_for_one_table(
         vector<ObRawExpr*> atomic_exprs = un_opt_raw_exprs.at(i);
         vector<ObRawExpr*> partition_sql_exprs;
 
-        search_partition_sql_exprs(atomic_exprs, partition_sql_exprs);
+        search_partition_sql_exprs(result_plan, atomic_exprs, partition_sql_exprs);
 
         /*if there is no route sql, this sql should be sent to all shards*/
         if (partition_sql_exprs.size() == 0)
@@ -983,7 +988,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
             key_relation.table_name     = table_name;
             key_relation.sharding_key   = it->first;
             key_relation.key_type       = it->second;
-            if (raw_expr->convert_ob_expr_to_route(key_relation))
+            if (raw_expr->convert_ob_expr_to_route(result_plan, key_relation))
             {
                 key_relations.push_back(key_relation);
             }
@@ -1296,7 +1301,7 @@ bool QueryActuator::reparse_where_with_route_for_multi_tables(
         vector<ObRawExpr*> atomic_exprs = un_opt_raw_exprs.at(i);
         vector<ObRawExpr*> partition_sql_exprs;
 
-        search_partition_sql_exprs(atomic_exprs, partition_sql_exprs);
+        search_partition_sql_exprs(result_plan, atomic_exprs, partition_sql_exprs);
 
         //if there is no route sql, this sql should be sent to all shards
         if (partition_sql_exprs.size() == 0)
@@ -1377,7 +1382,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
 
         string table_name;
         
-        if (!raw_expr->try_get_table_name(table_name))
+        if (!raw_expr->try_get_table_name(result_plan,table_name))
         {
             continue;
         }
@@ -1398,7 +1403,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
             key_relation.sharding_key   = it->first;
             key_relation.key_type       = it->second;
 
-            if (raw_expr->convert_ob_expr_to_route(key_relation))
+            if (raw_expr->convert_ob_expr_to_route(result_plan, key_relation))
             {
                 key_relations.push_back(key_relation);
             }
@@ -1548,7 +1553,7 @@ void QueryActuator::generate_all_table_shards(ResultPlan& result_plan,
         for (j = 0; j < expanded_shards_seq.size(); j++)
         {
             schema_shard* shard_tmp = expanded_shards_seq.at(j);
-            if (server_name == "")
+            if (server_name.empty())
             {
                 server_name = shard_tmp->get_master_server();
             }
@@ -1695,12 +1700,14 @@ Funtion     :   search_partition_sql_exprs
 Author      :   qinbo
 Date        :   2013.10.18
 Description :   find all expr that need to be partitioned
-Input       :   vector<ObRawExpr*>  atomic_exprs,
+Input       :   ResultPlan& result_plan
+                vector<ObRawExpr*>  atomic_exprs,
                 vector<ObRawExpr*>  &partition_sql_exprs
 Output      :   
  **************************************************/
 int QueryActuator::search_partition_sql_exprs(
-        vector<ObRawExpr*> atomic_exprs,
+        ResultPlan& result_plan,
+        vector<ObRawExpr*> &atomic_exprs,
         vector<ObRawExpr*> &partition_sql_exprs)
 {
     uint32_t i = 0;
@@ -1710,7 +1717,7 @@ int QueryActuator::search_partition_sql_exprs(
     {
         raw_expr = atomic_exprs.at(i);
 
-        if (raw_expr->is_need_to_get_route())
+        if (raw_expr->is_need_to_get_route(result_plan))
         {
             partition_sql_exprs.push_back(raw_expr);
         }
@@ -2276,7 +2283,7 @@ int QueryActuator::gen_exec_plan_insert(
                 {
                     sql_expr = logical_plan->get_expr_by_id(value_row.at(i));
                     
-                    if (!sql_expr->get_expr()->is_column_and_sharding_key())
+                    if (!sql_expr->get_expr()->is_column_and_sharding_key(result_plan))
                     {
                         ret = JD_ERR_COLUMN_NOT_MATCH;
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -2298,7 +2305,7 @@ int QueryActuator::gen_exec_plan_insert(
                         key_relation.sharding_key   = it->first;
                         key_relation.key_type       = it->second;
                     
-                        if (raw_expr->convert_ob_expr_to_route(key_relation))
+                        if (raw_expr->convert_ob_expr_to_route(result_plan, key_relation))
                         {
                             key_relations.push_back(key_relation);
                         }
@@ -2460,5 +2467,62 @@ int QueryActuator::distribute_sql_to_all_shards(
 
     return ret;
 }
+
+
+/**************************************************
+Funtion     :   send_sql_to_config_server
+Author      :   qinbo
+Date        :   2013.12.11
+Description :   send sql(show/set command) to config server
+                show/set command wo do not truely support now
+Input       :   ResultPlan& result_plan,
+                FinalExecPlan* physical_plan,
+                string sql
+Output      :   
+return      :   
+ **************************************************/
+int QueryActuator::send_sql_to_config_server( 
+                            ResultPlan& result_plan,
+                            FinalExecPlan* physical_plan,
+                            string sql)
+{
+    int ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+    
+    SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
+    if (exec_plan == NULL)
+    {
+        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Can not malloc space for SameLevelExecPlan at %s:%d", __FILE__,__LINE__);
+        return ret;
+    }
+    else
+    {
+        exec_plan = new(exec_plan) SameLevelExecPlan();
+        physical_plan->add_same_level_exec_plan(exec_plan);
+    }
+
+    exec_plan->set_sql_sent_goal(SEND_SQL_TO_CONFIG_SERVER);
+    
+    ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
+    if (exec_plan_unit == NULL)
+    {
+        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
+        return ret;
+    }
+    else
+    {
+        exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
+        exec_plan->add_exec_plan_unit(exec_plan_unit);
+    }
+    
+    exec_plan_unit->set_exec_unit_sql(sql);
+
+    return ret;
+}
+
+
 
 

@@ -236,6 +236,10 @@ const char* get_type_symbol(int type)
         return " AND ";
     case T_OP_EXISTS:
         return " EXIST ";
+    case T_OP_LIKE:
+        return " LIKE ";
+    case T_OP_NOT_LIKE:
+        return " NOT LIKE ";
     case T_OP_POS:
     case T_OP_NEG:
     default:

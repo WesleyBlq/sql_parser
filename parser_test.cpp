@@ -87,9 +87,11 @@ SELECT address,lastname FROM persons";
     string sql_test2 = "SELECT id from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing'";
     string sql_test3 = "SELECT id FROM pp";
     
-    string sql_test40 = "SELECT * from pp";
+    string sql_test40 = "SELECT id from pp WHERE name LIKE '%a%'";
     // UNION distinct SELECT id FROM tt
-    string sql_test4 = "SELECT MAX(id) from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing' GROUP BY name Having SUM(age)>100 ORDER BY age";
+    //string sql_test4 = "SELECT MAX(id) from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing' GROUP BY name Having SUM(age)>100 ORDER BY age";
+    string sql_test4 = "select id, name, avg(age) as cao  from tt where id > 0 group by age HAVING cao>1 order by id"; //
+
     //sql_parser(sql3, "qinbo");
     //sql_parser(sql6);
     //sql_parser(sql10);

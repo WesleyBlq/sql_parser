@@ -37,9 +37,9 @@ T* create_stmt(ResultPlan* result_plan)
 {
     T* stmt = NULL;
     void *ptr = NULL;
-    if (NULL == (ptr = parse_malloc(sizeof(T), result_plan->name_pool_)))
+    if (NULL == (ptr = parse_malloc(sizeof(T), NULL)))
     {
-        jlog(WARNING, "Can not allocate memory for stmt");
+        jlog(WARNING, "Can not allocate memory for stmt at %s:%d", __FILE__, __LINE__);
     }
     else
     {
@@ -65,9 +65,8 @@ int prepare_resolve_stmt(ResultPlan* result_plan,
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            jlog(WARNING, "out of memory");
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                  "Can not malloc ObLogicalPlan");
+                  "Can not malloc ObLogicalPlan at %s:%d", __FILE__,__LINE__); 
             return ret;
         }
         else
@@ -84,7 +83,7 @@ int prepare_resolve_stmt(ResultPlan* result_plan,
     if (NULL == (stmt = create_stmt<T>(result_plan)))
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        jlog(WARNING, "Failed to allocate memory");
+        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,"Failed to allocate memory at %s:%d", __FILE__,__LINE__);
     }
     else
     {
@@ -92,7 +91,7 @@ int prepare_resolve_stmt(ResultPlan* result_plan,
         stmt->set_query_id(query_id);
         if (OB_SUCCESS != (ret = logical_plan->add_query(stmt)))
         {
-            jlog(WARNING, "Can not add stmt to logical plan");
+            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,"Can not add query to logical plan at %s:%d", __FILE__,__LINE__);
             stmt->~T();
             stmt = NULL;
         }
@@ -143,19 +142,19 @@ int resolve_variable_set_stmt(
           if ((ret = ob_write_string(make_string(var->str_value_),
                                       var_node.variable_name_)) != OB_SUCCESS)
           {
-            jlog(WARNING, "Can not malloc space for variable name");
             break;
           }
 
           OB_ASSERT(node->children_[1]);
-          if ((ret = resolve_independ_expr(result_plan, NULL, set_node->children_[1], var_node.value_expr_id_,
+            if ((ret = resolve_independ_expr(result_plan, NULL, set_node->children_[1], var_node.value_expr_id_,
                                             T_VARIABLE_VALUE_LIMIT)) != OB_SUCCESS)
-          {
-            jlog(WARNING, "Resolve set value error");
-            break;
-          }
+            {
+                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                    "Resolve set value error at %s:%d", __FILE__,__LINE__);
+                break;
+            }
 
-          stmt->add_variable_node(var_node);
+            stmt->add_variable_node(var_node);
         }
     }
     return ret;
@@ -182,7 +181,7 @@ int resolve_show_stmt(
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not malloc ObLogicalPlan");
+                "Can not malloc ObLogicalPlan at %s:%d", __FILE__,__LINE__);
         }
         else
         {
@@ -202,7 +201,7 @@ int resolve_show_stmt(
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not malloc ObShowStmt");
+                "Can not malloc ObShowStmt at %s:%d", __FILE__,__LINE__);
         }
         else
         {
@@ -287,7 +286,7 @@ int resolve_show_stmt(
             if (ret == OB_SUCCESS && (ret = logical_plan->add_query(show_stmt)) != OB_SUCCESS)
             {
                 snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not add ObShowStmt to logical plan");
+                "Can not add ObShowStmt to logical plan at %s:%d", __FILE__,__LINE__);
             }
             if (ret != OB_SUCCESS && show_stmt != NULL)
             {
@@ -310,7 +309,7 @@ int resolve_show_stmt(
             if (schema_checker == NULL)
             {
             ret = OB_ERR_SCHEMA_UNSET;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG, "Schema(s) are not set");
+            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG, "Schema(s) are not set at %s:%d", __FILE__,__LINE__);
             }
             int32_t len = static_cast<int32_t>(strlen(show_table_node->str_value_));
             ObString table_name(len, len, show_table_node->str_value_);
@@ -319,7 +318,7 @@ int resolve_show_stmt(
             {
             ret = OB_ERR_TABLE_UNKNOWN;
             snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Unknown table \"%s\"", show_table_node->str_value_);
+                "Unknown table \"%s\" at %s:%d", show_table_node->str_value_, __FILE__,__LINE__);
             }
             else
             {

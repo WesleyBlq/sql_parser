@@ -1,3 +1,6 @@
+#include <string>
+#include <sstream>
+#include <iostream> 
 #include "ob_select_stmt.h"
 #include "parse_malloc.h"
 #include "ob_logical_plan.h"
@@ -8,6 +11,7 @@ extern meta_reader *g_metareader;
 
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
+using namespace std;
 
 ObSelectStmt::ObSelectStmt()
 : ObStmt(ObStmt::T_SELECT)
@@ -32,10 +36,14 @@ ObSelectStmt::~ObSelectStmt()
         parse_free(joined_tables_[i]);
     }
     select_items_.clear();
-    select_items_.clear();
+    from_items_.clear();
     joined_tables_.clear();
     group_expr_ids_.clear();
+    having_expr_ids_.clear();
+    agg_func_ids_.clear();
+    group_items_.clear();
     order_items_.clear();
+    having_items_.clear();
 }
 
 int ObSelectStmt::check_alias_name(
@@ -130,7 +138,7 @@ int ObSelectStmt::add_select_item(
     return ret;
 }
 
-int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& limit, const uint64_t& offset)
+int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& offset, const uint64_t& limit)
 {
     int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
     ObSqlRawExpr* sql_expr = NULL;
@@ -174,6 +182,10 @@ int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& lim
             }
         }
     }
+    else
+    {
+        limit_item_.start = 0;
+    }
 
     if (ret != OB_SUCCESS)
     {
@@ -185,20 +197,15 @@ int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& lim
         sql_expr = logical_plan->get_expr_by_id(limit_count_id_);
         if (NULL != sql_expr)
         {
-            if (limit_offset_id_ != OB_INVALID_ID)
+            if (sql_expr->get_expr()->is_const())
             {
-                if (sql_expr->get_expr()->is_const())
+                const_raw_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+                if (ObIntType == const_raw_expr->get_value().get_type())
                 {
-                    const_raw_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
-                    if (ObIntType == const_raw_expr->get_value().get_type())
+                    const_raw_expr->get_value().get_int(limit_item_.end);
+                    if (limit_item_.end > MAX_LIMIT_ROWS)
                     {
-                        const_raw_expr->get_value().get_int(limit_item_.end);
-                    }
-                    else
-                    {
-                        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "limit_count set error!!! at %s:%d", __FILE__,__LINE__);
+                        limit_item_.end = MAX_LIMIT_ROWS;
                     }
                 }
                 else
@@ -208,8 +215,19 @@ int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& lim
                             "limit_count set error!!! at %s:%d", __FILE__,__LINE__);
                 }
             }
+            else
+            {
+                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "limit_count set error!!! at %s:%d", __FILE__,__LINE__);
+            }
         }
     }
+    else
+    {
+        limit_item_.end = MAX_LIMIT_ROWS;
+    }
+       
     return ret;
     
 }
@@ -317,8 +335,9 @@ int ObSelectStmt::check_having_ident(
                     break;
                 }
                 // for having clause: having cc > 0
-                // type 1: select t1.cc
-                if (expr->get_expr_type() == T_REF_COLUMN && !select_item.is_real_alias_)
+                // type 1: select t1.cc   
+                // && !select_item.is_real_alias_
+                if (expr->get_expr_type() == T_REF_COLUMN)
                 {
                     ObBinaryRefRawExpr *col_expr = dynamic_cast<ObBinaryRefRawExpr *> (expr);
                     ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
@@ -336,11 +355,18 @@ int ObSelectStmt::check_having_ident(
                     b_expr->set_expr_type(T_REF_COLUMN);
                     b_expr->set_first_ref_id(col_expr->get_first_ref_id());
                     b_expr->set_second_ref_id(col_expr->get_second_ref_id());
+
+                    //only HAVING can have AGGR functions
+                    if (sql_expr->is_contain_aggr())
+                    {
+                        b_expr->set_related_sql_raw_id(col_expr->get_related_sql_raw_id());
+                    }
+                    
                     ret_expr = b_expr;
                 }
-                    // type 2: select t1.cc as cc
-                    // type 3: select t1.c1 as cc
-                    // type 4: select t1.c1 + t2.c1 as cc
+                // type 2: select t1.cc as cc
+                // type 3: select t1.c1 as cc
+                // type 4: select t1.c1 + t2.c1 as cc
                 else
                 {
                     ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
@@ -760,10 +786,20 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
 
         if (item.is_real_alias_)
         {
-            assembled_sql.append(item.expr_name_);
+            sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
+            if (NULL == sql_expr)
+            {
+                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "join table expr name error!!! at %s:%d", __FILE__,__LINE__);
+                return ret;
+            }
+            string tmp;
+            sql_expr->to_string(result_plan, tmp);
+            assembled_sql.append(tmp);
+            
             assembled_sql.append(" AS ");
             assembled_sql.append(item.alias_name_);
-            assembled_sql.append(" ");
 
             if (i < select_items_.size() - 1)
             {
@@ -787,8 +823,6 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
 
             sql_expr->to_string(result_plan, assembled_sql_tmp);
             assembled_sql.append(assembled_sql_tmp);
-
-            //databuff_printf(buf, buf_len, pos, item.expr_name_.data());
 
             if (i < select_items_.size() - 1)
             {
@@ -840,6 +874,7 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
     {
         for (i = 0; i < group_items.size(); i++)
         {
+            cout << "group_items[i].group_column        :" << group_items[i].group_column_ << endl;
             if (!try_fetch_select_item_by_column_name(select_items, group_items[i].group_column_, column_off))
             {
                 vector<string>::iterator pos;
@@ -859,6 +894,7 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
     {
         for (i = 0; i < Having_items.size(); i++)
         {
+            cout << "Having_items[i].having_column_name :" << Having_items[i].having_column_name << endl;
             if (!try_fetch_select_item_by_column_name(select_items, Having_items[i].having_column_name, column_off))
             {
                 vector<string>::iterator pos;
@@ -878,6 +914,7 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
     {
         for (i = 0; i < order_items.size(); i++)
         {
+            cout << "order_items[i].order_column        :" << order_items[i].order_column_ << endl;
             if (!try_fetch_select_item_by_column_name(select_items, order_items[i].order_column_, column_off))
             {
                 vector<string>::iterator pos;
@@ -971,7 +1008,7 @@ int64_t ObSelectStmt::make_from_string(ResultPlan& result_plan, string &assemble
         }
         else
         {
-            assembled_sql.append(ObStmt::get_table_item_by_id(item.table_id_)->table_name_);
+            assembled_sql.append(item.table_name_);
             if (i == from_items_.size() - 1)
             {
                 assembled_sql.append(" ");
@@ -1000,33 +1037,13 @@ int64_t ObSelectStmt::make_group_by_string(ResultPlan& result_plan, string &asse
 {
     uint32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    ObSqlRawExpr* sql_expr = NULL;
 
-    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
-    }
-
-    if (group_expr_ids_.size() > 0)
+    if (group_items_.size() > 0)
     {
         assembled_sql.append(" GROUP BY ");
-        for (i = 0; i < group_expr_ids_.size(); i++)
+        for (i = 0; i < group_items_.size(); i++)
         {
-            string  assembled_sql_tmp;
-            sql_expr = logical_plan->get_expr_by_id(group_expr_ids_[i]);
-            if (NULL == sql_expr)
-            {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "group by expr name error!!! at %s:%d", __FILE__,__LINE__);
-                return ret;
-            }
-
-            sql_expr->to_string(result_plan, assembled_sql_tmp);
-            assembled_sql.append(assembled_sql_tmp);
+            assembled_sql.append(group_items_.at(i).group_column_);
             assembled_sql.append(" ");
         }
     }
@@ -1047,15 +1064,6 @@ int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan, string &asse
 {
     uint32_t i = 0;
     int&    ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    ObSqlRawExpr* sql_expr = NULL;
-
-    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
-    }
 
     for (i = 0; i < order_items_.size(); i++)
     {
@@ -1067,17 +1075,7 @@ int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan, string &asse
 
         OrderItem& item = order_items_[i];
 
-        sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
-        if (NULL == sql_expr)
-        {
-            ret = OB_ERR_LOGICAL_PLAN_FAILD;
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "order by expr name error!!! at %s:%d", __FILE__,__LINE__);
-            return ret;
-        }
-
-        sql_expr->to_string(result_plan, assembled_sql_tmp);
-        assembled_sql.append(assembled_sql_tmp);        
+        assembled_sql.append(item.order_column_);        
         assembled_sql.append(" ");
         assembled_sql.append(item.order_type_ == T_SORT_ASC ? "ASC " : "DESC ");
     }
@@ -1123,10 +1121,10 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan, string &assemb
                         "having expr name error!!! at %s:%d", __FILE__,__LINE__);
                 return ret;
             }
-
+            assembled_sql.append("(");
             sql_expr->to_string(result_plan, assembled_sql_tmp);
             assembled_sql.append(assembled_sql_tmp);        
-            assembled_sql.append(" ");
+            assembled_sql.append(") ");
         }
     }
 
@@ -1144,69 +1142,23 @@ Output      :
  **************************************************/
 int64_t ObSelectStmt::make_limit_string(ResultPlan& result_plan, string &assembled_sql)
 {
-    int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    string  assembled_sql_tmp;
-    ObSqlRawExpr* sql_expr = NULL;
+    assembled_sql.append("LIMIT ");
+   
+    stringstream  ss1;
+    string s1;
+    ss1 << limit_item_.start;
+    ss1 >> s1;
+    assembled_sql.append(s1);       
 
-    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
-    }
+    assembled_sql.append(", ");        
 
+    stringstream  ss2;
+    string s2;
+    ss2 << limit_item_.end;
+    ss2 >> s2;
+    assembled_sql.append(s2);        
 
-    if (has_limit())
-    {
-        assembled_sql.append("LIMIT ");
-       
-        if (limit_offset_id_ == OB_INVALID_ID)
-        {
-            //fprintf(stderr, "NULL>\n");
-        }
-        else
-        {
-            sql_expr = logical_plan->get_expr_by_id(limit_offset_id_);
-            if (NULL == sql_expr)
-            {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "limit offset expr name error!!! at %s:%d", __FILE__,__LINE__);
-                return ret;
-            }
-
-            sql_expr->to_string(result_plan, assembled_sql_tmp);
-            assembled_sql.append(assembled_sql_tmp);        
-        }
-
-        if (limit_count_id_ == OB_INVALID_ID)
-        {
-            //fprintf(stderr, "NULL, ");
-        }
-        else
-        {
-            sql_expr = logical_plan->get_expr_by_id(limit_count_id_);
-            if (NULL == sql_expr)
-            {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "limit count expr name error!!! at %s:%d", __FILE__,__LINE__);
-                return ret;
-            }
-
-            if (limit_offset_id_ != OB_INVALID_ID)
-            {
-                assembled_sql.append(", ");        
-            }
-
-            assembled_sql_tmp.clear();
-            sql_expr->to_string(result_plan, assembled_sql_tmp);
-            assembled_sql.append(assembled_sql_tmp);        
-        }
-    }
-
-    return ret;
+    return OB_SUCCESS;
 }
 
 /**************************************************
@@ -1312,7 +1264,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
     
     if (select_expr->get_first_ref_id() == OB_INVALID_ID)
     {
-        sql_expr = logical_plan->get_expr_by_ref_sql_expr_raw_id(select_expr->get_related_sql_raw_id());
+        sql_expr = logical_plan->get_expr_by_id(select_expr->get_related_sql_raw_id());
         if (NULL == sql_expr)
         {
             ret = OB_ERR_ILLEGAL_ID;
@@ -1341,10 +1293,14 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
             }
         }
     }
-    else if (sql_expr->get_expr()->is_column())
+    else if (select_expr->is_column())
     {
-        sql_expr->get_expr()->to_string(*result_plan, assembled_sql_tmp);
-        column_type = sql_expr->get_expr()->get_result_type();
+        ret = select_expr->to_string(*result_plan, assembled_sql_tmp);
+        if (OB_SUCCESS != ret)
+        {
+            return ret;
+        }
+        column_type = select_expr->get_result_type();
         column_name.assign(assembled_sql_tmp);
     }
     else
@@ -1418,10 +1374,10 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     ObBinaryOpRawExpr   *select_op      = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
     ObBinaryRefRawExpr  *first_expr     = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (select_op->get_first_op_expr()));
     ObConstRawExpr      *second_expr    = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (select_op->get_second_op_expr()));
-    
+
     if (first_expr->get_first_ref_id() == OB_INVALID_ID)
     {
-        sql_expr = logical_plan->get_expr_by_ref_sql_expr_raw_id(first_expr->get_related_sql_raw_id());
+        sql_expr = logical_plan->get_expr_by_id(first_expr->get_related_sql_raw_id());
         if (NULL == sql_expr)
         {
             ret = OB_ERR_ILLEGAL_ID;
@@ -1429,7 +1385,6 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
                     "ref column error!!! at %s:%d", __FILE__,__LINE__);
             return ret;
         }
-    
         if (sql_expr->get_expr()->is_aggr_fun())
         {
             ObAggFunRawExpr *agg_fun_raw_expr = dynamic_cast<ObAggFunRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
@@ -1450,10 +1405,16 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
             }
         }
     }
-    else if (sql_expr->get_expr()->is_column())
+    else if (first_expr->is_column())
     {
-        sql_expr->get_expr()->to_string(*result_plan, assembled_sql_tmp);
-        column_type = sql_expr->get_expr()->get_result_type();
+        ret = first_expr->to_string(*result_plan, assembled_sql_tmp);
+        if (OB_SUCCESS != ret)
+        {
+            cout << "first_expr->get_first_ref_id(): " << first_expr->get_first_ref_id() <<" second: " << first_expr->get_second_ref_id() << endl;
+            return ret;
+        }   
+        
+        column_type = first_expr->get_result_type();
         column_name.assign(assembled_sql_tmp);
     }
     else

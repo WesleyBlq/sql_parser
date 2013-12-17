@@ -91,7 +91,7 @@ private:
 class QueryPostReduce
 {
 public:
-    QueryPostReduce( );
+    QueryPostReduce();
     QueryPostReduce(const QueryPostReduce& orig);
     virtual ~QueryPostReduce();
 
@@ -124,7 +124,7 @@ public:
     int32_t get_execute_code();
     
 private:
-    int32_t     reduce;
+    int32_t     reduce; /* NO_REDUCE, REDUCE_GROUP,REDUCE_AGGREGATE,REDUCE_HAVING,REDUCE_ORDER */
     int32_t     execute_code;
     uint32_t    original_field_num;
     uint32_t    real_field_num;
@@ -134,8 +134,8 @@ private:
     vector<OrderPostReduce>     order;
     vector<AggrFuncPostReduce>  func;
     vector<HavingPostReduce>    having;
-    bool        find_column_if_exist(vector<string> &columns, string goal_column, uint32_t column_off);
-    bool        is_sort_asc(SqlItemType sort_type)
+    bool  find_column_if_exist(vector<string> &columns, string goal_column, uint32_t column_off);
+    bool  is_sort_asc(SqlItemType sort_type)
     {
         if ( sort_type == T_SORT_ASC)
         {
