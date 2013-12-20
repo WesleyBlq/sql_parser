@@ -38,8 +38,6 @@ using namespace oceanbase::common;
 using namespace oceanbase::sql;
 using namespace std;
 
-extern meta_reader* g_metareader;
-
 
 int resolve_expr(
         ResultPlan * result_plan,
@@ -110,68 +108,6 @@ int resolve_hints(
 
 static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t table_id, ObStmt *stmt)
 {
-#if 0
-    int ret = OB_SUCCESS;
-    const ObTableSchema* table_schema = NULL;
-    const ObColumnSchemaV2* rowkey_column_schema = NULL;
-    ObRowkeyInfo rowkey_info;
-    int64_t rowkey_idx = 0;
-    uint64_t rowkey_column_id = 0;
-
-
-    if (NULL == stmt || NULL == result_plan)
-    {
-        jlog(WARNING, "invalid argument. stmt=%p, result_plan=%p", stmt, result_plan);
-        ret = OB_INVALID_ARGUMENT;
-    }
-
-    if (ret == OB_SUCCESS)
-    {
-        if (NULL == (table_schema = g_metareader->get_table_schema(table_id)))
-        {
-            ret = OB_ERR_TABLE_UNKNOWN;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Table schema not found", "at %s:%d", __FILE__,__LINE__);
-        }
-        else
-        {
-            // fill rowkey columns to statement, which must be returned in order to delete row
-            rowkey_info = table_schema->get_rowkey_info();
-            for (rowkey_idx = 0; rowkey_idx < rowkey_info.get_size(); rowkey_idx++)
-            {
-                if (OB_SUCCESS != (ret = rowkey_info.get_column_id(rowkey_idx, rowkey_column_id)))
-                {
-                    jlog(WARNING, "fail to get table %lu column %ld. ret=%d", table_id, rowkey_idx, ret);
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "BUG: Unexpected primary columns.", "at %s:%d", __FILE__,__LINE__);
-                    break;
-                }
-                else if (NULL == (rowkey_column_schema = g_metareader->get_column_schema(table_id, rowkey_column_id)))
-                {
-                    ret = OB_ENTRY_NOT_EXIST;
-                    jlog(WARNING, "fail to get table %lu column %lu", table_id, rowkey_column_id);
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "BUG: Primary key column schema not found", "at %s:%d", __FILE__,__LINE__);
-                    break;
-                }
-                else
-                {
-                    string column_name;
-                    column_name.assign(
-                            const_cast<char *> (rowkey_column_schema->get_name()),
-                            static_cast<string::obstr_size_t> (strlen(rowkey_column_schema->get_name())));
-                    ret = stmt->add_column_item(*result_plan, column_name);
-                    if (ret != OB_SUCCESS)
-                    {
-                        jlog(WARNING, "fail to add column item '%s' to table %lu", rowkey_column_schema->get_name(), table_id);
-                        break;
-                    }
-                }
-            }/* end for */
-        }
-    }
-    return ret;
-#endif  
     return OB_SUCCESS;
 }
 
@@ -616,7 +552,6 @@ int resolve_expr(
                     ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
                     uint64_t expr_id = select_stmt->get_alias_expr_id(column_name);
                     
-                    cout << "get_alias_expr_id" <<expr_id << endl;
                     if (expr_id != OB_INVALID_ID)
                     {
                         ObSqlRawExpr* alias_expr = logical_plan->get_expr(expr_id);
@@ -1929,10 +1864,9 @@ int resolve_table_columns(
 #if 0
             const ObColumnSchemaV2* column = NULL;
 #endif
-
             string db_name_tmp;
             db_name_tmp.assign(result_plan->db_name);
-            vector<class schema_column*> schema_columns = g_metareader->get_all_column_schemas(db_name_tmp, table_item.table_name_);
+            vector<class schema_column*> schema_columns = meta_reader::get_instance().get_all_column_schemas(db_name_tmp, table_item.table_name_);
 
             int32_t column_size = schema_columns.size();
 
@@ -2219,8 +2153,6 @@ int resolve_select_clause(
         ret = select_stmt->add_select_item(result_plan, expr_id, is_real_alias, alias_name, expr_name, type);
         if (ret != OB_SUCCESS)
         {
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Add select item error at %s:%d", __FILE__,__LINE__);
             break;
         }
 

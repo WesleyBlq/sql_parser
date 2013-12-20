@@ -12,8 +12,6 @@ using namespace oceanbase::sql;
 using namespace oceanbase::common;
 
 
-extern meta_reader *g_metareader;
-
 bool ObRawExpr::is_const() const
 {
     return (type_ >= T_INT && type_ <= T_NULL);
@@ -67,7 +65,7 @@ bool ObRawExpr::is_column_and_sharding_key(ResultPlan& result_plan) const
 
     ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (this));
 
-    schema_table* table_schema = g_metareader->get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
     if (NULL == table_schema)
     {
         return false;
@@ -104,7 +102,7 @@ bool ObRawExpr::get_table_name_in_sharding_column(ResultPlan& result_plan, strin
     
     ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (this));
 
-    schema_table* table_schema = g_metareader->get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
     if (NULL == table_schema)
     {
         return false;
@@ -131,7 +129,7 @@ bool ObRawExpr::get_column_and_sharding_key(ResultPlan& result_plan, string &col
 
     ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (this));
 
-    schema_table* table_schema = g_metareader->get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
     if (NULL == table_schema)
     {
         return false;
@@ -1033,7 +1031,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
     }
     else
     {
-        schema_table* table_schema = g_metareader->get_table_schema_by_id(result_plan.db_name, first_id_);
+        schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id(result_plan.db_name, first_id_);
         if (NULL == table_schema)
         {
             ret = OB_ERR_SCHEMA_UNSET;

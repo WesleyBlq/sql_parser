@@ -83,7 +83,6 @@ typedef struct
 {
   void*     plan_tree_;
   void*     name_pool_;     // ObStringBuf
-  void*     route_info;     // route info
   ErrStat   err_stat_;
   int       is_prepare_;
   string    db_name;        //record current db name

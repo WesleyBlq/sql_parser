@@ -7,8 +7,6 @@
 //#include "sql_parser.tab.h"
 #include "utility.h"
 
-extern meta_reader *g_metareader;
-
 using namespace oceanbase::sql;
 using namespace oceanbase::common;
 using namespace std;
@@ -62,7 +60,7 @@ int ObSelectStmt::check_alias_name(
         {
             string db_name_tmp;
             db_name_tmp.assign(result_plan.db_name);
-            schema_column* schema_column = g_metareader->get_column_schema(db_name_tmp, item.table_name_, alias_name);
+            schema_column* schema_column = meta_reader::get_instance().get_column_schema(db_name_tmp, item.table_name_, alias_name);
             if (NULL == schema_column)
             {
                 ret = OB_ERR_COLUMN_DUPLICATE;
@@ -312,6 +310,7 @@ int ObSelectStmt::check_having_ident(
                             else
                             {
                                 b_expr = new(b_expr) ObBinaryRefRawExpr();
+                                logical_plan->add_raw_expr(b_expr); //added by qinbo for avoiding mem leak
                             }
                             
                             b_expr->set_expr_type(T_REF_COLUMN);
@@ -330,7 +329,7 @@ int ObSelectStmt::check_having_ident(
                     ret = OB_ERR_COLUMN_AMBIGOUS;
                     snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                             "column %.*s of having clause is ambiguous at %s:%d", (int)column_name.size(), column_name.data(), __FILE__,__LINE__);
-                    parse_free(ret_expr);
+                    //parse_free(ret_expr);
                     ret_expr = NULL;
                     break;
                 }
@@ -351,6 +350,7 @@ int ObSelectStmt::check_having_ident(
                     else
                     {
                         b_expr = new(b_expr) ObBinaryRefRawExpr();
+                        logical_plan->add_raw_expr(b_expr); //added by qinbo for avoiding mem leak
                     }
                     b_expr->set_expr_type(T_REF_COLUMN);
                     b_expr->set_first_ref_id(col_expr->get_first_ref_id());
@@ -380,6 +380,7 @@ int ObSelectStmt::check_having_ident(
                     else
                     {
                         b_expr = new(b_expr) ObBinaryRefRawExpr();
+                        logical_plan->add_raw_expr(b_expr); //added by qinbo for avoiding mem leak
                     }
                     b_expr->set_expr_type(T_REF_COLUMN);
                     b_expr->set_first_ref_id(OB_INVALID_ID);
@@ -421,6 +422,7 @@ int ObSelectStmt::check_having_ident(
                     else
                     {
                         b_expr = new(b_expr) ObBinaryRefRawExpr();
+                        logical_plan->add_raw_expr(b_expr); //added by qinbo for avoiding mem leak
                     }
                     b_expr->set_expr_type(T_REF_COLUMN);
                     b_expr->set_first_ref_id(column_item->table_id_);

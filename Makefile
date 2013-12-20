@@ -22,7 +22,7 @@ USERLIBS_test = $(SYSLIBS_test) \
 	#-L/usr/local/mysql-cpp-connector/mysql-connector-c++-1.1.3-linux-glibc2.3-x86-64bit/lib
 
 LDLIBS = $(USERLIBS_test)  \
-	../sql/libsql.a ../route/libroute.a -lcrypto \
+	../sql/libsql.a ../route/libroute.a -lcrypto ../log/liblog.a \
 	/usr/local/lib/libzookeeper_mt.a \
 	/usr/local/lib/libjson_linux-gcc-4.1.2_libmt.a \
 	-lmysqlclient 
@@ -58,10 +58,10 @@ OBJS_SQL =  \
 #libsql.a
 
 %o: %c
-	gcc -g -c -o  $@ $<
+	gcc -Wall -g -c -o  $@ $<
 
 %o: %cpp
-	g++ -g -c -o  $@ $<
+	g++ -Wall -g -c -o  $@ $<
 	
 libsql.a: $(OBJS_SQL)
 	ar rv libsql.a ${OBJS_SQL}

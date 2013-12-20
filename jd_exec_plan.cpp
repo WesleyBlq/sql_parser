@@ -13,7 +13,6 @@
 #include <algorithm>
 #include "jd_exec_plan.h"
 
-extern meta_reader *g_metareader;
 
 using namespace oceanbase::common;
 using namespace oceanbase::sql;
@@ -80,6 +79,7 @@ SameLevelExecPlan::~SameLevelExecPlan()
 
     if (NULL != query_post_reduce_info)
     {
+        query_post_reduce_info->~QueryPostReduce();
         parse_free(query_post_reduce_info);
     }
 }
@@ -345,13 +345,11 @@ int QueryActuator::init_exec_plan(string current_db_name)
 #endif
     memset(&result, 0, sizeof(ParseResult));
     result_plan.name_pool_ = NULL;
-    result_plan.route_info = (void*) route;
     result_plan.plan_tree_ = NULL;
     result_plan.db_name    = current_db_name;
     final_exec_plan        = NULL;
     
     return 0;
-
 }
 
 /**************************************************
@@ -371,12 +369,6 @@ void QueryActuator::release_exec_plan()
         parse_free(result_plan.plan_tree_);
         result_plan.plan_tree_ = NULL;
         result_plan.name_pool_ = NULL;
-    }
-
-    if (result.result_tree_)
-    {
-        destroy_tree(result.result_tree_);
-        result.result_tree_ = NULL;
     }
 
     if (final_exec_plan)
@@ -450,14 +442,13 @@ int QueryActuator::generate_exec_plan(
         ret = JD_ERR_SQL_PARSER_WRONG;
         cout << "parse_sql error!!!" << endl;
         fprintf(stderr, "%s at %d:%d\n", result.error_msg_, result.line_, result.start_col_);
-        destroy_tree(result.result_tree_);
-        result.result_tree_ = NULL;
+        parse_terminate(&result);
         return ret;
     }
     else
     {
-        cout << "<<Part 2 : PARSE TREE>>" << endl;
-        print_tree(result.result_tree_, 0);
+        //cout << "<<Part 2 : PARSE TREE>>" << endl;
+        //print_tree(result.result_tree_, 0);
     }
 
     if (result.result_tree_ != NULL)
@@ -509,6 +500,14 @@ int QueryActuator::generate_exec_plan(
                 break;
         }
     }
+
+    if (result.result_tree_)
+    {
+        destroy_tree(result.result_tree_);
+        result.result_tree_ = NULL;
+    }
+
+    parse_terminate(&result);
 
     if ((!result_plan.plan_tree_)||(OB_SUCCESS != ret))
     {
@@ -648,7 +647,6 @@ int QueryActuator::gen_exec_plan_select(
     int ret = err_stat.err_code_ = OB_SUCCESS;
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    //router *route_info = static_cast<router*> (result_plan.route_info);
 
     //get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
@@ -756,7 +754,7 @@ int QueryActuator::generate_select_plan_single_table(
     table_name = from_items.at(0).table_name_;
     db_name.assign(result_plan.db_name);
 
-    schema_db* db_schema = g_metareader->get_DB_schema(db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
 
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
@@ -996,8 +994,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
         }
         if (key_relations.size() > 0)
         {
-            router *route_info = (router *) result_plan.route_info;
-            if (!route_info->get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
+            if (!router::get_instance().get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
             {
                 jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -1387,7 +1384,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
             continue;
         }
         
-        table_schema = g_metareader->get_table_schema(result_plan.db_name, table_name);
+        table_schema = meta_reader::get_instance().get_table_schema(result_plan.db_name, table_name);
         
         map<string, SqlItemType> sharding_key_tmp = table_schema->get_sharding_key();
         vector<key_data> key_relations;
@@ -1413,8 +1410,7 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
 
         if (key_relations.size() > 0)
         {
-            router *route_info = (router *) result_plan.route_info;
-            if (!route_info->get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
+            if (!router::get_instance().get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
             {
                 jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
@@ -1491,7 +1487,7 @@ void QueryActuator::generate_all_table_shards(ResultPlan& result_plan,
     uint32_t i = 0;
     uint32_t j = 0;
     db_name.assign(result_plan.db_name);
-    schema_db* db_schema = g_metareader->get_DB_schema(db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
     schema_table* table_schema = NULL;
     vector<vector<schema_shard*> > all_tables_shards_tmp;
     vector<vector<schema_shard*> > all_tables_shards_tmp2;
@@ -1812,7 +1808,7 @@ int QueryActuator::gen_exec_plan_update(
     }
 
     db_name.assign(result_plan.db_name);
-    schema_db* db_schema = g_metareader->get_DB_schema(db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
     table_name.assign(update_stmt->get_table_item_by_id(update_stmt->get_update_table_id())->table_name_);
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
 
@@ -2023,7 +2019,7 @@ int QueryActuator::gen_exec_plan_delete(
     }
 
     db_name.assign(result_plan.db_name);
-    schema_db* db_schema = g_metareader->get_DB_schema(db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
     schema_table* table_schema = db_schema->get_table_from_db_by_id(delete_stmt->get_delete_table_id());
 
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
@@ -2184,7 +2180,7 @@ int QueryActuator::gen_exec_plan_insert(
         return ret;
     }
 
-    schema_db* db_schema = g_metareader->get_DB_schema(result_plan.db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
     table_name.assign(insert_stmt->get_table_item_by_id(insert_stmt->get_table_id())->table_name_);
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
 
@@ -2315,8 +2311,7 @@ int QueryActuator::gen_exec_plan_insert(
                     
                     if (key_relations.size() > 0)
                     {
-                        router *route_info = (router *) result_plan.route_info;
-                        if (!route_info->get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
+                        if (!router::get_instance().get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
                         {
                             jlog(WARNING, "route info manage error");
                             snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,

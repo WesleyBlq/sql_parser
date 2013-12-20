@@ -130,7 +130,10 @@ QueryPostReduce::QueryPostReduce(const QueryPostReduce& orig)
 
 QueryPostReduce::~QueryPostReduce()
 {
-
+    group.clear();
+    order.clear();
+    func.clear();
+    having.clear();
 }
 
 void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt *select_stmt)
