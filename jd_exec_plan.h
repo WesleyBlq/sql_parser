@@ -53,6 +53,7 @@ using namespace oceanbase::sql;
 #define SEND_SQL_TO_CONFIG_SERVER   0
 #define SEND_SQL_TO_DATA_NODE       1
 
+#define SHARD_NOT_FOUND             0xffffffff
 /*��ִ�е�Ԫ�ķ�װ*/
 class ExecPlanUnit
 {
@@ -257,6 +258,13 @@ public:
         }
         return true;
     }
+    
+    /*BEGIN: add by tangchao 20131225 */
+    int get_query_type()
+    {
+        return query_type;
+    }
+    /*END: add by tangchao 20131225 */
 private:
     // types and constants
     bool is_plan_done;
@@ -264,7 +272,11 @@ private:
     ParseResult result;
     ResultPlan result_plan;
     FinalExecPlan* final_exec_plan;
-
+    
+    /*BEGIN: add by tangchao 20131225 */
+    int query_type;
+    /*END: add by tangchao 20131225 */
+    
     //internal functions
     int generate_select_plan_single_table(
             ResultPlan& result_plan,
@@ -324,14 +336,16 @@ private:
     Input       :   ResultPlan& result_plan,
                     schema_table table_info,
                     vector<vector<ObRawExpr*> > un_opt_raw_exprs,
-                    vector<vector<ObRawExpr*> > opted_raw_exprs
+                    multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+                    vector<schema_shard*>  &all_table_shards
     Output      :   
      **************************************************/
-    bool reparse_where_with_route_for_one_table(
+    int reparse_where_with_route_for_one_table(
             ResultPlan& result_plan,
             schema_table* table_info,
             vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
-            multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs);
+            multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+            vector<schema_shard*>  &all_table_shards);
 
     /**************************************************
     Funtion     :   reparse_where_with_route_for_multi_tables
@@ -339,16 +353,18 @@ private:
     Date        :   2013.10.29
     Description :   reparse distributed where conditions items
     Input       :   ResultPlan& result_plan,
-                    vector<schema_table*> table_infos,
-                    vector<vector<ObRawExpr*> > un_opt_raw_exprs,
-                    vector<vector<ObRawExpr*> > opted_raw_exprs
+                    ObSelectStmt *select_stmt,
+                    vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
+                    multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+                    vector<vector<schema_shard*> > &all_binding_tables_shards
     Output      :   
      **************************************************/
-    bool reparse_where_with_route_for_multi_tables(
-            ResultPlan& result_plan,
-            ObSelectStmt *select_stmt,
-            vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
-            multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs);
+    int reparse_where_with_route_for_multi_tables(
+                ResultPlan& result_plan,
+                ObSelectStmt *select_stmt,
+                vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
+                multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+                vector<vector<schema_shard*> > &all_binding_tables_shards);
 
     /**************************************************
     Funtion     :   build_shard_exprs_array_with_route_one_table
@@ -360,14 +376,29 @@ private:
                     vector<ObRawExpr*> partition_sql_exprs,
                     vector<ObRawExpr*> atomic_exprs,
                     multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs
+                    vector<schema_shard*>  &all_table_shards
     Output      :   
      **************************************************/
-    bool build_shard_exprs_array_with_route_one_table(
+    int build_shard_exprs_array_with_route_one_table(
             ResultPlan& result_plan,
             schema_table* table_info,
             vector<ObRawExpr*> partition_sql_exprs,
             vector<ObRawExpr*> atomic_exprs,
-            multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs);
+            multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+            vector<schema_shard*>  &all_table_shards);
+
+    /**************************************************
+    Funtion     :   search_shard_from_one_table_shards
+    Author      :   qinbo
+    Date        :   2013.12.24
+    Description :   search one shard from one table's shards and return 
+                    index
+    Input       :   vector<schema_shard*> &table_all_shards
+                    schema_shard* goal_shard
+    Output      :   index
+     **************************************************/
+    int search_shard_from_one_table_shards( vector<schema_shard*> &table_all_shards,
+                                            schema_shard* goal_shard);
 
     /**************************************************
     Funtion     :   build_shard_exprs_array_with_route_multi_table
@@ -378,14 +409,16 @@ private:
                     ObSelectStmt *select_stmt,
                     vector<ObRawExpr*> partition_sql_exprs,
                     vector<ObRawExpr*> atomic_exprs,
-                    multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs
+                    multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs
+                    vector<vector<schema_shard*> > &all_binding_tables_shards
     Output      :   
      **************************************************/
-    bool build_shard_exprs_array_with_route_multi_table(
+    int build_shard_exprs_array_with_route_multi_table(
             ResultPlan& result_plan,
             vector<ObRawExpr*> partition_sql_exprs,
             vector<ObRawExpr*> atomic_exprs,
-            multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs);
+            multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+            vector<vector<schema_shard*> > &all_binding_tables_shards);
 
 
     /**************************************************
@@ -433,13 +466,28 @@ private:
     Date        :   2013.10.24
     Description :   generate all tables' shards
     Input       :   ResultPlan& result_plan,
-                    vector<FromItem> from_items,
+                    vector<FromItem> &from_items,
                     vector<vector<schema_shard*> > &all_tables_shards
     Output      :   
      **************************************************/
     void generate_all_table_shards( ResultPlan& result_plan,
-                                    vector<FromItem> from_items,
+                                    vector<FromItem> &from_items,
                                     vector<vector<schema_shard*> > &all_tables_shards);
+
+    
+    /**************************************************
+    Funtion     :   search_shard_from_multi_tables_shards
+    Author      :   qinbo
+    Date        :   2013.12.24
+    Description :   search one shard from all_binding_tables_shards and return 
+                    all_binding_tables_shards index
+    Input       :   vector<vector<schema_shard*> > &all_binding_tables_shards,
+                    schema_shard* goal_shard
+    Output      :   index
+     **************************************************/
+    int search_shard_from_multi_tables_shards(vector<vector<schema_shard*> > &all_binding_tables_shards,
+                                       schema_shard* goal_shard);
+    
     /**************************************************
     Funtion     :   vector_elem_exist_already
     Author      :   qinbo
@@ -485,6 +533,32 @@ private:
                             ResultPlan& result_plan,
                             FinalExecPlan* physical_plan,
                             string sql);
+    /**************************************************
+    Funtion     :   is_from_tables_binding
+    Author      :   qinbo
+    Date        :   2013.12.24
+    Description :   whether all from tables are binding(shard with the same COLUMN KEY)
+    Input       :   ResultPlan& result_plan,
+                    vector<FromItem> &from_items
+    Output      :   
+    return      :   bool
+     **************************************************/
+    bool is_from_tables_binding(ResultPlan& result_plan,
+                                vector<FromItem> &from_items);
+    
+    
+    /**************************************************
+    Funtion     :   set_sql_dispatched_info
+    Author      :   qinbo
+    Date        :   2013.12.24
+    Description :   set "select_stmt" "is_sql_dispatched_multi_shards"
+    Input       :   ObSelectStmt *select_stmt, 
+                    multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs
+    Output      :   
+    return      :   
+     **************************************************/
+    void set_sql_dispatched_info(ObSelectStmt *select_stmt, 
+                                multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs);
 };
 
 

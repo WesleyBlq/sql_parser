@@ -39,7 +39,7 @@ namespace oceanbase
                 return ret;
             }
 
-            int get_update_column_id(int64_t idx, uint64_t &column_id)
+            int get_update_column_id(uint32_t idx, uint64_t &column_id)
             {
                 int ret = common::OB_SUCCESS;
                 if (idx < update_columns_.size())
@@ -63,7 +63,7 @@ namespace oceanbase
                 return ret;
             }
 
-            int get_update_expr_id(int64_t idx, uint64_t &expr_id)
+            int get_update_expr_id(uint32_t idx, uint64_t &expr_id)
             {
                 int ret = common::OB_SUCCESS;
                 if (idx < update_exprs_.size())
@@ -77,14 +77,14 @@ namespace oceanbase
                 return ret;
             }
 
-            int64_t get_update_column_count(void)
+            uint32_t get_update_column_count(void)
             {
                 return update_columns_.size();
             }
 
             void print(FILE* fp, int32_t level, int32_t index);
             int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
-            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql);
+            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql);
             int64_t make_update_table_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_update_column_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_update_where_string(ResultPlan& result_plan, string &assembled_sql);

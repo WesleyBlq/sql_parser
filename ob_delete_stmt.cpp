@@ -42,8 +42,15 @@ namespace oceanbase
          **************************************************/
         int64_t ObDeleteStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
         {
-            make_delete_table_string(result_plan, assembled_sql);
-            make_delete_where_string(result_plan, assembled_sql);
+            int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+            ret = make_delete_table_string(result_plan, assembled_sql);
+
+            if (OB_SUCCESS == ret)
+            {
+                ret = make_delete_where_string(result_plan, assembled_sql);
+            }
+            
+            return ret;
         }
 
         /**************************************************
@@ -53,12 +60,12 @@ namespace oceanbase
         Description :   make select sql
         Input       :   ResultPlan& result_plan, 
                         string &where_conditions, 
-                        schema_shard *shard_info,
+                        vector<schema_shard*> shard_info,
                         string &assembled_sql
                         
         Output      :   
          **************************************************/
-        int64_t ObDeleteStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql)
+        int64_t ObDeleteStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql)
         {
             return OB_SUCCESS;
         }
@@ -77,14 +84,13 @@ namespace oceanbase
         {
             int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
             string assembled_sql_tmp;
-            ObSqlRawExpr* sql_expr = NULL;
 
             ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
             if (logical_plan == NULL)
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "logical_plan must exist!!!");
+                        "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
             }
 
             assembled_sql.append("DELETE FROM ");
@@ -104,7 +110,7 @@ namespace oceanbase
          **************************************************/
         int64_t ObDeleteStmt::make_delete_where_string(ResultPlan& result_plan, string &assembled_sql)
         {
-            int32_t i = 0;
+            uint32_t i = 0;
             int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
             string assembled_sql_tmp;
             ObSqlRawExpr* sql_expr = NULL;
@@ -114,7 +120,7 @@ namespace oceanbase
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "logical_plan must exist!!!");
+                        "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
             }
             
             vector<uint64_t>& where_exprs = ObStmt::get_where_exprs();
@@ -129,7 +135,7 @@ namespace oceanbase
                     {
                         ret = OB_ERR_LOGICAL_PLAN_FAILD;
                         snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "where expr error!!!");
+                                "where expr error!!! at %s:%d", __FILE__,__LINE__);
                         return ret;
                     }
 
@@ -146,6 +152,7 @@ namespace oceanbase
                 }
             }
 
+            return ret;
         }
 
     }

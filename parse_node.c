@@ -217,15 +217,15 @@ const char* get_type_symbol(int type)
     case T_OP_NOT_BTW:
         return " NOT BETWEEN ";
     case T_FUN_MAX : 
-        return " MAX ";
+        return " MAX";
     case T_FUN_MIN : 
-        return " MIN ";
+        return " MIN";
     case T_FUN_SUM : 
-        return " SUM ";
+        return " SUM";
     case T_FUN_COUNT : 
-        return " COUNT ";
+        return " COUNT";
     case T_FUN_AVG : 
-        return " AVG ";
+        return " AVG";
     case T_OP_IN:
         return " IN ";
     case T_OP_NOT_IN:

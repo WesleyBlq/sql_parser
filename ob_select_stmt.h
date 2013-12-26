@@ -37,12 +37,11 @@ namespace oceanbase
         struct SelectItem
         {
             uint64_t expr_id_;
-            bool is_real_alias_;
-            string alias_name_;
             string expr_name_;
             common::ObObjType type_;
-
-            string select_column_name_;
+            bool is_real_alias_;        //whether or not is real alias
+            string alias_name_;         //alias name
+            string select_column_name_; //original field name
             SqlItemType aggr_fun_type;
         };
 
@@ -423,8 +422,14 @@ namespace oceanbase
                 {
                     FromItem item;
                     item.table_id_ = tid;
-                    item.table_name_ = ObStmt::get_table_item_by_id(tid)->table_name_;
                     item.is_joined_ = is_joined;
+                    if (!is_joined)
+                    {
+                        if (NULL != ObStmt::get_table_item_by_id(tid))
+                        {
+                            item.table_name_ = ObStmt::get_table_item_by_id(tid)->table_name_;
+                        }
+                    }
                     from_items_.push_back(item);
                     return common::OB_SUCCESS;
                 }
@@ -535,7 +540,7 @@ namespace oceanbase
             void print(FILE* fp, int32_t level, int32_t index = 0);
 
             int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
-            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql);
+            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql);
             int64_t make_select_item_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t append_select_items_reduce_used(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_from_string(ResultPlan& result_plan, string &assembled_sql);
@@ -558,6 +563,15 @@ namespace oceanbase
                                 uint32_t    &aggr_fun_operate,
                                 double      &aggr_fun_value,
                                 string      &column_name);
+            
+            void set_sql_dispatched_multi_shards(bool is_dispatched)
+            {
+                is_sql_relate_multi_shards = is_dispatched;
+            }
+            bool is_sql_dispatched_multi_shards()
+            {
+                return is_sql_relate_multi_shards;
+            }
         private:
             /* These fields are only used by normal select */
             bool is_distinct_;
@@ -588,6 +602,9 @@ namespace oceanbase
             bool for_update_;
 
             uint64_t gen_joined_tid_;
+
+            /* this sql is exec on multi shard(>1)*/
+            bool is_sql_relate_multi_shards;
         };
     }
 }

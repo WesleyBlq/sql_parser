@@ -1590,6 +1590,11 @@ table_factor:
     {
       $$ = $1;
     }
+   | relation_name '.' relation_factor
+    {
+      malloc_non_terminal_node($$, result->malloc_pool_, T_OP_NAME_FIELD, 2, $1, $3);
+      dup_expr_string($$->str_value_, result, @3.first_column, @3.last_column);
+    }
   | relation_factor AS relation_name
     {
       malloc_non_terminal_node($$, result->malloc_pool_, T_ALIAS, 2, $1, $3);

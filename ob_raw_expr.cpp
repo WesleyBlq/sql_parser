@@ -758,13 +758,13 @@ int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql
         {
             assembled_sql.append("\'");
             value_.to_string(buf_tmp, RAW_EXPR_BUF_SIZE);
-            assembled_sql.append(buf_tmp, RAW_EXPR_BUF_SIZE);
+            assembled_sql.append(buf_tmp, strlen(buf_tmp));
             assembled_sql.append("\'");
             break;
         }
         default:
             value_.to_string(buf_tmp, RAW_EXPR_BUF_SIZE);
-            assembled_sql.append(buf_tmp, RAW_EXPR_BUF_SIZE);
+            assembled_sql.append(buf_tmp, strlen(buf_tmp));
             break;
     }
     return ret;

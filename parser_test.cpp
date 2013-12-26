@@ -55,18 +55,18 @@ int main(void)
 WHERE lastname='Bush' OR address='Adams' AND id = 10\
 GROUP BY lastname HAVING(count(lastname) > 10) ORDER BY lastname desc limit 100, 10";
 
-    string sql7 = "select lastname,address FROM persons \
-WHERE id=(select id from persons where lastname='NEW YORK')";
+    string sql7 = "select id,name FROM tt \
+WHERE id=(select id from pp)";
 
-    string sql5 = "SELECT persons.lastname, persons.address, order_list.order_desc \
-FROM persons \
-JOIN order_list \
-ON persons.id = order_list.id \
-ORDER BY persons.lastname";
+    string sql5 = "SELECT tt.id, tt.name, pp.age \
+FROM tt \
+JOIN pp \
+ON tt.id = pp.id \
+ORDER BY tt.name";
 
-    string sql6 = "select id, order_desc from (select * from order_list) ooxx where id > 50";
+    string sql6 = "select id, name, age from (select * from tt) ooxx where id > 50";
 
-    string sql9 = "SELECT id FROM persons WHERE lastname = 'Attendee' AND address = 'beijing'  AND (id = 147 OR id = 155)";
+    string sql9 = "SELECT id FROM tt WHERE name = 'Attendee' AND age = 10  AND (id = 147 OR id = 155)";
 
     string sql10 = "UPDATE persons SET address = 'BEIJING' WHERE lastname = 'Wilson'";
     string sql11 = "SELECT COUNT(lastname), address AS addr FROM persons";
@@ -80,22 +80,22 @@ SELECT address,lastname FROM persons";
 
     string sql15 = "SELECT COUNT(lastname), address AS addr FROM persons WHERE lastname > 'cao1' AND id = 10 AND (id = 15 OR id = 100)";
     string sqls = "select t.id, s.lastname from persons t join persons s on t.id = s.id";
-    string sql_multi_table = "select * from persons, order_list \
-        WHERE persons.lastname = 'Attendee' AND persons.address = 'beijing'  AND (persons.id = 147 OR persons.id = 155)";
+    string sql_multi_table = "select * from tt AS ttt, pp WHERE tt.id > 10";
 
     string sql_test1 = "SELECT id, name, age from tt where id = 147 OR id = 155";
     string sql_test2 = "SELECT id from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing'";
     string sql_test3 = "SELECT id FROM pp";
     
-    string sql_test40 = "SELECT id from pp WHERE name LIKE '%a%'";
+    string sql_test40 = "select max(id) as id, name, avg(age) as age from tt";
+    
     // UNION distinct SELECT id FROM tt
-    //string sql_test4 = "SELECT MAX(id) from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing' GROUP BY name Having SUM(age)>100 ORDER BY age";
-    string sql_test4 = "select id, name, avg(age) as cao  from tt where id > 0 group by age HAVING cao>1 order by id"; //
-
+    string sql_test5 = "SELECT MAX(id) from pp where id>5  AND id<20 AND (id = 6 OR id = 10) AND name = 'beijing' GROUP BY name Having SUM(age)>100 ORDER BY age";
+    string sql_test4 = "select max(id), name, avg(age) as cao  from tt  group by age HAVING cao>1 order by id LIMIT 10,100"; //
+    string sql_test6 = "select *  from INformation_schema.tt"; //
     //sql_parser(sql3, "qinbo");
     //sql_parser(sql6);
     //sql_parser(sql10);
-    sql_parser(sql_test4, "oxwf");
+    sql_parser(sql_test6, "oxwf");
     //sql_parser(sql14);
     //sql_parser(sql9);
     //sql_parser(sql8, "qinbo");

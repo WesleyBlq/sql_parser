@@ -349,6 +349,10 @@ int QueryActuator::init_exec_plan(string current_db_name)
     result_plan.db_name    = current_db_name;
     final_exec_plan        = NULL;
     
+    /*BEGIN: add by tangchao 20131225 */
+    query_type = ObBasicStmt::T_NONE;
+    /*END: add by tangchao 20131225 */
+    
     return 0;
 }
 
@@ -426,29 +430,31 @@ int QueryActuator::generate_exec_plan(
     uint64_t    query_id = OB_INVALID_ID;
     string      assemble_sql;
     FinalExecPlan* final_exec_plan = NULL;
+    result_plan.meta_db_name.clear();
 
     if (parse_init(&result))
     {
         ret = JD_ERR_SQL_PARSER_WRONG;
-        cout << "parse_init error!!!" << endl;
+        jlog(ERROR, "parse_init error!!!");
         return ret;
     }
-
-    cout << "<<Part 1 : SQL STRING>>" << endl << sql << endl;
+    
+    jlog(INFO, "<<Part 1 : SQL STRING>> %s" ,sql.data());
     parse_sql(&result, sql.data(), sql.size());
 
     if (result.result_tree_ == NULL)
     {
         ret = JD_ERR_SQL_PARSER_WRONG;
-        cout << "parse_sql error!!!" << endl;
-        fprintf(stderr, "%s at %d:%d\n", result.error_msg_, result.line_, result.start_col_);
+        jlog(ERROR, "parse_sql error %s at %d:%d!!!", result.error_msg_, result.line_, result.start_col_);
         parse_terminate(&result);
         return ret;
     }
     else
     {
-        //cout << "<<Part 2 : PARSE TREE>>" << endl;
-        //print_tree(result.result_tree_, 0);
+#if DEBUG_ON 
+//        jlog(INFO, "<<Part 2 : PARSE TREE>>");
+//        print_tree(result.result_tree_, 0);
+#endif        
     }
 
     if (result.result_tree_ != NULL)
@@ -514,14 +520,15 @@ int QueryActuator::generate_exec_plan(
         return ret;
     }
     
-    fprintf(stderr, "\n=======================================\n");
-
     ObLogicalPlan* logic_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    fflush(stderr);
-    fprintf(stderr, "\n<<Part 2 : LOGICAL PLAN>>\n");
-    logic_plan->print();
+    
+#if DEBUG_ON 
+    //jlog(INFO, "\n=======================================\n");
+    //jlog(INFO, "\n<<Part 2 : LOGICAL PLAN>>\n");
+    //logic_plan->print();
     logic_plan->make_stmt_string(result_plan);
-
+#endif
+    
     if (logic_plan)
     {
         if (OB_LIKELY(NULL == final_exec_plan))
@@ -535,7 +542,6 @@ int QueryActuator::generate_exec_plan(
             else
             {
                 final_exec_plan = new(final_exec_plan) FinalExecPlan();
-                jlog(INFO, "new physical plan, addr=%p", final_exec_plan);
                 new_generated = true;
             }
         }
@@ -557,6 +563,9 @@ int QueryActuator::generate_exec_plan(
 
         if (OB_LIKELY(ret == OB_SUCCESS))
         {
+            /*BEGIN: add by tangchao 20131225 */
+            query_type = stmt->get_stmt_type();
+            /*END: add by tangchao 20131225 */
             switch (stmt->get_stmt_type())
             {
                 case ObBasicStmt::T_SELECT:
@@ -582,7 +591,7 @@ int QueryActuator::generate_exec_plan(
                 case ObBasicStmt::T_SHOW_WARNINGS:
                 case ObBasicStmt::T_SHOW_GRANTS:
                 case ObBasicStmt::T_SHOW_PARAMETERS:
-                case ObBasicStmt::T_SHOW_PROCESSLIST :
+                case ObBasicStmt::T_SHOW_PROCESSLIST:
                 case ObBasicStmt::T_VARIABLE_SET:
                     ret = send_sql_to_config_server(result_plan, final_exec_plan, sql);
                     break;
@@ -687,7 +696,7 @@ int QueryActuator::gen_exec_plan_select(
                 ret = generate_select_plan_single_table(result_plan, physical_plan, err_stat, query_id, index);
             }
             /*related to >1 tables*/
-            else
+            else if (1 < select_stmt->get_from_item_size())
             {
                 ret = generate_select_plan_multi_table(result_plan, physical_plan, err_stat, query_id, index);
             }
@@ -798,17 +807,20 @@ int QueryActuator::generate_select_plan_single_table(
                     "Shard manage wrong at %s:%d", __FILE__,__LINE__);
             return ret;
         }
-
+        
+        select_stmt->set_sql_dispatched_multi_shards(false);
         ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
         return ret;
     }
     //this table is distributed table
     else
     {
-        vector<uint64_t> expr_ids = select_stmt->get_where_exprs();
+        vector<schema_shard*>   table_all_shards= table_schema->get_all_shards();
+        vector<uint64_t>        expr_ids        = select_stmt->get_where_exprs();
         /*if there is no where conditions*/
         if (0 == expr_ids.size())
         {
+            select_stmt->set_sql_dispatched_multi_shards(true);
             ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
             return ret;
         }
@@ -822,25 +834,33 @@ int QueryActuator::generate_select_plan_single_table(
             
             if (WHERE_IS_OR_AND == where_ret)
             {
-                multimap<schema_shard*, vector<ObRawExpr*> > opted_raw_exprs;
+                multimap<uint32_t, vector<ObRawExpr*> > opted_raw_exprs;
                 schema_shard* shard_key = NULL;
+                jlog(INFO, "atomic_exprs_array num: %d",atomic_exprs_array.size());
+                multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map1;
+                multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map_tmp;
+                multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map2;
+                pair<multimap<uint32_t, vector<ObRawExpr*> >::iterator, multimap<uint32_t, vector<ObRawExpr*> >::iterator> raw_exprs_same_shard;
 
-                cout << "atomic_exprs_array num: " << atomic_exprs_array.size() << endl;
-
-                multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map1;
-                multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map_tmp;
-                multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map2;
-                pair<multimap<schema_shard*, vector<ObRawExpr*> >::iterator, multimap<schema_shard*, vector<ObRawExpr*> >::iterator> raw_exprs_same_shard;
-
-                reparse_where_with_route_for_one_table(result_plan,
+                ret = reparse_where_with_route_for_one_table(result_plan,
                         table_schema,
                         atomic_exprs_array,
-                        opted_raw_exprs);
+                        opted_raw_exprs,
+                        table_all_shards);
+
+                if (OB_SUCCESS != ret)
+                {
+                    return ret;
+                }
+                set_sql_dispatched_info(select_stmt, opted_raw_exprs);
+                
                 for (p_map1 = opted_raw_exprs.begin(); p_map1 != opted_raw_exprs.end();)
                 {
                     vector<vector<ObRawExpr*> > final_exprs_array;
                     string assembled_sql;
-                    shard_key = p_map1->first;
+                    shard_key = table_all_shards.at(p_map1->first);
+                    vector<schema_shard*> shard_tmp;
+                    shard_tmp.push_back(shard_key);
                     raw_exprs_same_shard = opted_raw_exprs.equal_range(p_map1->first);
                     for (p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
                     {
@@ -853,8 +873,9 @@ int QueryActuator::generate_select_plan_single_table(
                     }
 
                     string where_conditions;
+                    
                     append_distributed_where_items(result_plan, where_conditions, final_exprs_array);
-                    select_stmt->make_exec_plan_unit_string(result_plan, where_conditions, shard_key, assembled_sql);
+                    select_stmt->make_exec_plan_unit_string(result_plan, where_conditions, shard_tmp, assembled_sql);
                     
                     ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                     if (exec_plan_unit == NULL)
@@ -870,8 +891,8 @@ int QueryActuator::generate_select_plan_single_table(
                     }
 
                     exec_plan_unit->set_exec_unit_sql(assembled_sql);
-                    cout << "exec_plan_unit shard name: " << shard_key->get_shard_name() << endl;
-                    cout << "exec_plan_unit SQL name  : " << assembled_sql << endl;
+                    jlog(INFO, "exec_plan_unit shard name: %s" ,shard_key->get_shard_name().data());
+                    jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
                     exec_plan_unit->set_exec_uint_shard_info(shard_key);
 
                     /*add exec_plan_unit*/
@@ -895,19 +916,20 @@ Author      :   qinbo
 Date        :   2013.10.17
 Description :   reparse distributed where conditions items
 Input       :   ResultPlan& result_plan,
-                schema_table table_schema,
-                vector<vector<ObRawExpr*> > un_opt_raw_exprs,
-                vector<vector<ObRawExpr*> > opted_raw_exprs
+                schema_table* table_schema,
+                vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
+                multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+                vector<schema_shard*>  &all_table_shards
 Output      :   
  **************************************************/
-bool QueryActuator::reparse_where_with_route_for_one_table(
-        ResultPlan& result_plan,
-        schema_table* table_schema,
-        vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
-        multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs)
+int QueryActuator::reparse_where_with_route_for_one_table(
+                    ResultPlan& result_plan,
+                    schema_table* table_schema,
+                    vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
+                    multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+                    vector<schema_shard*>  &all_table_shards)
 {
-    bool ret = false;
-    vector<schema_shard*> all_table_shards = table_schema->get_all_shards();
+    int ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;;
 
     if (un_opt_raw_exprs.size() == 0)
     {
@@ -926,7 +948,7 @@ bool QueryActuator::reparse_where_with_route_for_one_table(
         {
             for (uint32_t j = 0; j < all_table_shards.size(); j++)
             {
-                opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(all_table_shards.at(j), atomic_exprs));
+                opted_raw_exprs.insert(pair<uint32_t, vector<ObRawExpr*> >(j, atomic_exprs));
             }
         }
         /*if there is route sql, this sql should be sent to related shards*/
@@ -937,7 +959,8 @@ bool QueryActuator::reparse_where_with_route_for_one_table(
                     table_schema,
                     partition_sql_exprs,
                     atomic_exprs,
-                    opted_raw_exprs);
+                    opted_raw_exprs,
+                    all_table_shards);
         }
     }
     return ret;
@@ -953,21 +976,25 @@ Input       :   ResultPlan& result_plan,
                 string &sql
                 vector<vector<ObRawExpr*> > partition_sql_exprs
                 vector<vector<ObRawExpr*> > atomic_exprs,
-                multimap<schema_shard* , vector<ObRawExpr*> > &opted_raw_exprs
+                multimap<uint32_t , vector<ObRawExpr*> > &opted_raw_exprs
+                vector<schema_shard*>  &all_table_shards
 Output      :   
  **************************************************/
-bool QueryActuator::build_shard_exprs_array_with_route_one_table(
+int QueryActuator::build_shard_exprs_array_with_route_one_table(
         ResultPlan& result_plan,
         schema_table* table_schema,
         vector<ObRawExpr*> partition_sql_exprs,
         vector<ObRawExpr*> atomic_exprs,
-        multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs)
+        multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+        vector<schema_shard*>  &all_table_shards)
 {
+    int ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;;
     ObRawExpr* raw_expr = NULL;
     vector<vector<schema_shard*> > all_related_shards;
     vector<schema_shard*> shard_tmp1(MAX_SQL_EXEC_PLAN_SHARD_NUM);
     vector<schema_shard*> shard_tmp2;
     uint32_t i = 0;
+    uint32_t shards_index = 0;
 
     for (i = 0; i < partition_sql_exprs.size(); i++)
     {
@@ -996,10 +1023,11 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
         {
             if (!router::get_instance().get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
             {
+                ret = JD_ERR_CONFIG_ROUTE_ERR;
                 jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                         "Route info manage error at %s:%d", __FILE__,__LINE__);
-                return false;
+                return ret;
             }
         }
 
@@ -1011,10 +1039,9 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
 
     if (all_related_shards.size() == 0)
     {
-        jlog(WARNING, "shard info manage error");
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Shard info manage error at %s:%d", __FILE__,__LINE__);
-        return false;
+        ret = JD_ERR_SHARD_NUM_WRONG;
+        jlog(WARNING, "shard manage wrong");
+        return ret;
     }
 
     if (all_related_shards.size() == 1)
@@ -1022,8 +1049,19 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
         shard_tmp1 = all_related_shards.at(0);
         for (i = 0; i < shard_tmp1.size(); i++)
         {
-            opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(shard_tmp1.at(i), atomic_exprs));
+            shards_index = search_shard_from_one_table_shards(all_table_shards, shard_tmp1.at(i));  
+            if (SHARD_NOT_FOUND != shards_index)
+            {
+                opted_raw_exprs.insert(pair<uint32_t, vector<ObRawExpr*> >(shards_index, atomic_exprs));
+            }
+            else
+            {
+                ret = JD_ERR_SHARD_NUM_WRONG;
+                jlog(WARNING, "shard manage wrong");
+                return ret;
+            }
         }
+        return ret;
     }
     //get shards' intersection
     else if (all_related_shards.size() == 2)
@@ -1050,11 +1088,50 @@ bool QueryActuator::build_shard_exprs_array_with_route_one_table(
     {
         if (NULL != shard_tmp1.at(i))
         {
-            opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(shard_tmp1.at(i), atomic_exprs));
+            shards_index = search_shard_from_one_table_shards(all_table_shards, shard_tmp1.at(i));  
+            if (SHARD_NOT_FOUND != shards_index)
+            {
+                opted_raw_exprs.insert(pair<uint32_t, vector<ObRawExpr*> >(shards_index, atomic_exprs));
+            }
+            else
+            {
+                ret = JD_ERR_SHARD_NUM_WRONG;
+                jlog(WARNING, "shard manage wrong");
+                return ret;
+            }
         }
     }
 
-    return true;
+    return ret;
+}
+
+/**************************************************
+Funtion     :   search_shard_from_one_table_shards
+Author      :   qinbo
+Date        :   2013.12.24
+Description :   search one shard from one table's shards and return 
+                index
+Input       :   vector<schema_shard*> &table_all_shards
+                schema_shard* goal_shard
+Output      :   index
+ **************************************************/
+int QueryActuator::search_shard_from_one_table_shards( vector<schema_shard*> &table_all_shards,
+                                                        schema_shard* goal_shard)
+{
+    if (table_all_shards.size() == 0)
+    {
+        return SHARD_NOT_FOUND;
+    }
+
+    for (uint32_t i=0; i< table_all_shards.size();i++)
+    {
+        if (table_all_shards.at(i) == goal_shard)
+        {
+            return i;
+        }
+    }
+    return SHARD_NOT_FOUND;
+
 }
 
 /**************************************************
@@ -1079,12 +1156,11 @@ int QueryActuator::generate_select_plan_multi_table(
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     vector<FromItem> from_items;
-    vector<schema_shard*> shards_info;
-    schema_shard* shard_info = NULL;
     ObSqlRawExpr* sql_expr = NULL;
-    vector<vector<schema_shard*> >all_tables_shards;
+    vector<vector<schema_shard*> >  all_binding_table_shards;
+    vector<schema_shard*>           one_binding_table_shards;
+    uint32_t shard_key_index = 0;
     uint32_t i = 0;
-    uint32_t j = 0;
 
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
@@ -1105,6 +1181,15 @@ int QueryActuator::generate_select_plan_multi_table(
         return ret;
     }
 
+    //now we only support binding tables in multi-table query
+    if(!is_from_tables_binding(result_plan,from_items))
+    {
+        ret = OB_ERR_GEN_PLAN;
+        jlog(WARNING, "Can not support no-binding tables query");
+        snprintf(err_stat.err_msg_, MAX_ERROR_MSG,
+                "Can not support no-binding tables query");
+        return ret;
+    }
 
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
@@ -1139,51 +1224,58 @@ int QueryActuator::generate_select_plan_multi_table(
 
     vector<uint64_t> expr_ids = select_stmt->get_where_exprs();
 
-    /*if there is no where conditions*/
+    generate_all_table_shards(result_plan, from_items, all_binding_table_shards);
+    if (0 == all_binding_table_shards.size())
+    {
+        ret = JD_ERR_SHARD_NUM_WRONG;
+        jlog(WARNING, "shard manage wrong");
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "Shard manage wrong at %s:%d", __FILE__,__LINE__);
+        return ret;
+    }
+    
+    //if there is no where conditions
     if (0 == expr_ids.size())
     {
-        generate_all_table_shards(result_plan, from_items, all_tables_shards);
-        if (0 == all_tables_shards.size())
+        /*
+        ___________________________
+        table1.1 table2.1 table3.1    ----> one_binding_shards's content
+        table1.2 table2.2 table3.2
+        .........................
+        */
+        if (all_binding_table_shards.size() > 1)
         {
-            ret = JD_ERR_SHARD_NUM_WRONG;
-            jlog(WARNING, "shard manage wrong");
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Shard manage wrong at %s:%d", __FILE__,__LINE__);
-            return ret;
+            select_stmt->set_sql_dispatched_multi_shards(true);
         }
-
-        for (i = 0; i < all_tables_shards.size(); i++)
+        
+        for (i = 0; i < all_binding_table_shards.size(); i++)
         {
-            shards_info = all_tables_shards.at(i);
-            for (j = 0; j < shards_info.size(); j++)
+            one_binding_table_shards = all_binding_table_shards.at(i);
+            string     assembled_sql;
+            ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
+            if (exec_plan_unit == NULL)
             {
-                string     assembled_sql;
-                shard_info = shards_info.at(j);
-                ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
-                if (exec_plan_unit == NULL)
-                {
-                    ret = OB_ERR_PARSER_MALLOC_FAILED;
-                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
-                    return ret;
-                }
-                else
-                {
-                    exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
-                }
-
-                select_stmt->make_exec_plan_unit_string(result_plan, "", shard_info, assembled_sql);
-
-                /*generate sql exec plan*/
-                exec_plan_unit->set_exec_unit_sql(assembled_sql);
-
-                cout << "exec_plan_unit shard name: " << shard_info->get_shard_name() << endl;
-                cout << "exec_plan_unit SQL name  : " << assembled_sql << endl;
-                exec_plan_unit->set_exec_uint_shard_info(shard_info);
-
-                /*add exec_plan_unit*/
-                exec_plan->add_exec_plan_unit(exec_plan_unit);
+                ret = OB_ERR_PARSER_MALLOC_FAILED;
+                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                        "Can not malloc space for ExecPlanUnit at %s:%d", __FILE__,__LINE__);
+                return ret;
             }
+            else
+            {
+                exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
+            }
+
+            select_stmt->make_exec_plan_unit_string(result_plan, "", one_binding_table_shards, assembled_sql);
+
+            //generate sql exec plan
+            exec_plan_unit->set_exec_unit_sql(assembled_sql);
+            //we default think the other binding tables is located with the table's first shard
+            exec_plan_unit->set_exec_uint_shard_info(one_binding_table_shards.at(0));
+            jlog(INFO, "exec_plan_unit shard name: %s" ,one_binding_table_shards.at(0)->get_shard_name().data());
+            jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
+
+            //add exec_plan_unit
+            exec_plan->add_exec_plan_unit(exec_plan_unit);
         }
     }
     else
@@ -1196,26 +1288,27 @@ int QueryActuator::generate_select_plan_multi_table(
 
         if (WHERE_IS_OR_AND == where_ret)
         {
-            multimap<schema_shard*, vector<ObRawExpr*> > opted_raw_exprs;
-            schema_shard* shard_key = NULL;
-
-            cout << "multi table atomic_exprs_array num: " << atomic_exprs_array.size() << endl;
-
-            multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map1;
-            multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map_tmp;
-            multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map2;
-            pair<multimap<schema_shard*, vector<ObRawExpr*> >::iterator, multimap<schema_shard*, vector<ObRawExpr*> >::iterator> raw_exprs_same_shard;
+            multimap<uint32_t, vector<ObRawExpr*> > opted_raw_exprs;
+            jlog(INFO, "multi table atomic_exprs_array num: %d" ,atomic_exprs_array.size());
+            multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map1;
+            multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map_tmp;
+            multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map2;
+            pair<multimap<uint32_t, vector<ObRawExpr*> >::iterator, multimap<uint32_t, vector<ObRawExpr*> >::iterator> raw_exprs_same_shard;
 
             reparse_where_with_route_for_multi_tables(result_plan,
                     select_stmt,
                     atomic_exprs_array,
-                    opted_raw_exprs);
+                    opted_raw_exprs,
+                    all_binding_table_shards);
+            
+            set_sql_dispatched_info(select_stmt, opted_raw_exprs);
             
             for (p_map1 = opted_raw_exprs.begin(); p_map1 != opted_raw_exprs.end();)
             {
                 vector<vector<ObRawExpr*> > final_exprs_array;
                 string assembled_sql;
-                shard_key = p_map1->first;
+                shard_key_index = p_map1->first;
+                one_binding_table_shards = all_binding_table_shards.at(shard_key_index);
                 raw_exprs_same_shard = opted_raw_exprs.equal_range(p_map1->first);
                 for (p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
                 {
@@ -1226,10 +1319,6 @@ int QueryActuator::generate_select_plan_multi_table(
                 {
                     p_map1++;
                 }
-
-                string where_conditions;
-                append_distributed_where_items(result_plan, where_conditions, final_exprs_array);
-                select_stmt->make_exec_plan_unit_string(result_plan, where_conditions, shard_info, assembled_sql);
 
                 ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                 if (exec_plan_unit == NULL)
@@ -1244,11 +1333,14 @@ int QueryActuator::generate_select_plan_multi_table(
                     exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
                 }
 
+                string where_conditions;
+                append_distributed_where_items(result_plan, where_conditions, final_exprs_array);
+                select_stmt->make_exec_plan_unit_string(result_plan, where_conditions, one_binding_table_shards, assembled_sql);
                 exec_plan_unit->set_exec_unit_sql(assembled_sql);
-                cout << "exec_plan_unit shard name: " << shard_key->get_shard_name() << endl;
-                cout << "exec_plan_unit SQL name: " << assembled_sql << endl;
-                exec_plan_unit->set_exec_uint_shard_info(shard_key);
-
+                exec_plan_unit->set_exec_uint_shard_info(one_binding_table_shards.at(0));
+                jlog(INFO, "exec_plan_unit shard name: %s" ,one_binding_table_shards.at(0)->get_shard_name().data());
+                jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
+                
                 /*add exec_plan_unit*/
                 exec_plan->add_exec_plan_unit(exec_plan_unit);
             }
@@ -1268,31 +1360,49 @@ Author      :   qinbo
 Date        :   2013.10.29
 Description :   reparse distributed where conditions items
 Input       :   ResultPlan& result_plan,
-                vector<schema_table*> table_schemas,
-                vector<vector<ObRawExpr*> > un_opt_raw_exprs,
-                vector<vector<ObRawExpr*> > opted_raw_exprs
+                ObSelectStmt *select_stmt,
+                vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
+                multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+                vector<vector<schema_shard*> > &all_binding_tables_shards
 Output      :   
  **************************************************/
-bool QueryActuator::reparse_where_with_route_for_multi_tables(
+int QueryActuator::reparse_where_with_route_for_multi_tables(
                         ResultPlan& result_plan,
                         ObSelectStmt *select_stmt,
                         vector<vector<ObRawExpr*> > &un_opt_raw_exprs,
-                        multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs)
+                        multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+                        vector<vector<schema_shard*> > &all_binding_tables_shards)
 {
-    int             ret = false;
-    schema_shard*   shard_info = NULL;
-    vector<schema_shard*>   shards_info;
-    vector<FromItem>        from_items;
-    vector<vector<schema_shard*> >all_tables_shards;
+    int  ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;;
+    schema_shard*       shard_info = NULL;
+    vector<FromItem>    from_items;
+    vector<vector<schema_shard*> >  all_binding_table_shards;
+    vector<schema_shard*>           one_binding_table_shards;
     uint32_t i = 0;
     uint32_t j = 0;
-    uint32_t k = 0;
     
     if (un_opt_raw_exprs.size() == 0)
     {
         return ret;
     }
 
+    /*
+    ___________________________
+    table1.1 table2.1 table3.1    ----> one_binding_shards's content
+    table1.2 table2.2 table3.2
+    .........................
+    */
+
+    from_items = select_stmt->get_all_from_items();
+    if (from_items.size() < 2)
+    {
+        ret = JD_ERR_LOGICAL_TREE_WRONG;
+        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
+                "From table size is not right at %s:%d", __FILE__,__LINE__);
+        return ret;
+    }
+
+    //un_opt_raw_exprs' CONTENT is a set of AND exprs(such as a AND b AND c) 
     for (i = 0; i < un_opt_raw_exprs.size(); i++)
     {
         vector<ObRawExpr*> atomic_exprs = un_opt_raw_exprs.at(i);
@@ -1303,34 +1413,21 @@ bool QueryActuator::reparse_where_with_route_for_multi_tables(
         //if there is no route sql, this sql should be sent to all shards
         if (partition_sql_exprs.size() == 0)
         {
-            from_items = select_stmt->get_all_from_items();
-            if (from_items.size() <= 1)
+            for (j = 0; j < all_binding_table_shards.size(); j++)
             {
-                ret = JD_ERR_LOGICAL_TREE_WRONG;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "From table size is not right at %s:%d", __FILE__,__LINE__);
-                return ret;
-            }
-        
-            generate_all_table_shards(result_plan, from_items, all_tables_shards);
-            if (0 == all_tables_shards.size())
-            {
-                ret = JD_ERR_SHARD_NUM_WRONG;
-                jlog(WARNING, "shard manage wrong");
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Shard manage wrong at %s:%d", __FILE__,__LINE__);
-                return ret;
-            }
-            
-            for (j = 0; j < all_tables_shards.size(); j++)
-            {
-                shards_info = all_tables_shards.at(j);
-                for (k = 0; k < shards_info.size(); k++)
+                one_binding_table_shards = all_binding_table_shards.at(j);
+                //all table's shards in [one_binding_table_shards] is located at the same server
+                //so we can use the first table's first shard to behalf the same server
+                //solution here is not precise, it's just a compromise solution NOW
+                shard_info = one_binding_table_shards.at(0);
+                opted_raw_exprs.insert(pair<uint32_t, vector<ObRawExpr*> >(j, atomic_exprs));
+                #if 0 
+                for (k = 0; k < one_binding_table_shards.size(); k++)
                 {
-                    shard_info = shards_info.at(k);
+                    shard_info = one_binding_table_shards.at(k);
                     opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(shard_info, atomic_exprs));
-                    
                 }
+                #endif
             }
         }
         //if there is route sql, this sql should be sent to related shards
@@ -1338,9 +1435,10 @@ bool QueryActuator::reparse_where_with_route_for_multi_tables(
         {
             ret = build_shard_exprs_array_with_route_multi_table(
                     result_plan,
-                    partition_sql_exprs,
-                    atomic_exprs,
-                    opted_raw_exprs);
+                    partition_sql_exprs,        //expr related ROUTE info in a set of AND exprs
+                    atomic_exprs,               //a set of AND exprs(such as a AND b AND c)
+                    opted_raw_exprs,            //exprs related server info
+                    all_binding_tables_shards); 
         }
     }
     
@@ -1357,21 +1455,30 @@ Input       :   ResultPlan& result_plan,
                 vector<ObRawExpr*> partition_sql_exprs,
                 vector<ObRawExpr*> atomic_exprs,
                 multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs
+                vector<vector<schema_shard*> > &all_binding_tables_shards
 Output      :   
  **************************************************/
-bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
+int QueryActuator::build_shard_exprs_array_with_route_multi_table(
         ResultPlan& result_plan,
         vector<ObRawExpr*> partition_sql_exprs,
         vector<ObRawExpr*> atomic_exprs,
-        multimap<schema_shard*, vector<ObRawExpr*> > &opted_raw_exprs)
+        multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
+        vector<vector<schema_shard*> > &all_binding_tables_shards)
 {
+    int ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;;
     ObRawExpr* raw_expr = NULL;
-    vector<vector<schema_shard*> > all_related_shards;
-    vector<schema_shard*> shard_tmp1;
-    vector<schema_shard*> shard_tmp2;
-    vector<schema_shard*> shard_tmp3;
+    vector<schema_shard*> one_binding_tables_shards;
     schema_table*   table_schema = NULL;
     uint32_t i = 0;
+    uint32_t j = 0;
+    uint32_t k = 0;
+    uint32_t shards_index = 0;
+    /*
+    ___________________________
+    table1.1 table2.1 table3.1    ----> one_binding_shards's content
+    table1.2 table2.2 table3.2
+    table1.3 table2.3 table3.3
+    */
 
     for (i = 0; i < partition_sql_exprs.size(); i++)
     {
@@ -1381,14 +1488,21 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
         
         if (!raw_expr->try_get_table_name(result_plan,table_name))
         {
+            jlog(INFO,"Can not get table name from raw_expr.");
             continue;
         }
         
         table_schema = meta_reader::get_instance().get_table_schema(result_plan.db_name, table_name);
+
+        for (j = 0; j<all_binding_tables_shards.size();j++)
+        {
+            one_binding_tables_shards = all_binding_tables_shards.at(j);
+            
+        }
         
         map<string, SqlItemType> sharding_key_tmp = table_schema->get_sharding_key();
         vector<key_data> key_relations;
-        vector<schema_shard*> shard_info;
+        vector<schema_shard*> route_shards;
 
         map<string, SqlItemType>::iterator it = sharding_key_tmp.begin();
 
@@ -1410,61 +1524,35 @@ bool QueryActuator::build_shard_exprs_array_with_route_multi_table(
 
         if (key_relations.size() > 0)
         {
-            if (!router::get_instance().get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
+            if ((!router::get_instance().get_route_result(key_relations, route_shards, result_plan.err_stat_.err_code_))
+                ||(route_shards.size() == 0))
             {
+                ret = JD_ERR_CONFIG_ROUTE_ERR;
                 jlog(WARNING, "route info manage error");
                 snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
                         "Route info manage error at %s:%d", __FILE__,__LINE__);
-                return false;
+                return ret;
             }
         }
 
-        if (shard_info.size() > 0)
+        for (k = 0; k < route_shards.size(); k++)
         {
-            all_related_shards.push_back(shard_info);
+            shards_index = search_shard_from_multi_tables_shards(all_binding_tables_shards, route_shards.at(k));  
+            if (SHARD_NOT_FOUND != shards_index)
+            {
+                opted_raw_exprs.insert(pair<uint32_t, vector<ObRawExpr*> >(shards_index, atomic_exprs));
+            }
+            else
+            {
+                opted_raw_exprs.clear();
+                ret = JD_ERR_SHARD_NUM_WRONG;
+                jlog(WARNING, "shard manage wrong");
+                return ret;
+            }
         }
     }
 
-    if (all_related_shards.size() == 0)
-    {
-        jlog(WARNING, "shard info manage error");
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Shard info manage error at %s:%d", __FILE__,__LINE__);
-        return false;
-    }
-
-    if (all_related_shards.size() == 1)
-    {
-        shard_tmp1 = all_related_shards.at(0);
-        for (i = 0; i < shard_tmp1.size(); i++)
-        {
-            opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(shard_tmp1.at(i), atomic_exprs));
-        }
-    }
-    //get shards' intersection
-    else if (all_related_shards.size() == 2)
-    {
-        set_intersection(all_related_shards.at(0).begin(), all_related_shards.at(0).end(),
-                all_related_shards.at(1).begin(), all_related_shards.at(1).end(), shard_tmp1.begin()); //����
-    }
-    else
-    {
-        set_intersection(all_related_shards.at(0).begin(), all_related_shards.at(0).end(),
-                all_related_shards.at(1).begin(), all_related_shards.at(1).end(), shard_tmp1.begin()); //����
-        for (i = 2; i < all_related_shards.size(); i++)
-        {
-            shard_tmp2 = all_related_shards.at(i);
-            set_intersection(shard_tmp1.begin(), shard_tmp1.end(), shard_tmp2.begin(), shard_tmp2.end(), shard_tmp3.begin()); //����
-            shard_tmp1 = shard_tmp3;
-        }
-    }
-
-    for (i = 0; i < shard_tmp1.size(); i++)
-    {
-        opted_raw_exprs.insert(pair<schema_shard*, vector<ObRawExpr*> >(shard_tmp1.at(i), atomic_exprs));
-    }
-
-    return true;
+    return ret;
 }
 
 
@@ -1474,98 +1562,81 @@ Author      :   qinbo
 Date        :   2013.10.24
 Description :   generate all tables' shards
 Input       :   ResultPlan& result_plan,
-                vector<string> table_names,
-                vector<schema_shard*> &all_tables_shards
+                vector<string> &table_names,
+                vector<vector<schema_shard*> > &all_binding_tables_shards
 Output      :   
  **************************************************/
 void QueryActuator::generate_all_table_shards(ResultPlan& result_plan,
-                                              vector<FromItem> from_items,
-                                              vector<vector<schema_shard*> > &all_tables_shards)
+                                              vector<FromItem> &from_items,
+                                              vector<vector<schema_shard*> > &all_binding_tables_shards)
 {
     string   db_name;
-    FromItem from_item;
-    uint32_t i = 0;
-    uint32_t j = 0;
     db_name.assign(result_plan.db_name);
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
     schema_table* table_schema = NULL;
-    vector<vector<schema_shard*> > all_tables_shards_tmp;
-    vector<vector<schema_shard*> > all_tables_shards_tmp2;
-    vector<schema_shard*> a_tables_shards_tmp;
-    uint32_t combination_count = 1;
-
-    for (i = 0; i < from_items.size(); i++)
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
+    
+    if (NULL == db_schema)
     {
-        from_item = from_items.at(i);
-        table_schema = db_schema->get_table_from_db(from_item.table_name_);
-        all_tables_shards_tmp.push_back(table_schema->get_all_shards());
+        return;
+    }
+        
+    if(!is_from_tables_binding(result_plan,from_items))
+    {
+        return;
     }
 
-    uint32_t indexes_len = all_tables_shards_tmp.size();
-    uint32_t *indexes = new uint32_t[indexes_len];
+    /*
+    ___________________________
+    table1.1 table2.1 table3.1    ----> one_binding_shards's content
+    table1.2 table2.2 table3.2
+    .........................
+    */
+    uint32_t binding_shards_num = db_schema->get_table_from_db(from_items.at(0).table_name_)->get_all_shards().size();
 
-    //all table's shards ȫ���
-    for (i = 0; i < all_tables_shards_tmp.size(); i++)
+    for (uint32_t i = 0; i < binding_shards_num; i++)
     {
-        combination_count *= all_tables_shards_tmp.at(i).size();
-    }
-
-    for (i = 0; i < combination_count; i++)
-    {
-        vector<schema_shard*> expanded_shards;
-
-        for (j = 0; j < indexes_len; j++)
+        vector<schema_shard*>  one_binding_shards;
+        for (uint32_t j = 0; j < from_items.size(); j++)
         {
-            vector<schema_shard*> curr_shards = all_tables_shards_tmp.at(j);
-            schema_shard *shard = curr_shards.at(indexes[j]);
-            expanded_shards.push_back(shard);
+            table_schema = db_schema->get_table_from_db(from_items.at(j).table_name_);
+            one_binding_shards.push_back(table_schema->get_all_shards().at(i));
         }
-
-        all_tables_shards_tmp2.push_back(expanded_shards);
-
-        uint32_t k = indexes_len - 1;
-        for (; k >= 0; k--)
-        {
-            vector<schema_shard*> curr_shards = all_tables_shards_tmp.at(k);
-            if ((indexes[k] + 1) == curr_shards.size())
-            {
-                indexes[k] = 0;
-            }
-            else
-            {
-                ++indexes[k];
-                break;
-            }
-        }
+        all_binding_tables_shards.push_back(one_binding_shards);
     }
-    delete []indexes;
-
-    string server_name;
-
-    //�ж����еķ�Ƭ������ͬһ��server�У�������Ч
-    for (i = 0; i < all_tables_shards_tmp2.size(); i++)
-    {
-        vector<schema_shard*> expanded_shards_seq = all_tables_shards_tmp2.at(i);
-        for (j = 0; j < expanded_shards_seq.size(); j++)
-        {
-            schema_shard* shard_tmp = expanded_shards_seq.at(j);
-            if (server_name.empty())
-            {
-                server_name = shard_tmp->get_master_server();
-            }
-            else if (server_name != shard_tmp->get_master_server())
-            {
-                break;
-            }
-            else if (j == expanded_shards_seq.size() - 1)
-            {
-                all_tables_shards.push_back(expanded_shards_seq);
-            }
-        }
-    }
-
-
     return;
+}
+
+
+/**************************************************
+Funtion     :   search_shard_from_multi_tables_shards
+Author      :   qinbo
+Date        :   2013.12.24
+Description :   search one shard from all_binding_tables_shards and return 
+                all_binding_tables_shards index
+Input       :   vector<vector<schema_shard*> > &all_binding_tables_shards,
+                schema_shard* goal_shard
+Output      :   index
+ **************************************************/
+int QueryActuator::search_shard_from_multi_tables_shards( vector<vector<schema_shard*> > &all_binding_tables_shards,
+                                                   schema_shard* goal_shard)
+{
+    if (all_binding_tables_shards.size() == 0)
+    {
+        return SHARD_NOT_FOUND;
+    }
+
+    for (uint32_t i=0; i< all_binding_tables_shards.size();i++)
+    {
+        for (uint32_t j=0; j< all_binding_tables_shards.at(i).size();j++)
+        {
+            if (all_binding_tables_shards.at(i).at(j) == goal_shard)
+            {
+                return i;
+            }
+        }
+    }
+    return SHARD_NOT_FOUND;
+
 }
 
 /**************************************************
@@ -1684,10 +1755,20 @@ int QueryActuator::decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRa
 
         return WHERE_IS_OR_AND;
     }
+    #if 1
+    else
+    {
+        vector<ObRawExpr*> one_expr;
+        one_expr.push_back(sql_expr);
+        atomic_exprs_array.push_back(one_expr);
+        return WHERE_IS_OR_AND;
+    }
+    #else //do not support sub query now
     else
     {
         return WHERE_IS_SUBQUERY;
     }
+    #endif
 }
 
 
@@ -1876,7 +1957,8 @@ int QueryActuator::gen_exec_plan_update(
             }
         }
 
-        vector<uint64_t> expr_ids = update_stmt->get_where_exprs();
+        vector<schema_shard*>   table_all_shards= table_schema->get_all_shards();
+        vector<uint64_t>        expr_ids        = update_stmt->get_where_exprs();
         /*if there is no where conditions*/
         if (0 == expr_ids.size())
         {
@@ -1893,25 +1975,30 @@ int QueryActuator::gen_exec_plan_update(
 
             if (WHERE_IS_OR_AND == where_ret)
             {
-                multimap<schema_shard*, vector<ObRawExpr*> > opted_raw_exprs;
+                multimap<uint32_t, vector<ObRawExpr*> > opted_raw_exprs;
                 schema_shard* shard_key = NULL;
+                jlog(INFO, "atomic_exprs_array num: %d" ,atomic_exprs_array.size());
+                multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map1;
+                multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map_tmp;
+                multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map2;
+                pair<multimap<uint32_t, vector<ObRawExpr*> >::iterator, multimap<uint32_t, vector<ObRawExpr*> >::iterator> raw_exprs_same_shard;
             
-                cout << "atomic_exprs_array num: " << atomic_exprs_array.size() << endl;
-            
-                multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map1;
-                multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map_tmp;
-                multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map2;
-                pair<multimap<schema_shard*, vector<ObRawExpr*> >::iterator, multimap<schema_shard*, vector<ObRawExpr*> >::iterator> raw_exprs_same_shard;
-            
-                reparse_where_with_route_for_one_table(result_plan,
+                ret = reparse_where_with_route_for_one_table(result_plan,
                         table_schema,
                         atomic_exprs_array,
-                        opted_raw_exprs);
+                        opted_raw_exprs,
+                        table_all_shards);
+
+                if (OB_SUCCESS != ret)
+                {
+                    return ret;
+                }
+                
                 for (p_map1 = opted_raw_exprs.begin(); p_map1 != opted_raw_exprs.end();)
                 {
                     vector<vector<ObRawExpr*> > final_exprs_array;
                     string assembled_sql;
-                    shard_key = p_map1->first;
+                    shard_key = table_all_shards.at(p_map1->first);
                     raw_exprs_same_shard = opted_raw_exprs.equal_range(p_map1->first);
                     for (p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
                     {
@@ -1939,10 +2026,10 @@ int QueryActuator::gen_exec_plan_update(
                     {
                         exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
                     }
-            
+
                     exec_plan_unit->set_exec_unit_sql(assembled_sql);
-                    cout << "exec_plan_unit shard name: " << shard_key->get_shard_name() << endl;
-                    cout << "exec_plan_unit SQL name: " << assembled_sql << endl;
+                    jlog(INFO, "exec_plan_unit shard name: %s" ,shard_key->get_shard_name().data());
+                    jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
                     exec_plan_unit->set_exec_uint_shard_info(shard_key);
             
                     /*add exec_plan_unit*/
@@ -2054,7 +2141,8 @@ int QueryActuator::gen_exec_plan_delete(
     //this table is distributed table
     else
     {
-        vector<uint64_t> expr_ids = delete_stmt->get_where_exprs();
+        vector<schema_shard*>   table_all_shards= table_schema->get_all_shards();
+        vector<uint64_t>        expr_ids        = delete_stmt->get_where_exprs();
         /*if there is no where conditions*/
         if (0 == expr_ids.size())
         {
@@ -2071,25 +2159,29 @@ int QueryActuator::gen_exec_plan_delete(
 
             if (WHERE_IS_OR_AND == where_ret)
             {
-                multimap<schema_shard*, vector<ObRawExpr*> > opted_raw_exprs;
+                multimap<uint32_t, vector<ObRawExpr*> > opted_raw_exprs;
                 schema_shard* shard_key = NULL;
+                jlog(INFO, "atomic_exprs_array num: %d" ,atomic_exprs_array.size());
+                multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map1;
+                multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map_tmp;
+                multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map2;
+                pair<multimap<uint32_t, vector<ObRawExpr*> >::iterator, multimap<uint32_t, vector<ObRawExpr*> >::iterator> raw_exprs_same_shard;
 
-                cout << "atomic_exprs_array num: " << atomic_exprs_array.size() << endl;
-
-                multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map1;
-                multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map_tmp;
-                multimap<schema_shard*, vector<ObRawExpr*> >::iterator p_map2;
-                pair<multimap<schema_shard*, vector<ObRawExpr*> >::iterator, multimap<schema_shard*, vector<ObRawExpr*> >::iterator> raw_exprs_same_shard;
-
-                reparse_where_with_route_for_one_table(result_plan,
+                ret = reparse_where_with_route_for_one_table(result_plan,
                         table_schema,
                         atomic_exprs_array,
-                        opted_raw_exprs);
+                        opted_raw_exprs,
+                        table_all_shards);
+                
+                if (OB_SUCCESS != ret)
+                {
+                    return ret;
+                }
                 for (p_map1 = opted_raw_exprs.begin(); p_map1 != opted_raw_exprs.end();)
                 {
                     vector<vector<ObRawExpr*> > final_exprs_array;
                     string assembled_sql;
-                    shard_key = p_map1->first;
+                    shard_key = table_all_shards.at(p_map1->first);
                     raw_exprs_same_shard = opted_raw_exprs.equal_range(p_map1->first);
                     for (p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
                     {
@@ -2118,8 +2210,8 @@ int QueryActuator::gen_exec_plan_delete(
                     }
 
                     exec_plan_unit->set_exec_unit_sql(assembled_sql);
-                    cout << "exec_plan_unit shard name: " << shard_key->get_shard_name() << endl;
-                    cout << "exec_plan_unit SQL name: " << assembled_sql << endl;
+                    jlog(INFO, "exec_plan_unit shard name: %s" ,shard_key->get_shard_name().data());
+                    jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
                     exec_plan_unit->set_exec_uint_shard_info(shard_key);
 
                     /*add exec_plan_unit*/
@@ -2229,12 +2321,10 @@ int QueryActuator::gen_exec_plan_insert(
         //generate sql exec plan
         sql_exec_plan_unit.assign(assembled_sql);
         exec_plan_unit->set_exec_unit_sql(sql_exec_plan_unit);
-
-        cout << "exec_plan_unit SQL name: " << sql_exec_plan_unit << endl;
-
         shard_info = table_schema->get_all_shards().at(0);
         exec_plan_unit->set_exec_uint_shard_info(shard_info);
-
+        jlog(INFO, "exec_plan_unit shard name: %s" ,shard_info->get_shard_name().data());
+        jlog(INFO, "exec_plan_unit SQL name  : %s" ,sql_exec_plan_unit.data());
         //add exec_plan_unit
         exec_plan->add_exec_plan_unit(exec_plan_unit);
     }
@@ -2358,10 +2448,9 @@ int QueryActuator::gen_exec_plan_insert(
             //generate sql exec plan
             sql_exec_plan_unit.assign(assembled_sql);
             exec_plan_unit->set_exec_unit_sql(sql_exec_plan_unit);
-
-            cout << "exec_plan_unit SQL name: " << sql_exec_plan_unit << endl;
             exec_plan_unit->set_exec_uint_shard_info(shard_info);
-
+            jlog(INFO, "exec_plan_unit shard name: %s" ,shard_info->get_shard_name().data());
+            jlog(INFO, "exec_plan_unit SQL name  : %s" ,sql_exec_plan_unit.data());
             //add exec_plan_unit
             exec_plan->add_exec_plan_unit(exec_plan_unit);
         }
@@ -2431,9 +2520,11 @@ int QueryActuator::distribute_sql_to_all_shards(
     
     for (i = 0; i < table_schema->get_all_shards().size(); i++)
     {
-        string     assembled_sql;
+        string     assembled_sql = "";
         shard_info = table_schema->get_all_shards().at(i);
-    
+        vector<schema_shard*> shard_tmp;
+        shard_tmp.push_back(shard_info);
+        
         ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
         if (exec_plan_unit == NULL)
         {
@@ -2447,15 +2538,13 @@ int QueryActuator::distribute_sql_to_all_shards(
             exec_plan_unit = new(exec_plan_unit) ExecPlanUnit();
         }
     
-        stmt->make_exec_plan_unit_string(result_plan, "", shard_info, assembled_sql);
+        stmt->make_exec_plan_unit_string(result_plan, "", shard_tmp, assembled_sql);
     
         /*generate sql exec plan*/
         exec_plan_unit->set_exec_unit_sql(assembled_sql);
-    
-        cout << "exec_plan_unit shard name: " << shard_info->get_shard_name() << endl;
-        cout << "exec_plan_unit SQL name  : " << assembled_sql << endl;
         exec_plan_unit->set_exec_uint_shard_info(shard_info);
-    
+        jlog(INFO, "exec_plan_unit shard name: %s" ,shard_info->get_shard_name().c_str());
+        jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
         /*add exec_plan_unit*/
         exec_plan->add_exec_plan_unit(exec_plan_unit);
     }
@@ -2518,6 +2607,93 @@ int QueryActuator::send_sql_to_config_server(
     return ret;
 }
 
+/**************************************************
+Funtion     :   is_from_tables_binding
+Author      :   qinbo
+Date        :   2013.12.24
+Description :   whether all from tables are binding(shard with the same COLUMN KEY)
+Input       :   ResultPlan& result_plan,
+                vector<FromItem> &from_items
+Output      :   
+return      :   bool
+ **************************************************/
+bool QueryActuator::is_from_tables_binding(ResultPlan& result_plan,
+                                          vector<FromItem> &from_items)
+{
+    schema_table*  table_schema          = NULL;
+    schema_table*  first_table_schema    = NULL;
+    vector<string> binding_tables;
+    
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+    first_table_schema = db_schema->get_table_from_db(from_items.at(0).table_name_);
+
+    if (NULL == first_table_schema)
+    {
+        jlog(ERROR, "shard schema manage error!!");
+        return false;
+    }
+    
+    if (from_items.size() < 2) 
+    {
+        jlog(ERROR, "from items manage error!!");
+        return false;
+    }
+
+    binding_tables = first_table_schema->get_relation_table();
+    if (binding_tables.size() == 0)
+    {
+        return false;
+    }
+    
+    for (uint32_t i = 1; i < from_items.size(); i++)
+    {
+        table_schema = db_schema->get_table_from_db(from_items.at(i).table_name_);
+        
+        vector<string>::iterator pos;
+        pos = find(binding_tables.begin(),binding_tables.end(),from_items.at(i).table_name_);
+        if(pos == binding_tables.end())
+        {
+            return false;
+        }
+    }
+    return true;
+    
+}
+
+/**************************************************
+Funtion     :   set_sql_dispatched_info
+Author      :   qinbo
+Date        :   2013.12.24
+Description :   set "select_stmt" "is_sql_dispatched_multi_shards"
+Input       :   ObSelectStmt *select_stmt, 
+                multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs
+Output      :   
+return      :   
+ **************************************************/
+void QueryActuator::set_sql_dispatched_info(ObSelectStmt *select_stmt, 
+                                            multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs)
+{
+    multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map;
+    uint32_t counter = 0;
+        
+    for (p_map = opted_raw_exprs.begin(); p_map != opted_raw_exprs.end();)
+    {
+        for (uint32_t i = 0; i < opted_raw_exprs.count(p_map->first); i++)
+        {
+            p_map++;
+        }
+        counter++;
+    }
+
+    if (counter > 1)
+    {
+        select_stmt->set_sql_dispatched_multi_shards(true);
+    }
+    else
+    {
+        select_stmt->set_sql_dispatched_multi_shards(false);
+    }
+}
 
 
 

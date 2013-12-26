@@ -1693,6 +1693,46 @@ int resolve_table(
                         "Can not add JoinedTable at %s:%d", __FILE__,__LINE__);
                 break;
             }
+            //BEGIN: Added by qinbo
+            //only support meta database query
+            case T_OP_NAME_FIELD:
+            {
+                OB_ASSERT(node->children_[0]->type_ == T_IDENT);
+                // star has been expand before
+                // T_IDENT.* can't has alias name here, which is illeagal
+                if (node->children_[1]->type_ != T_IDENT)
+                {
+                    ret = OB_ERR_PARSER_SYNTAX;
+                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                            "%s.* is illeagal at %s:%d", node->children_[0]->str_value_, __FILE__,__LINE__);
+                    break;
+                }
+                
+                const char* db_str = node->children_[0]->str_value_;
+                const char* table_str = node->children_[1]->str_value_;
+                string db_name;
+                string table_name;
+                db_name.assign((char*) db_str, static_cast<int32_t> (strlen(db_str)));
+                table_name.assign((char*) table_str, static_cast<int32_t> (strlen(table_str)));
+                //transfer to lower string
+                std::transform(db_name.begin(), db_name.end(), db_name.begin(), ::tolower);
+                std::transform(table_name.begin(), table_name.end(), table_name.begin(), ::tolower);
+                if ((0 != db_name.compare("information_schema"))
+                 && (0 != db_name.compare("mysql"))
+                 && (0 != db_name.compare("performance_schema")))
+                {
+                    ret = OB_ERR_PARSER_SYNTAX;
+                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                            "Unknown db name at %s:%d", __FILE__,__LINE__);
+                }
+                else
+                {
+                    result_plan->meta_db_name = db_name;
+                    jlog(INFO, "Current meta dic query database is: %s", db_name.c_str());
+                }
+                break;
+            }
+            //END: Added by qinbo
             default:
                 /* won't be here */
                 ret = OB_ERR_PARSER_SYNTAX;
@@ -1730,6 +1770,10 @@ int resolve_from_clause(
             if (ret != OB_SUCCESS)
                 break;
 
+            if (child_node->type_ == T_OP_NAME_FIELD)
+            {
+                break;
+            }
             if (child_node->type_ == T_JOINED_TABLE)
                 ret = select_stmt->add_from_item(tid, true);
             else

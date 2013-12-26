@@ -22,6 +22,7 @@ ObSelectStmt::ObSelectStmt()
     limit_offset_id_ = OB_INVALID_ID;
     for_update_ = false;
     gen_joined_tid_ = UINT64_MAX - 2;
+    is_sql_relate_multi_shards = false;
 }
 
 ObSelectStmt::~ObSelectStmt()
@@ -691,29 +692,45 @@ Date        :   2013.12.9
 Description :   make select sql
 Input       :   ResultPlan& result_plan,
                 string where_conditions
-                schema_shard *shard_info
+                vector<schema_shard*> shard_info
                 string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, schema_shard *shard_info,string &assembled_sql)
+int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan, 
+                                                string where_conditions, 
+                                                vector<schema_shard*> binding_shard_info,
+                                                string &assembled_sql)
 {
     make_select_item_string(result_plan, assembled_sql);
     
     //when post process need column while this column is not in select_itmes, append them
     append_select_items_reduce_used(result_plan, assembled_sql);
 
+    if (from_items_.size() != binding_shard_info.size())
+    {
+        jlog(ERROR, "sql parser error!!!");
+        return OB_ERR_PARSE_SQL;
+    }
+   
     for (uint32_t i = 0; i < from_items_.size(); i++)
     {
         if (0 == i)
         {
             assembled_sql.append("FROM ");
         }
-        
+
         FromItem& item = from_items_[i];
         string table_name = ObStmt::get_table_item_by_id(item.table_id_)->table_name_;
-        if (table_name != shard_info->get_table_name())
+        if (table_name != binding_shard_info.at(i)->get_table_name())
         {
-            assembled_sql.append(shard_info->get_shard_name());
+            assembled_sql.append(binding_shard_info.at(i)->get_shard_name());
+            //from multi table
+            if (from_items_.size() >1)
+            {
+                assembled_sql.append(" AS ");
+                assembled_sql.append(table_name);
+                assembled_sql.append(" ");
+            }
         }
         else
         {
@@ -737,6 +754,7 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string
     else
     {
         assembled_sql.append(where_conditions);
+        assembled_sql.append(" ");
     }
     
     make_group_by_string(result_plan, assembled_sql);
@@ -747,7 +765,6 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string
         make_order_by_string(result_plan, assembled_sql);
     }
     make_limit_string(result_plan, assembled_sql);    
-
     return OB_SUCCESS;
 }
 
@@ -876,12 +893,21 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
     {
         for (i = 0; i < group_items.size(); i++)
         {
-            cout << "group_items[i].group_column        :" << group_items[i].group_column_ << endl;
             if (!try_fetch_select_item_by_column_name(select_items, group_items[i].group_column_, column_off))
             {
-                vector<string>::iterator pos;
-                pos = find(exist_column_names.begin(),exist_column_names.end(),group_items[i].group_column_);
-                if(pos == exist_column_names.end())
+                if (exist_column_names.size() > 0)
+                {
+                    vector<string>::iterator pos;
+                    pos = find(exist_column_names.begin(),exist_column_names.end(),group_items[i].group_column_);
+                    if(pos == exist_column_names.end())
+                    {
+                        assembled_sql.append(",");
+                        assembled_sql.append(group_items[i].group_column_);
+                        assembled_sql.append(" ");
+                        exist_column_names.push_back(group_items[i].group_column_);
+                    }
+                }
+                else
                 {
                     assembled_sql.append(",");
                     assembled_sql.append(group_items[i].group_column_);
@@ -896,17 +922,26 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
     {
         for (i = 0; i < Having_items.size(); i++)
         {
-            cout << "Having_items[i].having_column_name :" << Having_items[i].having_column_name << endl;
             if (!try_fetch_select_item_by_column_name(select_items, Having_items[i].having_column_name, column_off))
             {
-                vector<string>::iterator pos;
-                pos = find(exist_column_names.begin(),exist_column_names.end(),Having_items[i].having_column_name);
-                if(pos == exist_column_names.end())
+                if (exist_column_names.size() > 0)
+                {
+                    vector<string>::iterator pos;
+                    pos = find(exist_column_names.begin(),exist_column_names.end(),Having_items[i].having_column_name);
+                    if(pos == exist_column_names.end())
+                    {
+                        assembled_sql.append(",");
+                        assembled_sql.append(Having_items[i].having_column_name);
+                        assembled_sql.append(" ");
+                        exist_column_names.push_back(Having_items[i].having_column_name);
+                    }
+                }
+                else
                 {
                     assembled_sql.append(",");
                     assembled_sql.append(Having_items[i].having_column_name);
                     assembled_sql.append(" ");
-                    exist_column_names.push_back(order_items[i].order_column_);
+                    exist_column_names.push_back(Having_items[i].having_column_name);
                 }
             }
         }
@@ -916,12 +951,20 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
     {
         for (i = 0; i < order_items.size(); i++)
         {
-            cout << "order_items[i].order_column        :" << order_items[i].order_column_ << endl;
             if (!try_fetch_select_item_by_column_name(select_items, order_items[i].order_column_, column_off))
             {
-                vector<string>::iterator pos;
-                pos = find(exist_column_names.begin(),exist_column_names.end(),order_items[i].order_column_);
-                if(pos == exist_column_names.end())
+                if (exist_column_names.size() > 0)
+                {
+                    vector<string>::iterator pos;
+                    pos = find(exist_column_names.begin(),exist_column_names.end(),order_items[i].order_column_);
+                    if(pos == exist_column_names.end())
+                    {
+                        assembled_sql.append(",");
+                        assembled_sql.append(order_items[i].order_column_);
+                        assembled_sql.append(" ");
+                    }
+                }
+                else
                 {
                     assembled_sql.append(",");
                     assembled_sql.append(order_items[i].order_column_);
@@ -1048,6 +1091,15 @@ int64_t ObSelectStmt::make_group_by_string(ResultPlan& result_plan, string &asse
             assembled_sql.append(group_items_.at(i).group_column_);
             assembled_sql.append(" ");
         }
+        
+        if ((group_items_.size() > 1)&&(i != group_items_.size()- 1))
+        {
+            assembled_sql.append(", ");        
+        }
+        else
+        {
+            assembled_sql.append(" ");        
+        }
     }
 
     return ret;
@@ -1080,6 +1132,14 @@ int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan, string &asse
         assembled_sql.append(item.order_column_);        
         assembled_sql.append(" ");
         assembled_sql.append(item.order_type_ == T_SORT_ASC ? "ASC " : "DESC ");
+        if ((order_items_.size() > 1)&&(i != order_items_.size()- 1))
+        {
+            assembled_sql.append(", ");        
+        }
+        else
+        {
+            assembled_sql.append(" ");        
+        }
     }
 
     return ret;
@@ -1127,6 +1187,14 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan, string &assemb
             sql_expr->to_string(result_plan, assembled_sql_tmp);
             assembled_sql.append(assembled_sql_tmp);        
             assembled_sql.append(") ");
+            if ((having_expr_ids_.size() > 1)&&(i != having_expr_ids_.size()- 1))
+            {
+                assembled_sql.append(", ");        
+            }
+            else
+            {
+                assembled_sql.append(" ");        
+            }
         }
     }
 
@@ -1145,21 +1213,31 @@ Output      :
 int64_t ObSelectStmt::make_limit_string(ResultPlan& result_plan, string &assembled_sql)
 {
     assembled_sql.append("LIMIT ");
-   
-    stringstream  ss1;
-    string s1;
-    ss1 << limit_item_.start;
-    ss1 >> s1;
-    assembled_sql.append(s1);       
+    if (is_sql_dispatched_multi_shards())
+    {
+        assembled_sql.append("0, ");
+        stringstream  ss;
+        string s;
+        ss << limit_item_.start + limit_item_.end;
+        ss >> s;
+        assembled_sql.append(s);        
+    }
+    else
+    {
+        stringstream  ss1;
+        string s1;
+        ss1 << limit_item_.start;
+        ss1 >> s1;
+        assembled_sql.append(s1);       
 
-    assembled_sql.append(", ");        
+        assembled_sql.append(", ");        
 
-    stringstream  ss2;
-    string s2;
-    ss2 << limit_item_.end;
-    ss2 >> s2;
-    assembled_sql.append(s2);        
-
+        stringstream  ss2;
+        string s2;
+        ss2 << limit_item_.end;
+        ss2 >> s2;
+        assembled_sql.append(s2);        
+    }
     return OB_SUCCESS;
 }
 
@@ -1367,8 +1445,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     if (NULL == sql_expr)
     {
         ret = OB_ERR_ILLEGAL_ID;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "select item error!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "having item error!!!");
         return ret;
     }
     
@@ -1383,8 +1460,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
         if (NULL == sql_expr)
         {
             ret = OB_ERR_ILLEGAL_ID;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "ref column error!!! at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "ref column error!!!");
             return ret;
         }
         if (sql_expr->get_expr()->is_aggr_fun())
@@ -1396,8 +1472,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
                 if (!agg_fun_raw_expr->get_param_expr()->is_column())
                 {
                     ret = OB_ERR_ILLEGAL_ID;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "select item error!!! at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "having item error!!!");
                     return ret;
                 }
     
@@ -1412,7 +1487,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
         ret = first_expr->to_string(*result_plan, assembled_sql_tmp);
         if (OB_SUCCESS != ret)
         {
-            cout << "first_expr->get_first_ref_id(): " << first_expr->get_first_ref_id() <<" second: " << first_expr->get_second_ref_id() << endl;
+            jlog(WARNING, "having item convert error!!!");
             return ret;
         }   
         
@@ -1422,8 +1497,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     else
     {
         ret = OB_ERR_ILLEGAL_ID;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "select item error!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "having item error!!!");
         return ret;
     }
     
@@ -1442,8 +1516,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
         &&(T_DOUBLE != second_expr->get_expr_type()))
     {
         ret = OB_ERR_ILLEGAL_ID;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Aggr func only support INT/FLOAT/DOUBLE/DECIMAL type value!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "Aggr func only support INT/FLOAT/DOUBLE/DECIMAL type value!!!");
         return ret;
     }
     else

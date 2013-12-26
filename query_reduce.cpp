@@ -5,7 +5,7 @@
  * Created on 2013年11月25日, 上午10:10
  */
 
-#include "../log/jlog.h"
+#include "../log/log.h"
 #include "query_reduce.h"
 #include "ob_select_stmt.h"
 
@@ -158,6 +158,8 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
 
     //set limit 
     set_limit_reduce_info(limit_item.start, limit_item.end);
+    //set original field columns info
+    set_original_field_item(select_items);
 
     for (i = 0; i <raw_select_num ; i++)
     {
@@ -311,9 +313,25 @@ void QueryPostReduce::set_limit_reduce_info(uint64_t row_offset,
     this->row_count = row_count;
 }
 
+void QueryPostReduce::set_original_field_item(vector<SelectItem> &select_items_)
+{
+    select_items = select_items_;
+}
+
+vector<SelectItem> &QueryPostReduce::get_original_field_item()
+{
+    return select_items;
+}
+
+
 bool QueryPostReduce::find_column_if_exist(vector<string> &columns,
         string goal_column, uint32_t column_off)
 {
+    if (columns.size() == 0)
+    {
+        return false;
+    }
+    
     for (uint32_t i = 0; i < columns.size(); i++)
     {
         if (goal_column == columns.at(i))

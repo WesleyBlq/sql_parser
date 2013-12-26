@@ -103,6 +103,8 @@ public:
     void add_aggr_func_reduce_info(int32_t pos, int32_t func, enum enum_field_types field_type);//same to 
     void add_having_reduce_info(int32_t pos, int32_t func, int32_t operate, double value, enum enum_field_types field_type);
     void add_order_reduce_info(bool sort, int32_t pos, enum enum_field_types field_type);
+    void set_original_field_item(vector<SelectItem> &select_items_);
+    vector<SelectItem> &get_original_field_item( );
 
     int32_t get_reduce();
     uint32_t get_group_size();
@@ -134,14 +136,16 @@ private:
     vector<OrderPostReduce>     order;
     vector<AggrFuncPostReduce>  func;
     vector<HavingPostReduce>    having;
+    vector<SelectItem>          select_items;
+    
     bool  find_column_if_exist(vector<string> &columns, string goal_column, uint32_t column_off);
     bool  is_sort_asc(SqlItemType sort_type)
     {
         if ( sort_type == T_SORT_ASC)
         {
-            return true;
+            return false;
         }
-        return false;
+        return true;
     }
 
     enum enum_field_types trans_ob_sql2_mysql(ObObjType ob_sql_type);
