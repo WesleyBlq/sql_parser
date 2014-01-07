@@ -38,7 +38,20 @@ namespace oceanbase
             const vector<vector<uint64_t> >& get_all_value_rows() const;
             void print(FILE* fp, int32_t level, int32_t index);
             int64_t make_stmt_string(ResultPlan& result_plan, string& assembled_sql_tmp);
-            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql);
+            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string insert_rows, vector<schema_shard*> shard_info,string &assembled_sql);
+            /**************************************************
+            Funtion     :   append_distributed_insert_items
+            Author      :   qinbo
+            Date        :   2014.1.6
+            Description :   append insert rows
+            Input       :   ResultPlan& result_plan,
+                            vector<uint32_t> &insert_rows_index,
+                            string &assembled_sql
+            Output      :   
+             **************************************************/
+            int append_distributed_insert_items(ResultPlan& result_plan,
+                                                vector<uint32_t> &insert_rows_index,
+                                                string &assembled_sql);
 
         private:
             uint64_t table_id_;

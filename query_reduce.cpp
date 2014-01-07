@@ -48,12 +48,13 @@ enum enum_field_types OrderPostReduce::get_field_type()
 }
 
 AggrFuncPostReduce::AggrFuncPostReduce(int32_t pos, int32_t func,
-        enum enum_field_types field_type) : pos(pos), func(func), field_type(field_type)
+        enum enum_field_types field_type) : pos(pos), func(func),
+field_type(field_type)
 {
 }
 
-AggrFuncPostReduce::AggrFuncPostReduce(const AggrFuncPostReduce& orig) : pos(orig.pos), func(orig.func),
-field_type(orig.field_type)
+AggrFuncPostReduce::AggrFuncPostReduce(const AggrFuncPostReduce& orig)
+: pos(orig.pos), func(orig.func), field_type(orig.field_type)
 {
 }
 
@@ -76,14 +77,15 @@ enum enum_field_types AggrFuncPostReduce::get_field_type()
     return field_type;
 }
 
-HavingPostReduce::HavingPostReduce(int32_t pos, int32_t func, int32_t operate, double value,
-        enum enum_field_types field_type) : pos(pos), func(func), operate(operate),
-value(value), field_type(field_type)
+HavingPostReduce::HavingPostReduce(int32_t pos, int32_t func, int32_t operate,
+        double value, enum enum_field_types field_type) : pos(pos), func(func),
+operate(operate), value(value), field_type(field_type)
 {
 }
 
 HavingPostReduce::HavingPostReduce(const HavingPostReduce& orig) : pos(orig.pos),
-func(orig.func), operate(orig.operate), value(orig.value), field_type(orig.field_type)
+func(orig.func), operate(orig.operate), value(orig.value),
+field_type(orig.field_type)
 {
 }
 
@@ -136,7 +138,8 @@ QueryPostReduce::~QueryPostReduce()
     having.clear();
 }
 
-void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt *select_stmt)
+void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
+        ObSelectStmt *select_stmt)
 {
     uint32_t i = 0;
     int32_t reduce_type = NO_REDUCE;
@@ -161,16 +164,17 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
     //set original field columns info
     set_original_field_item(select_items);
 
-    for (i = 0; i <raw_select_num ; i++)
+    for (i = 0; i < raw_select_num; i++)
     {
         SelectItem select_item = select_items.at(i);
         if (0 != select_item.aggr_fun_type)
         {
-            add_aggr_func_reduce_info(i, select_item.aggr_fun_type, trans_ob_sql2_mysql(select_item.type_));
+            add_aggr_func_reduce_info(i, select_item.aggr_fun_type,
+                    trans_ob_sql2_mysql(select_item.type_));
         }
     }
 
-    
+
     if (group_items.size() > 0)
     {
         for (i = 0; i < group_items.size(); i++)
@@ -178,9 +182,11 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
             GroupItem group_item = group_items.at(i);
             reduce_type = REDUCE_GROUP;
 
-            if (!select_stmt->try_fetch_select_item_by_column_name(select_items, group_item.group_column_, column_off))
+            if (!select_stmt->try_fetch_select_item_by_group(select_items,
+                    group_item.group_column_, column_off))
             {
-                if (!find_column_if_exist(exist_column_names, group_item.group_column_, vector_off))
+                if (!find_column_if_exist(exist_column_names,
+                        group_item.group_column_, vector_off))
                 {
                     add_group_reduce_info(is_sort_asc(group_item.group_type_),
                             raw_select_num + exist_column_names.size(),
@@ -205,28 +211,32 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
         set_post_reduce_type(REDUCE_GROUP);
     }
 
-    
+
     if ((get_func().size() > 0)&&(NO_REDUCE == get_reduce()))
     {
         set_post_reduce_type(REDUCE_AGGREGATE);
     }
-    
+
     if (having_items.size() > 0)
     {
         for (i = 0; i < having_items.size(); i++)
         {
             HavingItem having_item = having_items.at(i);
-            if (!select_stmt->try_fetch_select_item_by_column_name(select_items, having_item.having_column_name, column_off))
+            if (!select_stmt->try_fetch_select_item_by_having(select_items,
+                    having_item, column_off))
             {
-                if (!find_column_if_exist(exist_column_names, having_item.having_column_name, vector_off))
-                {
-                    add_having_reduce_info(raw_select_num + exist_column_names.size(),
+           //     if (!find_column_if_exist(exist_column_names,
+          //              having_item.having_column_name, vector_off))
+           //     {
+                    add_having_reduce_info(raw_select_num
+                            + exist_column_names.size(),
                             having_item.aggr_fun_type,
                             having_item.aggr_fun_operate,
                             having_item.aggr_fun_value,
                             trans_ob_sql2_mysql(having_item.column_type_));
-                    exist_column_names.push_back(having_item.having_column_name);
-                }
+     //               exist_column_names.push_back(having_item.having_column_name);
+          //      }
+#if 0
                 else
                 {
                     add_having_reduce_info(raw_select_num + vector_off,
@@ -235,6 +245,7 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
                             having_item.aggr_fun_value,
                             trans_ob_sql2_mysql(having_item.column_type_));
                 }
+#endif
             }
             else
             {
@@ -261,9 +272,11 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
             {
                 reduce_type = REDUCE_ORDER;
             }
-            if (!select_stmt->try_fetch_select_item_by_column_name(select_items, order_item.order_column_, column_off))
+            if (!select_stmt->try_fetch_select_item_by_column_name(select_items,
+                    order_item.order_column_, column_off))
             {
-                if (!find_column_if_exist(exist_column_names, order_item.order_column_, vector_off))
+                if (!find_column_if_exist(exist_column_names,
+                        order_item.order_column_, vector_off))
                 {
                     add_order_reduce_info(is_sort_asc(order_item.order_type_),
                             raw_select_num + exist_column_names.size(),
@@ -284,7 +297,7 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan, ObSelectStmt
                         trans_ob_sql2_mysql(order_item.column_type_));
             }
         }
-        
+
         if (NO_REDUCE == get_reduce())
         {
             set_post_reduce_type(REDUCE_ORDER);
@@ -313,7 +326,8 @@ void QueryPostReduce::set_limit_reduce_info(uint64_t row_offset,
     this->row_count = row_count;
 }
 
-void QueryPostReduce::set_original_field_item(vector<SelectItem> &select_items_)
+void QueryPostReduce::set_original_field_item(
+        vector<SelectItem> &select_items_)
 {
     select_items = select_items_;
 }
@@ -323,7 +337,6 @@ vector<SelectItem> &QueryPostReduce::get_original_field_item()
     return select_items;
 }
 
-
 bool QueryPostReduce::find_column_if_exist(vector<string> &columns,
         string goal_column, uint32_t column_off)
 {
@@ -331,7 +344,7 @@ bool QueryPostReduce::find_column_if_exist(vector<string> &columns,
     {
         return false;
     }
-    
+
     for (uint32_t i = 0; i < columns.size(); i++)
     {
         if (goal_column == columns.at(i))
@@ -360,15 +373,15 @@ void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func,
 {
     //whether this aggr func is already in func vector
     uint32_t i = 0;
-    bool  func_exist = false;
+    bool func_exist = false;
     if (get_func_size() > 0)
     {
-        for (i = 0; i< get_func_size(); i++)
+        for (i = 0; i < get_func_size(); i++)
         {
             AggrFuncPostReduce aggr_func_item = get_func().at(i);
             if ((aggr_func_item.get_field_type() == field_type)
-                &&(aggr_func_item.get_func()== func)
-                &&(aggr_func_item.get_pos()== pos))
+                    &&(aggr_func_item.get_func() == func)
+                    &&(aggr_func_item.get_pos() == pos))
             {
                 func_exist = true;
                 break;
@@ -385,7 +398,8 @@ void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func,
         this->func.push_back(AggrFuncPostReduce(pos, func, field_type));
     }
 
-    this->having.push_back(HavingPostReduce(pos, func, operate, value, field_type));
+    this->having.push_back(HavingPostReduce(pos, func, operate, value,
+            field_type));
 }
 
 void QueryPostReduce::add_order_reduce_info(bool sort, int32_t pos,
@@ -394,7 +408,8 @@ void QueryPostReduce::add_order_reduce_info(bool sort, int32_t pos,
     this->order.push_back(OrderPostReduce(sort, pos, field_type));
 }
 
-enum enum_field_types QueryPostReduce::trans_ob_sql2_mysql(ObObjType ob_sql_type)
+enum enum_field_types QueryPostReduce::trans_ob_sql2_mysql(
+        ObObjType ob_sql_type)
 {
     switch (ob_sql_type)
     {
@@ -496,6 +511,7 @@ int32_t QueryPostReduce::get_execute_code()
 }
 
 #if 0
+
 vector<OrderPostReduce> QueryPostReduce::get_using_key()
 {
     vector<OrderPostReduce> tmp;
@@ -613,20 +629,20 @@ explain_current_reduce:
 vector<OrderPostReduce> QueryPostReduce::get_using_key()
 {
     vector<OrderPostReduce> tmp;
-            
-    if(group.size())
+
+    if (group.size())
     {
         execute_code = EXECUTE_GROUP;
-        
-        if(func.size())
+
+        if (func.size())
         {
             reduce = REDUCE_AGGREGATE;
         }
-        else if(having.size())
+        else if (having.size())
         {
             reduce = REDUCE_HAVING;
         }
-        else if(order.size())
+        else if (order.size())
         {
             reduce = REDUCE_ORDER;
         }
@@ -640,7 +656,7 @@ vector<OrderPostReduce> QueryPostReduce::get_using_key()
     if (func.size())
     {
         execute_code = EXECUTE_AGGREGATE;
-        
+
         if (having.size())
         {
             reduce = REDUCE_HAVING;

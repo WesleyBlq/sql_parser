@@ -89,8 +89,7 @@ namespace oceanbase
             if (logical_plan == NULL)
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "logical_plan must exist!!!");
             }
 
             assembled_sql.append("DELETE FROM ");
@@ -119,8 +118,7 @@ namespace oceanbase
             if (logical_plan == NULL)
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "logical_plan must exist!!!");
             }
             
             vector<uint64_t>& where_exprs = ObStmt::get_where_exprs();
@@ -134,8 +132,7 @@ namespace oceanbase
                     if (NULL == sql_expr)
                     {
                         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "where expr error!!! at %s:%d", __FILE__,__LINE__);
+                        jlog(WARNING, "where expr error!!!");
                         return ret;
                     }
 

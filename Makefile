@@ -9,7 +9,7 @@
 all: libsql.a parser_test
 
 
-SYSLIBS_test = -Wl,-rpath -Wl,LIBDIR -lglog
+SYSLIBS_test =
 
 	
 CPPFLAGS = \
@@ -53,7 +53,8 @@ OBJS_SQL =  \
 	dml_build_plan.o \
 	crud_build_plan.o \
 	query_reduce.o \
-	jd_exec_plan.o
+	jd_exec_plan.o \
+	dispatch_command.o \
 
 #libsql.a
 

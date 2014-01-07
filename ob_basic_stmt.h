@@ -43,6 +43,7 @@ namespace oceanbase
                 T_ALTER_TABLE,
 
                 // show statements
+                T_SHOW_DATABASES,
                 T_SHOW_TABLES,
                 T_SHOW_COLUMNS,
                 T_SHOW_VARIABLES,
@@ -141,7 +142,7 @@ namespace oceanbase
 
         inline bool ObBasicStmt::is_show_stmt() const
         {
-            return (stmt_type_ >= T_SHOW_TABLES and stmt_type_ <= T_SHOW_SERVER_STATUS);
+            return (stmt_type_ >= T_SHOW_DATABASES and stmt_type_ <= T_SHOW_SERVER_STATUS);
         }
     }
 }

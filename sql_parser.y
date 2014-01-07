@@ -144,7 +144,7 @@ do \
        ROLLBACK
 %token SCHEMA SCOPE SELECT SESSION SESSION_ALIAS
        SET SHOW SMALLINT SNAPSHOT SPFILE START STATIC SYSTEM
-%token TABLE TABLES THEN TIME TIMESTAMP TINYINT TRAILING TRANSACTION TO
+%token DATABASES TABLE TABLES THEN TIME TIMESTAMP TINYINT TRAILING TRANSACTION TO
 %token UNION UPDATE USER USING
 %token VALUES VARCHAR VARBINARY
 %token WHERE WHEN WITH WORK
@@ -1711,7 +1711,9 @@ opt_verbose:
  *
  *****************************************************************************/
 show_stmt:
-    SHOW TABLES opt_show_condition
+    SHOW DATABASES opt_show_condition
+    { malloc_non_terminal_node($$, result->malloc_pool_, T_SHOW_DATABASES, 1, $3); }
+  | SHOW TABLES opt_show_condition
     { malloc_non_terminal_node($$, result->malloc_pool_, T_SHOW_TABLES, 1, $3); }
   | SHOW COLUMNS FROM relation_factor opt_show_condition
     { malloc_non_terminal_node($$, result->malloc_pool_, T_SHOW_COLUMNS, 2, $4, $5); }

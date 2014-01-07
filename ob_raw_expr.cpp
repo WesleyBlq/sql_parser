@@ -461,6 +461,7 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
 
                 ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (binary_expr->get_first_op_expr()));
                 const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                return true;
             }
         }
         else if (binary_expr->get_second_op_expr()->is_const())
@@ -471,9 +472,9 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
                 key_relation.key_relation = this->get_expr_type();
                 ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (binary_expr->get_second_op_expr()));
                 const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                return true;
             }
         }
-
     }
     else if (this->is_contain_filter_need_route(result_plan))
     {
@@ -499,6 +500,7 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
                     const_expr->get_ob_const_expr_to_key_data(key_relation, i);
                 }
             }
+            return true;
         }
     }
     else if (this->is_range_filter_need_route(result_plan))
@@ -516,6 +518,7 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
 
                     ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (binary_expr->get_first_op_expr()));
                     const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                    return true;
                 }
             }
             else if (binary_expr->get_second_op_expr()->is_const())
@@ -543,11 +546,12 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
 
                 const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (triple_expr->get_third_op_expr()));
                 const_expr->get_ob_const_expr_to_key_data(key_relation, 1);
+                return true;
             }
         }
     }
 
-    return true;
+    return false;
 
 }
 
@@ -680,6 +684,8 @@ void ObConstRawExpr::print(FILE* fp, int32_t level) const
             break;
         }
         case T_STRING:
+        case T_SYSTEM_VARIABLE:
+        case T_TEMP_VARIABLE:
         case T_BINARY:
         {
             string str;
@@ -920,8 +926,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
         return ret;
     }
 
@@ -933,8 +938,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_
     if (!sub_select)
     {
         ret = OB_ERR_PARSER_SYNTAX;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Sub-query of In operator is not select statment at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "Sub-query of In operator is not select statment");
         return ret;
     }
 
@@ -1012,8 +1016,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         if (logical_plan == NULL)
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "logical_plan must exist!!!");
             return ret;
         }
 
@@ -1021,8 +1024,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         if (NULL == sql_expr)
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "ref column error!!! at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "ref column error!!!");
             return ret;
         }
 
@@ -1035,8 +1037,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         if (NULL == table_schema)
         {
             ret = OB_ERR_SCHEMA_UNSET;
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Schema(s) are not set at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Schema(s) are not set");
             return ret;
         }
 
@@ -1044,8 +1045,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         if (column_schema == NULL)
         {
             ret = OB_ERR_SCHEMA_UNSET;
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Schema(s) are not set at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Schema(s) are not set");
             return ret;
         }
 

@@ -8,7 +8,7 @@
 #ifndef LOG_H
 #define	LOG_H
 
-#include "../log/jlog.h"
+#include "../log/log.h"
 
 #endif	/* LOG_H */
 

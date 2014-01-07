@@ -85,8 +85,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
     }
 
     if (is_replace_)
@@ -138,8 +137,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
                 if (NULL == sql_expr)
                 {
                     ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "insert value expr error!!! at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "insert value expr error!!!");
                     return ret;
                 }
 
@@ -171,8 +169,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
         if (NULL == query_stmt)
         {
             ret = OB_ERR_LOGICAL_PLAN_FAILD;
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "can not get query stmt by query id!!! at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "can not get query stmt by query id!!!");
             return ret;
         }
 
@@ -189,15 +186,203 @@ Author      :   qinbo
 Date        :   2013.12.9
 Description :   make select sql
 Input       :   ResultPlan& result_plan, 
-                string where_conditions, 
-                schema_shard *shard_info,
+                string insert_rows, 
+                vector<schema_shard*> binding_shard_info,
                 string &assembled_sql
-                
 Output      :   
  **************************************************/
-int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql)
+int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan, 
+                                                string insert_rows, 
+                                                vector<schema_shard*> binding_shard_info,
+                                                string &assembled_sql)
 {
-    return OB_SUCCESS;
+    int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+    ObSqlRawExpr* sql_expr = NULL;
+
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    if (logical_plan == NULL)
+    {
+        ret = OB_ERR_LOGICAL_PLAN_FAILD;
+        jlog(WARNING, "logical_plan must exist!!!");
+    }
+
+    if (is_replace_)
+    {
+        assembled_sql.append("REPLACE INTO ");
+    }
+    else
+    {
+        assembled_sql.append("INSERT INTO ");
+    }
+
+    string table_name = ObStmt::get_table_item_by_id(table_id_)->table_name_;
+    if (table_name != binding_shard_info.at(0)->get_table_name())
+    {
+        assembled_sql.append(binding_shard_info.at(0)->get_shard_name());
+    }
+    else
+    {
+        assembled_sql.append(table_name);
+    }
+        
+    for (int64_t i = 0; i < ObStmt::get_column_size(); i++)
+    {
+        if (0 == i)
+        {
+            assembled_sql.append(" (");
+        }
+
+        assembled_sql.append(ObStmt::get_column_item(i)->column_name_);
+            
+        if (i != ObStmt::get_column_size() - 1)
+        {
+            assembled_sql.append(", ");
+        }
+        else
+        {
+            assembled_sql.append(") ");
+        }
+    }
+
+    if (sub_query_id_ == OB_INVALID_ID)
+    {
+        if (insert_rows.empty())
+        {
+            assembled_sql.append("VALUES ");
+                
+            for (uint32_t i = 0; i < value_vectors_.size(); i++)
+            {
+                vector<uint64_t>& value_row = value_vectors_.at(i);
+                for (uint32_t j = 0; j < value_row.size(); j++)
+                {
+                    string assembled_sql_tmp;
+                    if (j == 0)
+                    {
+                        assembled_sql.append("(");
+                    }
+            
+                    sql_expr = logical_plan->get_expr_by_id(value_row.at(j));
+            
+                    if (NULL == sql_expr)
+                    {
+                        ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                        jlog(WARNING, "insert value expr error!!!");
+                        return ret;
+                    }
+            
+                    sql_expr->to_string(result_plan, assembled_sql_tmp);
+                    assembled_sql.append(assembled_sql_tmp);
+                        
+                    if (j == value_row.size() - 1)
+                    {
+                        assembled_sql.append(")");
+                    }
+                    else
+                    {
+                        assembled_sql.append(",");
+                    }
+                }
+            
+                if (i != value_vectors_.size() - 1)
+                {
+                    assembled_sql.append(",");
+                }
+            }
+        }
+        else
+        {
+            assembled_sql.append(insert_rows);
+        }
+    }
+    else
+    {
+        jlog(INFO, "We do not support sub query now!!");
+    #if 0
+        string assembled_sql_tmp;
+        ObBasicStmt* query_stmt = logical_plan->get_query(sub_query_id_);
+
+        if (NULL == query_stmt)
+        {
+            ret = OB_ERR_LOGICAL_PLAN_FAILD;
+            jlog(WARNING, "can not get query stmt by query id!!!");
+            return ret;
+        }
+
+        query_stmt->make_stmt_string(result_plan, assembled_sql_tmp);
+        assembled_sql.append(assembled_sql_tmp);
+    #endif    
+    }
+    
+    return ret;
 }
+
+
+/**************************************************
+Funtion     :   append_distributed_insert_items
+Author      :   qinbo
+Date        :   2014.1.6
+Description :   append insert rows
+Input       :   ResultPlan& result_plan,
+                vector<uint32_t> &insert_rows_index,
+                string &assembled_sql
+Output      :   
+ **************************************************/
+int ObInsertStmt::append_distributed_insert_items(  ResultPlan& result_plan,
+                                                    vector<uint32_t> &insert_rows_index,
+                                                    string &assembled_sql)
+{
+    int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+    ObSqlRawExpr* sql_expr = NULL;
+
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    if (logical_plan == NULL)
+    {
+        ret = OB_ERR_LOGICAL_PLAN_FAILD;
+        jlog(WARNING, "logical_plan must exist!!!");
+        return ret;
+    }
+
+    assembled_sql.append("VALUES ");
+    
+    for (uint32_t i = 0; i < insert_rows_index.size(); i++)
+    {
+        vector<uint64_t>& value_row = value_vectors_.at(insert_rows_index.at(i));
+        for (uint32_t j = 0; j < value_row.size(); j++)
+        {
+            if (j == 0)
+            {
+                assembled_sql.append("(");
+            }
+
+            sql_expr = logical_plan->get_expr_by_id(value_row.at(j));
+
+            if (NULL == sql_expr)
+            {
+                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                jlog(WARNING, "insert value expr error!!!");
+                return ret;
+            }
+
+            sql_expr->to_string(result_plan, assembled_sql);
+                
+            if (j == value_row.size() - 1)
+            {
+                assembled_sql.append(")");
+            }
+            else
+            {
+                assembled_sql.append(",");
+            }
+        }
+
+        if (i != insert_rows_index.size() - 1)
+        {
+            assembled_sql.append(",");
+        }
+    }
+    
+    return ret;
+}
+
 
 

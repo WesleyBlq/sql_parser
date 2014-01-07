@@ -13,6 +13,9 @@
 using std::vector;
 using std::string;
 
+#define JD_DEBUG   jlog(INFO, "DEBUG");
+
+
 namespace oceanbase
 {
     namespace sql

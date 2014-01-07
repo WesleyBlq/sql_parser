@@ -65,8 +65,7 @@ int ObSelectStmt::check_alias_name(
             if (NULL == schema_column)
             {
                 ret = OB_ERR_COLUMN_DUPLICATE;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "alias name %.*s is ambiguous at %s:%d", (int)alias_name.size(), alias_name.data(), __FILE__,__LINE__);
+                jlog(WARNING, "alias name %.*s is ambiguous", (int)alias_name.size(), alias_name.data());
                 break;
             }
         }
@@ -80,8 +79,7 @@ int ObSelectStmt::check_alias_name(
                 if (select_item.alias_name_ == alias_name)
                 {
                     ret = OB_ERR_COLUMN_DUPLICATE;
-                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "alias name %.*s is ambiguous at %s:%d", (int)alias_name.size(), alias_name.data(), __FILE__,__LINE__);
+                    jlog(WARNING, "alias name %.*s is ambiguous", (int)alias_name.size(), alias_name.data());
                     break;
                 }
             }
@@ -95,8 +93,7 @@ int ObSelectStmt::check_alias_name(
         if (select_item.alias_name_ == alias_name)
         {
             ret = OB_ERR_COLUMN_DUPLICATE;
-            snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "alias name %.*s is ambiguous at %s:%d", (int)alias_name.size(), alias_name.data(), __FILE__,__LINE__);
+            jlog(WARNING, "alias name %.*s is ambiguous", (int)alias_name.size(), alias_name.data());
             break;
         }
     }
@@ -147,8 +144,7 @@ int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& off
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
     }
 
     limit_count_id_ = limit;
@@ -169,15 +165,13 @@ int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& off
                 else
                 {
                     ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "limit_offset set error!!! at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "limit_offset set error!!!");
                 }
             }
             else
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "limit_offset set error!!! at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "limit_offset set error!!!");
             }
         }
     }
@@ -210,15 +204,13 @@ int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& off
                 else
                 {
                     ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "limit_count set error!!! at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "limit_count set error!!!");
                 }
             }
             else
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "limit_count set error!!! at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "limit_count set error!!!");
             }
         }
     }
@@ -277,8 +269,7 @@ int ObSelectStmt::check_having_ident(
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
     }
 
 
@@ -304,8 +295,7 @@ int ObSelectStmt::check_having_ident(
                             if (b_expr == NULL)
                             {
                                 ret = OB_ERR_PARSER_MALLOC_FAILED;
-                                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                        "Can not malloc space for ObBinaryRefRawExpr at %s:%d", __FILE__,__LINE__);
+                                jlog(WARNING, "Can not malloc space for ObBinaryRefRawExpr!!!");
                                 return ret;
                             }
                             else
@@ -328,8 +318,7 @@ int ObSelectStmt::check_having_ident(
                 if (ret_expr)
                 {
                     ret = OB_ERR_COLUMN_AMBIGOUS;
-                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "column %.*s of having clause is ambiguous at %s:%d", (int)column_name.size(), column_name.data(), __FILE__,__LINE__);
+                    jlog(WARNING, "column %.*s of having clause is ambiguous", (int)column_name.size(), column_name.data());
                     //parse_free(ret_expr);
                     ret_expr = NULL;
                     break;
@@ -344,8 +333,7 @@ int ObSelectStmt::check_having_ident(
                     if (b_expr == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "Can not malloc space for ObBinaryRefRawExpr at %s:%d", __FILE__,__LINE__);
+                        jlog(WARNING, "Can not malloc space for ObBinaryRefRawExpr");
                         return ret;
                     }
                     else
@@ -374,8 +362,7 @@ int ObSelectStmt::check_having_ident(
                     if (b_expr == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "Can not malloc space for ObBinaryRefRawExpr at %s:%d", __FILE__,__LINE__);
+                        jlog(WARNING, "Can not malloc space for ObBinaryRefRawExpr");
                         return ret;
                     }
                     else
@@ -416,8 +403,7 @@ int ObSelectStmt::check_having_ident(
                     if (b_expr == NULL)
                     {
                         ret = OB_ERR_PARSER_MALLOC_FAILED;
-                        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "Can not malloc space for ObBinaryRefRawExpr at %s:%d", __FILE__,__LINE__);
+                        jlog(WARNING, "Can not malloc space for ObBinaryRefRawExpr");
                         return ret;
                     }
                     else
@@ -438,8 +424,7 @@ int ObSelectStmt::check_having_ident(
     if (ret == OB_SUCCESS && ret_expr == NULL)
     {
         ret = OB_ERR_COLUMN_UNKNOWN;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Unknown %.*s in having clause at %s:%d", (int)column_name.size(), column_name.data(), __FILE__,__LINE__);
+        jlog(WARNING, "Unknown %.*s in having clause", (int)column_name.size(), column_name.data());
     }
     return ret;
 }
@@ -788,8 +773,7 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
     }
 
     if (is_distinct_)
@@ -809,8 +793,7 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
             if (NULL == sql_expr)
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "join table expr name error!!! at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "join table expr name error!!!");
                 return ret;
             }
             string tmp;
@@ -835,8 +818,7 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
             if (NULL == sql_expr)
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "select expr error!!! at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "select expr error!!!");
                 return ret;
             }
 
@@ -856,8 +838,6 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
     return ret;
 }
 
-
-
 /**************************************************
 Funtion     :   append_select_items_reduce_used
 Author      :   qinbo
@@ -869,7 +849,8 @@ Input       :   ResultPlan& result_plan,
                 string &assembled_sql
 Output      :   
  **************************************************/
-int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, string &assembled_sql)
+int64_t ObSelectStmt::append_select_items_reduce_used(
+        ResultPlan& result_plan, string &assembled_sql)
 {
     uint32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
@@ -878,28 +859,29 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
     }
 
-    vector<SelectItem>  select_items    = get_all_select_items();
-    vector<GroupItem>   group_items     = get_all_group_items();
-    vector<OrderItem>   order_items     = get_all_order_items();
-    vector<HavingItem>  Having_items    = get_all_having_items();
-    vector<string>      exist_column_names;
-    uint32_t            column_off = 0;
+    vector<SelectItem> select_items = get_all_select_items();
+    vector<GroupItem> group_items = get_all_group_items();
+    vector<OrderItem> order_items = get_all_order_items();
+    vector<HavingItem> Having_items = get_all_having_items();
+    vector<string> exist_column_names;
+    uint32_t column_off = 0;
 
     if (group_items.size() > 0)
     {
         for (i = 0; i < group_items.size(); i++)
         {
-            if (!try_fetch_select_item_by_column_name(select_items, group_items[i].group_column_, column_off))
+            if (!try_fetch_select_item_by_group(select_items,
+                    group_items[i].group_column_, column_off))
             {
                 if (exist_column_names.size() > 0)
                 {
                     vector<string>::iterator pos;
-                    pos = find(exist_column_names.begin(),exist_column_names.end(),group_items[i].group_column_);
-                    if(pos == exist_column_names.end())
+                    pos = find(exist_column_names.begin(),
+                            exist_column_names.end(), group_items[i].group_column_);
+                    if (pos == exist_column_names.end())
                     {
                         assembled_sql.append(",");
                         assembled_sql.append(group_items[i].group_column_);
@@ -922,26 +904,54 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
     {
         for (i = 0; i < Having_items.size(); i++)
         {
-            if (!try_fetch_select_item_by_column_name(select_items, Having_items[i].having_column_name, column_off))
+            if (!try_fetch_select_item_by_having(select_items,
+                    Having_items[i], column_off))
             {
+#if 0
                 if (exist_column_names.size() > 0)
                 {
                     vector<string>::iterator pos;
-                    pos = find(exist_column_names.begin(),exist_column_names.end(),Having_items[i].having_column_name);
-                    if(pos == exist_column_names.end())
+                    pos = find(exist_column_names.begin(),
+                            exist_column_names.end(),
+                            Having_items[i].having_column_name);
+                    if (pos == exist_column_names.end())
                     {
                         assembled_sql.append(",");
                         assembled_sql.append(Having_items[i].having_column_name);
                         assembled_sql.append(" ");
-                        exist_column_names.push_back(Having_items[i].having_column_name);
+                        exist_column_names.push_back(
+                                Having_items[i].having_column_name);
                     }
                 }
                 else
+#endif
                 {
                     assembled_sql.append(",");
+                    switch (Having_items[i].aggr_fun_type)
+                    {
+                        case T_FUN_MAX:
+                            assembled_sql.append("MAX(");
+                            break;
+                        case T_FUN_MIN:
+                            assembled_sql.append("MIN(");
+                            break;
+                        case T_FUN_SUM:
+                            assembled_sql.append("SUM(");
+                            break;
+                        case T_FUN_COUNT:
+                            assembled_sql.append("COUNT(");
+                            break;
+                        case T_FUN_AVG:
+                            assembled_sql.append("AVG(");
+                            break;
+                        default:
+                            break;
+                    }
                     assembled_sql.append(Having_items[i].having_column_name);
+                    assembled_sql.append(")");
                     assembled_sql.append(" ");
-                    exist_column_names.push_back(Having_items[i].having_column_name);
+                    //exist_column_names.push_back(
+                      //      Having_items[i].having_column_name);
                 }
             }
         }
@@ -951,13 +961,16 @@ int64_t ObSelectStmt::append_select_items_reduce_used(ResultPlan& result_plan, s
     {
         for (i = 0; i < order_items.size(); i++)
         {
-            if (!try_fetch_select_item_by_column_name(select_items, order_items[i].order_column_, column_off))
+            if (!try_fetch_select_item_by_column_name(select_items,
+                    order_items[i].order_column_, column_off))
             {
                 if (exist_column_names.size() > 0)
                 {
                     vector<string>::iterator pos;
-                    pos = find(exist_column_names.begin(),exist_column_names.end(),order_items[i].order_column_);
-                    if(pos == exist_column_names.end())
+                    pos = find(exist_column_names.begin(),
+                            exist_column_names.end(),
+                            order_items[i].order_column_);
+                    if (pos == exist_column_names.end())
                     {
                         assembled_sql.append(",");
                         assembled_sql.append(order_items[i].order_column_);
@@ -997,8 +1010,7 @@ int64_t ObSelectStmt::make_from_string(ResultPlan& result_plan, string &assemble
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
     }
     
     assembled_sql.append("FROM ");
@@ -1041,8 +1053,7 @@ int64_t ObSelectStmt::make_from_string(ResultPlan& result_plan, string &assemble
                 if (NULL == sql_expr)
                 {
                     ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                    snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "join table expr name error!!! at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "join table expr name error!!!");
                     return ret;
                 }
                 string tmp;
@@ -1164,8 +1175,7 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan, string &assemb
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
     }
 
 
@@ -1179,8 +1189,7 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan, string &assemb
             if (NULL == sql_expr)
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "having expr name error!!! at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "having expr name error!!!");
                 return ret;
             }
             assembled_sql.append("(");
@@ -1260,8 +1269,7 @@ int64_t ObSelectStmt::make_where_string(ResultPlan& result_plan, string &assembl
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
     }
 
     vector<uint64_t>& where_exprs = ObStmt::get_where_exprs();
@@ -1276,8 +1284,7 @@ int64_t ObSelectStmt::make_where_string(ResultPlan& result_plan, string &assembl
             if (NULL == sql_expr)
             {
                 ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                snprintf(result_plan.err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "where expr name error!!! at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "where expr name error!!!");
                 return ret;
             }
 
@@ -1325,8 +1332,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
     if (logical_plan == NULL)
     {
         ret = OB_ERR_ILLEGAL_ID;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
         return ret;
     }
     
@@ -1335,12 +1341,17 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
     if (NULL == sql_expr)
     {
         ret = OB_ERR_ILLEGAL_ID;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "select item error!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "select item error!!!");
         return ret;
     }
     
     ObBinaryRefRawExpr *select_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+    if (NULL == select_expr)
+    {
+        ret = OB_ERR_ILLEGAL_ID;
+        jlog(WARNING, "We do not support this sql now!!!");
+        return ret;
+    }
     
     if (select_expr->get_first_ref_id() == OB_INVALID_ID)
     {
@@ -1348,8 +1359,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
         if (NULL == sql_expr)
         {
             ret = OB_ERR_ILLEGAL_ID;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "ref column error!!! at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "ref column error!!!");
             return ret;
         }
     
@@ -1362,8 +1372,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
                 if (!agg_fun_raw_expr->get_param_expr()->is_column())
                 {
                     ret = OB_ERR_ILLEGAL_ID;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "select item error!!! at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "select item error!!!");
                     return ret;
                 }
     
@@ -1386,8 +1395,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
     else
     {
         ret = OB_ERR_ILLEGAL_ID;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "select item error!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "select item error!!!");
         return ret;
     }
     
@@ -1435,8 +1443,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     if (logical_plan == NULL)
     {
         ret = OB_ERR_ILLEGAL_ID;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
         return ret;
     }
 
@@ -1451,8 +1458,21 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     
     aggr_fun_operate = sql_expr->get_expr()->get_expr_type();
     ObBinaryOpRawExpr   *select_op      = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+    if (NULL == select_op)
+    {
+        ret = OB_ERR_ILLEGAL_ID;
+        jlog(WARNING, "We do not support this sql now!!!");
+        return ret;
+    }
+    
     ObBinaryRefRawExpr  *first_expr     = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (select_op->get_first_op_expr()));
     ObConstRawExpr      *second_expr    = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (select_op->get_second_op_expr()));
+    if ((NULL == first_expr)||(NULL == second_expr))
+    {
+        ret = OB_ERR_ILLEGAL_ID;
+        jlog(WARNING, "We do not support this sql now!!!");
+        return ret;
+    }
 
     if (first_expr->get_first_ref_id() == OB_INVALID_ID)
     {

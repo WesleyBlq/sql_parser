@@ -326,11 +326,14 @@ namespace oceanbase
             }
 
             //BEGIN: Added by qinbo
-            const bool try_fetch_select_item_by_column_name(vector<SelectItem> &select_items, string column_name, uint32_t &offset)
+            const bool try_fetch_select_item_by_column_name(
+                    vector<SelectItem> &select_items, string column_name,
+                    uint32_t &offset)
             {
-                for (uint32_t i = 0; i< select_items.size(); i++)
+                for (uint32_t i = 0; i < select_items.size(); i++)
                 {
                     if (select_items[i].select_column_name_ == column_name)
+                        
                     {
                         offset = i;
                         return true;
@@ -340,8 +343,49 @@ namespace oceanbase
                 return false;
             }
 
-            const bool try_fetch_group_from_order_by_column_name(vector<OrderItem> &order_items, string column_name)
+            /*BEGIN: add by tangchao at 20140106 */
+            const bool try_fetch_select_item_by_group(
+                    vector<SelectItem> &select_items, string column_name,
+                    uint32_t &offset)
             {
+                for (uint32_t i = 0; i < select_items.size(); i++)
+                {
+                    if (select_items[i].select_column_name_ == column_name
+                            && select_items[i].aggr_fun_type == T_INVALID)
+                    {
+                        offset = i;
+                        return true;
+                    }
+                }
+                
+                return false;
+            }
+
+            const bool try_fetch_select_item_by_having(
+                    vector<SelectItem> &select_items, HavingItem& having,
+                    uint32_t & offset)
+            {
+                for (uint32_t i = 0; i < select_items.size(); i++)
+                {
+                    if (select_items[i].select_column_name_ ==
+                            having.having_column_name
+                            && select_items[i].aggr_fun_type ==
+                            having.aggr_fun_type)
+
+                    {
+                        offset = i;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            /*END: add by tangchao at 20140106 */
+
+                const bool try_fetch_group_from_order_by_column_name(
+                        vector<OrderItem> &order_items, string column_name)
+                {
                 for (uint32_t i = 0; i< order_items.size(); i++)
                 {
                     if (order_items[i].order_column_ == column_name)

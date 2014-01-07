@@ -87,6 +87,7 @@ typedef struct
   int       is_prepare_;
   string    db_name;        //record current db name
   string    meta_db_name;   //record meta db name 
+  bool      is_show_sys_var;//this sql is "select @@xxxxx" 
 } ResultPlan;
 
 
@@ -523,6 +524,7 @@ namespace oceanbase
         const char* const OB_ALL_CLUSTER = "__all_cluster";
         const char* const OB_ALL_SERVER = "__all_server";
         const char* const OB_ALL_CLIENT = "__all_client";
+        const char* const OB_TABLES_SHOW_DATABASE_NAME = "__databases_show";
         const char* const OB_TABLES_SHOW_TABLE_NAME = "__tables_show";
         const char* const OB_VARIABLES_SHOW_TABLE_NAME = "__variables_show";
         const char* const OB_CREATE_TABLE_SHOW_TABLE_NAME = "__create_table_show";

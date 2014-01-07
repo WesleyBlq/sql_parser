@@ -367,6 +367,25 @@ private:
                 vector<vector<schema_shard*> > &all_binding_tables_shards);
 
     /**************************************************
+    Funtion     :   reparse_insert_stmt_rows_value
+    Author      :   qinbo
+    Date        :   2014.1.6
+    Description :   reparse insert rows info
+    Input       :   ResultPlan& result_plan,
+                    ObInsertStmt* insert_stmt,
+                    schema_table* table_schema,
+                    multimap<uint32_t, uint32_t > &sorted_insert_rows_value,
+                    vector<schema_shard*>  &all_table_shards
+    Output      :   
+     **************************************************/
+    int reparse_insert_stmt_rows_value(
+                        ResultPlan& result_plan,
+                        ObInsertStmt* insert_stmt,
+                        schema_table* table_schema,
+                        multimap<uint32_t, uint32_t > &sorted_insert_rows_value,
+                        vector<schema_shard*>  &all_table_shards);
+
+    /**************************************************
     Funtion     :   build_shard_exprs_array_with_route_one_table
     Author      :   qinbo
     Date        :   2013.10.17
@@ -488,17 +507,6 @@ private:
     int search_shard_from_multi_tables_shards(vector<vector<schema_shard*> > &all_binding_tables_shards,
                                        schema_shard* goal_shard);
     
-    /**************************************************
-    Funtion     :   vector_elem_exist_already
-    Author      :   qinbo
-    Date        :   2013.10.30
-    Description :   vector elem is already existing
-    Input       :   vector<schema_shard*> vector_shards,
-                    schema_shard* single_shard
-    Output      :   
-     **************************************************/
-    bool vector_elem_exist_already( vector<schema_shard*> vector_shards,
-                                    schema_shard* single_shard);
     
     /**************************************************
     Funtion     :   distribute_sql_to_all_shards

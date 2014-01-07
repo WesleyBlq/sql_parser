@@ -127,16 +127,14 @@ int resolve_independ_expr(
         if (sql_expr == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc space for ObSqlRawExpr at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc space for ObSqlRawExpr");
         }
         if (ret == OB_SUCCESS)
         {
             sql_expr = new(sql_expr) ObSqlRawExpr();
             ret = logical_plan->add_expr(sql_expr);
             if (ret != OB_SUCCESS)
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Add ObSqlRawExpr error at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Add ObSqlRawExpr error");
         }
         if (ret == OB_SUCCESS)
         {
@@ -183,11 +181,6 @@ int resolve_and_exprs(
             if (ret == OB_SUCCESS)
             {
                 and_exprs.push_back(expr_id);
-#if 0
-                if (ret != OB_SUCCESS)
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Add 'AND' expression error at %s:%d", __FILE__,__LINE__);
-#endif
             }
         }
 #if 0 /*deleted by qinbo*/
@@ -218,8 +211,7 @@ int resolve_and_exprs(
   if (expr == NULL)  \
   { \
     result_plan->err_stat_.err_code_ = OB_ERR_PARSER_MALLOC_FAILED; \
-    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,  \
-        "Fail to malloc new raw expression at %s:%d", __FILE__,__LINE__); \
+    jlog(WARNING, "Fail to malloc new raw expression"); \
   } \
   expr; \
 })
@@ -283,8 +275,7 @@ int resolve_expr(
             expr = c_expr;
             if (node->type_ == T_TEMP_VARIABLE)
             {
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "resolve tmp variable, name=%.*s", (int)str.size(), str.data());
+                jlog(WARNING, "resolve tmp variable, name=%.*s", (int)str.size(), str.data());
             }
             break;
         }
@@ -402,8 +393,7 @@ int resolve_expr(
             if (node->children_[1]->type_ != T_IDENT)
             {
                 ret = OB_ERR_PARSER_SYNTAX;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "%s.* is illeagal at %s:%d", node->children_[0]->str_value_, __FILE__,__LINE__);
+                jlog(WARNING, "%s.* is illeagal", node->children_[0]->str_value_);
                 break;
             }
 
@@ -412,8 +402,7 @@ int resolve_expr(
             if (expr_scope_type == T_INSERT_LIMIT)
             {
                 ret = OB_ERR_PARSER_SYNTAX;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Illegal usage %s.%s at %s:%d", table_str, column_str, __FILE__,__LINE__);
+                jlog(WARNING, "Illegal usage %s.%s", table_str, column_str);
                 break;
             }
 
@@ -431,8 +420,7 @@ int resolve_expr(
                 if ((select_stmt->get_table_item(table_name, &table_item)) == OB_INVALID_ID)
                 {
                     ret = OB_ERR_TABLE_UNKNOWN;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Unknown table %s in having clause at %s:%d", table_str, __FILE__,__LINE__);
+                    jlog(WARNING, "Unknown table %s in having clause");
                     break;
                 }
                 ret = select_stmt->check_having_ident(*result_plan, column_name, table_item, expr);
@@ -469,16 +457,14 @@ int resolve_expr(
             if (expr_scope_type == T_INSERT_LIMIT)
             {
                 ret = OB_ERR_PARSER_SYNTAX;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Unknown value %s at %s:%d", node->str_value_, __FILE__,__LINE__);
+                jlog(WARNING, "Unknown value %s", node->str_value_);
                 break;
             }
             else if (expr_scope_type == T_VARIABLE_VALUE_LIMIT)
             {
                 /* TBD */
                 ret = OB_ERR_PARSER_SYNTAX;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Unknown value %s at %s:%d", node->str_value_, __FILE__,__LINE__);
+                jlog(WARNING, "Unknown value %s", node->str_value_);
                 break;
             }
 
@@ -558,8 +544,7 @@ int resolve_expr(
                         if (alias_expr == NULL)
                         {
                             ret = OB_ERR_ILLEGAL_ID;
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Wrong expr_id %lu at %s:%d", expr_id,__FILE__,__LINE__);
+                            jlog(WARNING, "Wrong expr_id %lu", expr_id);
                             break;
                         }
                         if (alias_expr->is_contain_aggr()
@@ -570,8 +555,7 @@ int resolve_expr(
                                 || expr_scope_type == T_GROUP_LIMIT))
                         {
                             ret = OB_ERR_PARSER_SYNTAX;
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Invalid use of alias which contains group function at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Invalid use of alias which contains group function");
                             break;
                         }
                         else
@@ -603,8 +587,7 @@ int resolve_expr(
                 if (expr == NULL)
                 {
                     ret = OB_ERR_COLUMN_UNKNOWN;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Unkown column name %.*s at %s:%d", (int)column_name.size(), column_name.data(), __FILE__,__LINE__);
+                    jlog(WARNING, "Unkown column name %.*s", (int)column_name.size(), column_name.data());
                 }
             }
             break;
@@ -613,8 +596,7 @@ int resolve_expr(
             if (expr_scope_type == T_INSERT_LIMIT || expr_scope_type == T_UPDATE)
             {
                 ret = OB_ERR_PARSER_SYNTAX;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "EXISTS expression can not appear in INSERT/UPDATE statement at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "EXISTS expression can not appear in INSERT/UPDATE statement");
                 break;
             }
         case T_OP_POS:
@@ -635,8 +617,7 @@ int resolve_expr(
                 if (const_expr == NULL)
                 {
                     ret = OB_ERR_PARSER_SYNTAX;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Wrong internal status of const expression at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Wrong internal status of const expression");
                     break;
                 }
                 switch (sub_expr->get_expr_type())
@@ -686,8 +667,7 @@ int resolve_expr(
                 }
                 else
                 {
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Wrong internal status of const expression at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Wrong internal status of const expression");
                     break;
                 }
             }
@@ -892,8 +872,7 @@ int resolve_expr(
                     if (!sub_select)
                     {
                         ret = OB_ERR_PARSER_SYNTAX;
-                        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                "Sub-query of In operator is not select statment at %s:%d", __FILE__,__LINE__);
+                        jlog(WARNING, "Sub-query of In operator is not select statment");
                         break;
                     }
                     num_left_param = sub_select->get_select_item_size();
@@ -964,8 +943,7 @@ int resolve_expr(
             if (num_left_param != num_right_param)
             {
                 ret = OB_ERR_COLUMN_SIZE;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "In operands contain different column(s) at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "In operands contain different column(s)");
                 break;
             }
 
@@ -1035,7 +1013,7 @@ int resolve_expr(
                 else
                 {
                     ret = OB_ERR_ILLEGAL_TYPE;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                    jlog(WARNING, 
                             "Return types of then clause are not compatible");
                     break;
                 }
@@ -1051,7 +1029,7 @@ int resolve_expr(
             if (case_expr->get_when_expr_size() != case_expr->get_then_expr_size())
             {
                 ret = OB_ERR_COLUMN_SIZE;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
+                jlog(WARNING, 
                         "Error size of when expressions");
                 break;
             }
@@ -1118,8 +1096,7 @@ int resolve_expr(
                     || expr_scope_type == T_AGG_LIMIT)
             {
                 ret = OB_ERR_PARSER_SYNTAX;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Sub-query is illeagal in INSERT/UPDATE statement or AGGREGATION function at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Sub-query is illeagal in INSERT/UPDATE statement or AGGREGATION function");
                 break;
             }
 
@@ -1133,8 +1110,7 @@ int resolve_expr(
                 if (sub_select->get_select_item_size() != 1)
                 {
                     ret = OB_ERR_COLUMN_SIZE;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Operand should contain 1 column(s) at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Operand should contain 1 column(s)");
                     break;
                 }
             }
@@ -1162,8 +1138,7 @@ int resolve_expr(
                     || expr_scope_type == T_GROUP_LIMIT)
             {
                 ret = OB_ERR_PARSER_SYNTAX;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Invalid use of group function at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Invalid use of group function");
                 break;
             }
             ObSelectStmt* select_stmt = dynamic_cast<ObSelectStmt*> (stmt);
@@ -1199,8 +1174,6 @@ int resolve_expr(
             {
                 ret = OB_ERR_PARSER_MALLOC_FAILED;
                 jlog(WARNING, "out of memory");
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Malloc function name failed");
                 break;
             }
             func_expr->set_func_name(func_name);
@@ -1228,8 +1201,7 @@ int resolve_expr(
                 int32_t param_num = 0;
                 if ((ret = oceanbase::sql::ObPostfixExpression::get_sys_func_param_num(func_name, param_num)) != OB_SUCCESS)
                 {
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Unknown function '%.*s', ret=%d", func_name.size(), func_name.data(), ret);
+                    jlog(WARNING, "Unknown function '%.*s', ret=%d", func_name.size(), func_name.data());
                 }
                 else
                 {
@@ -1240,8 +1212,7 @@ int resolve_expr(
                             if (func_expr->get_param_size() < 2 || func_expr->get_param_size() > 3)
                             {
                                 ret = OB_ERR_PARAM_SIZE;
-                                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                        "Param num of function '%.*s' can not be less than 2 or more than 3, ret=%d",
+                                jlog(WARNING, "Param num of function '%.*s' can not be less than 2 or more than 3, ret=%d",
                                         func_name.size(), func_name.data(), ret);
                             }
                             break;
@@ -1251,8 +1222,7 @@ int resolve_expr(
                             /* Won't be here */
                             /* No function of this type now */
                             ret = OB_ERR_PARAM_SIZE;
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Wrong num of function param(s), function='%.*s', num=%d, ret=%d",
+                            jlog(WARNING, "Wrong num of function param(s), function='%.*s', num=%d, ret=%d",
                                     func_name.size(), func_name.data(), OCCUR_AS_PAIR, ret);
                             break;
                         }
@@ -1261,8 +1231,8 @@ int resolve_expr(
                             if (func_expr->get_param_size() <= 0)
                             {
                                 ret = OB_ERR_PARAM_SIZE;
-                                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                        "Param num of function '%.*s' can not be empty, ret=%d", func_name.size(), func_name.data(), ret);
+                                jlog(WARNING, "Param num of function '%.*s' can not be less than 2 or more than 3, ret=%d",
+                                        func_name.size(), func_name.data(), ret);
                             }
                             break;
                         }
@@ -1271,8 +1241,8 @@ int resolve_expr(
                             if (func_expr->get_param_size() != param_num)
                             {
                                 ret = OB_ERR_PARAM_SIZE;
-                                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                        "Param num of function '%.*s' must be %d, ret=%d", func_name.size(), func_name.data(), param_num, ret);
+                                jlog(WARNING, "Param num of function '%.*s' must be %d, ret=%d",
+                                        func_name.size(), func_name.data(), ret);
                             }
                             break;
                         }
@@ -1374,8 +1344,7 @@ int resolve_expr(
                 else
                 {
                     ret = OB_ERR_UNKNOWN_SYS_FUNC;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "system function `%.*s' not supported", func_name.size(), func_name.data());
+                    jlog(WARNING, "system function `%.*s' not supported", func_name.size(), func_name.data());
                 }
             }
             if (ret == OB_SUCCESS)
@@ -1387,8 +1356,7 @@ int resolve_expr(
 #endif
         default:
             ret = OB_ERR_PARSER_SYNTAX;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Wrong type in expression at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Wrong type in expression");
             break;
     }
     return ret;
@@ -1411,16 +1379,14 @@ int resolve_agg_func(
         if (sql_expr == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc space for ObSqlRawExpr at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc space for ObSqlRawExpr");
         }
         if (ret == OB_SUCCESS)
         {
             sql_expr = new(sql_expr) ObSqlRawExpr();
             ret = logical_plan->add_expr(sql_expr);
             if (ret != OB_SUCCESS)
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Add ObSqlRawExpr error at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Add ObSqlRawExpr error");
         }
         if (ret == OB_SUCCESS)
         {
@@ -1430,8 +1396,7 @@ int resolve_agg_func(
             sql_expr->set_column_id(logical_plan->generate_range_column_id());
             ret = select_stmt->add_agg_func(expr_id);
             if (ret != OB_SUCCESS)
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Add aggregate function error at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Add aggregate function error");
         }
 
         // When '*', do not set parameter
@@ -1500,8 +1465,7 @@ int resolve_agg_func(
     else
     {
         ret = OB_ERR_PARSER_SYNTAX;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Wrong usage of aggregate function at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "Wrong usage of aggregate function");
     }
     if (ret == OB_SUCCESS)
         ret_sql_expr = sql_expr;
@@ -1532,8 +1496,7 @@ int resolve_joined_table(
             case T_ALIAS:
                 ret = resolve_table(result_plan, select_stmt, table_node, tid);
                 if (ret == OB_SUCCESS && (ret = joined_table.add_table_id(tid)) != OB_SUCCESS)
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Add table_id to outer joined table failed at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Add table_id to outer joined table failed");
                 break;
             case T_JOINED_TABLE:
                 ret = resolve_joined_table(result_plan, select_stmt, table_node, joined_table);
@@ -1541,8 +1504,7 @@ int resolve_joined_table(
             default:
                 /* won't be here */
                 ret = OB_ERR_PARSER_MALLOC_FAILED;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Unknown table type in outer join at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Unknown table type in outer join");
                 break;
         }
     }
@@ -1567,8 +1529,7 @@ int resolve_joined_table(
             default:
                 /* won't be here */
                 ret = OB_ERR_PARSER_MALLOC_FAILED;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Unknown outer join type at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Unknown outer join type");
                 break;
         }
     }
@@ -1581,8 +1542,7 @@ int resolve_joined_table(
     if (ret == OB_SUCCESS)
     {
         if ((ret = joined_table.add_expr_id(expr_id)) != OB_SUCCESS)
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Add outer join condition error at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Add outer join condition error");
     }
 
     return ret;
@@ -1642,8 +1602,7 @@ int resolve_table(
                 if (alias_node == NULL)
                 {
                     ret = OB_ERR_PARSER_SYNTAX;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "generated table must have alias name at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "generated table must have alias name");
                     break;
                 }
 
@@ -1678,8 +1637,7 @@ int resolve_table(
                 if (joined_table == NULL)
                 {
                     ret = OB_ERR_PARSER_MALLOC_FAILED;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Can not malloc space for JoinedTable at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Can not malloc space for JoinedTable");
                     break;
                 }
                 joined_table = new(joined_table) JoinedTable;
@@ -1689,8 +1647,7 @@ int resolve_table(
                     break;
                 ret = select_stmt->add_joined_table(joined_table);
                 if (ret != OB_SUCCESS)
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Can not add JoinedTable at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Can not add JoinedTable");
                 break;
             }
             //BEGIN: Added by qinbo
@@ -1703,8 +1660,7 @@ int resolve_table(
                 if (node->children_[1]->type_ != T_IDENT)
                 {
                     ret = OB_ERR_PARSER_SYNTAX;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "%s.* is illeagal at %s:%d", node->children_[0]->str_value_, __FILE__,__LINE__);
+                    jlog(WARNING, "%s.* is illeagal", node->children_[0]->str_value_);
                     break;
                 }
                 
@@ -1722,8 +1678,7 @@ int resolve_table(
                  && (0 != db_name.compare("performance_schema")))
                 {
                     ret = OB_ERR_PARSER_SYNTAX;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Unknown db name at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Unknown db name");
                 }
                 else
                 {
@@ -1736,16 +1691,14 @@ int resolve_table(
             default:
                 /* won't be here */
                 ret = OB_ERR_PARSER_SYNTAX;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Unknown table type at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Unknown table type");
                 break;
         }
     }
     else
     {
         ret = OB_ERR_PARSER_SYNTAX;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "No table in from clause at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "No table in from clause");
     }
 
     return ret;
@@ -1780,8 +1733,7 @@ int resolve_from_clause(
                 ret = select_stmt->add_from_item(tid);
             if (ret != OB_SUCCESS)
             {
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Add from table failed at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Add from table failed");
                 break;
             }
         }
@@ -1802,8 +1754,7 @@ int resolve_table_columns(
     if (logical_plan == NULL)
     {
         ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "logical_plan must exist!!! at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "logical_plan must exist!!!");
     }
 
 
@@ -1815,8 +1766,7 @@ int resolve_table_columns(
             if (sub_select == NULL)
             {
                 ret = OB_ERR_ILLEGAL_ID;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Can not get sub-query whose id = %lu at %s:%d", table_item.ref_id_, __FILE__,__LINE__);
+                jlog(WARNING, "Can not get sub-query whose id = %lu", table_item.ref_id_);
             }
             else
             {
@@ -1832,8 +1782,7 @@ int resolve_table_columns(
                                 new_column_item.column_name_)) != OB_SUCCESS)
                         {
                             ret = OB_ERR_PARSER_MALLOC_FAILED;
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Can not malloc space for column name at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Can not malloc space for column name");
                             break;
                         }
                         new_column_item.table_id_ = table_item.table_id_;
@@ -1844,8 +1793,7 @@ int resolve_table_columns(
                         ret = stmt->add_column_item(new_column_item);
                         if (ret != OB_SUCCESS)
                         {
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Add column error at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Add column error");
                             break;
                         }
                         column_item = &new_column_item;
@@ -1864,8 +1812,7 @@ int resolve_table_columns(
                         if (sql_expr == NULL)
                         {
                             ret = OB_ERR_PARSER_MALLOC_FAILED;
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Can not malloc space for ObSqlRawExpr at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Can not malloc space for ObSqlRawExpr");
                             break;
                         }
                         sql_expr = new(sql_expr) ObSqlRawExpr();
@@ -1879,8 +1826,7 @@ int resolve_table_columns(
                         ret = logical_plan->add_expr(sql_expr);
                         if (ret != OB_SUCCESS)
                         {
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Can not add ObSqlRawExpr to logical plan at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Can not add ObSqlRawExpr to logical plan");
                             break;
                         }
 
@@ -1894,8 +1840,7 @@ int resolve_table_columns(
                                 select_item.type_);
                         if (ret != OB_SUCCESS)
                         {
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Can not add select item at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Can not add select item");
                             break;
                         }
                     }
@@ -1934,8 +1879,7 @@ int resolve_table_columns(
                         if (ret != OB_SUCCESS)
                         {
                             ret = OB_ERR_PARSER_MALLOC_FAILED;
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Can not malloc space for column name at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Can not malloc space for column name");
                             break;
                         }
                         new_column_item.table_id_ = table_item.table_id_;
@@ -1946,8 +1890,7 @@ int resolve_table_columns(
                         ret = stmt->add_column_item(new_column_item);
                         if (ret != OB_SUCCESS)
                         {
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Add column error at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Add column error");
                             break;
                         }
                         column_item = &new_column_item;
@@ -1975,8 +1918,7 @@ int resolve_table_columns(
                         if (sql_expr == NULL)
                         {
                             ret = OB_ERR_PARSER_MALLOC_FAILED;
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Can not malloc space for ObSqlRawExpr at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Can not malloc space for ObSqlRawExpr");
                             break;
                         }
                         sql_expr = new(sql_expr) ObSqlRawExpr();
@@ -1991,8 +1933,7 @@ int resolve_table_columns(
                         ret = logical_plan->add_expr(sql_expr);
                         if (ret != OB_SUCCESS)
                         {
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Can not add ObSqlRawExpr to logical plan at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Can not add ObSqlRawExpr to logical plan");
                             break;
                         }
 
@@ -2005,8 +1946,7 @@ int resolve_table_columns(
                                 column_item->data_type_);
                         if (ret != OB_SUCCESS)
                         {
-                            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                    "Can not add select item at %s:%d", __FILE__,__LINE__);
+                            jlog(WARNING, "Can not add select item");
                             break;
                         }
                     }
@@ -2051,8 +1991,7 @@ int resolve_star(
         if ((select_stmt->get_table_item(table_name, &table_item)) == OB_INVALID_ID)
         {
             ret = OB_ERR_TABLE_UNKNOWN;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Unknown table %s at %s:%d", table_node->str_value_, __FILE__,__LINE__);
+            jlog(WARNING, "Unknown table %s", table_node->str_value_);
         }
         if (ret == OB_SUCCESS)
             ret = resolve_table_columns(result_plan, select_stmt, *table_item);
@@ -2097,8 +2036,7 @@ int resolve_select_clause(
                 if (is_bald_star)
                 {
                     ret = OB_ERR_STAR_DUPLICATE;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Wrong usage of '*' at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Wrong usage of '*'");
                     break;
                 }
                 else
@@ -2160,8 +2098,7 @@ int resolve_select_clause(
         if (project_node->type_ == T_EXPR_LIST && project_node->num_child_ != 1)
         {
             ret = OB_ERR_RESOLVE_SQL;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Operand should contain 1 column(s) at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Operand should contain 1 column(s)");
             break;
         }
 
@@ -2174,10 +2111,18 @@ int resolve_select_clause(
         if ((select_expr = logical_plan->get_expr(expr_id)) == NULL)
         {
             ret = OB_ERR_ILLEGAL_ID;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Wrong expr_id at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Wrong expr_id");
             break;
         }
+
+        //sql like "select @@version_comment limit 1" should be processed 
+        if ((NULL != select_expr->get_expr())
+            &&(select_expr->get_expr()->get_expr_type() == T_SYSTEM_VARIABLE))
+        {
+            result_plan->is_show_sys_var = true;
+            break;
+        }
+        
 
         /* if IDENT, we need to assign new id for it to avoid same (table_id, column_id) in ObRowDesc */
         /* 1. select price + off new_price, new_price from tbl; */
@@ -2263,8 +2208,7 @@ int resolve_group_clause(
                 if (pos <= 0 || pos > select_stmt->get_select_item_size())
                 {
                     ret = OB_ERR_WRONG_POS;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Unknown column '%d' in 'group clause' at %s:%d", pos, __FILE__,__LINE__);
+                    jlog(WARNING, "Unknown column '%d' in 'group clause'", pos);
                     break;
                 }
                 expr_id = select_stmt->get_select_item(pos - 1).expr_id_;
@@ -2272,15 +2216,13 @@ int resolve_group_clause(
                 if (!sql_expr)
                 {
                     ret = OB_ERR_ILLEGAL_ID;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Can not find expression, expr_id = %lu at %s:%d", expr_id, __FILE__,__LINE__);
+                    jlog(WARNING, "Can not find expression, expr_id = %lu", expr_id);
                     break;
                 }
                 if (sql_expr->is_contain_aggr())
                 {
                     ret = OB_ERR_PARSER_SYNTAX;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Invalid use of expression which contains group function at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Invalid use of expression which contains group function");
                     break;
                 }
 
@@ -2317,8 +2259,7 @@ int resolve_group_clause(
                 {
                     select_stmt->add_group_item(group_item);
                     if ((ret = select_stmt->add_group_expr(expr_id)) != OB_SUCCESS)
-                        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Add group expression error at %s:%d", __FILE__,__LINE__);
+                        jlog(WARNING, "Add group expression error");
                 }
                 //END:Added by qinbo
             }
@@ -2409,8 +2350,7 @@ int resolve_order_clause(
                 if (pos <= 0 || pos > select_stmt->get_select_item_size())
                 {
                     ret = OB_ERR_WRONG_POS;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Unknown column '%d' in 'order clause' at %s:%d", pos, __FILE__,__LINE__);
+                    jlog(WARNING, "Unknown column '%d' in 'order clause'");
                     break;
                 }
                 order_item.expr_id_     = select_stmt->get_select_item(pos - 1).expr_id_;
@@ -2438,8 +2378,7 @@ int resolve_order_clause(
                 if (ret == OB_SUCCESS)
                 {
                     if ((ret = select_stmt->add_order_item(order_item)) != OB_SUCCESS)
-                        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Add order expression error at %s:%d", __FILE__,__LINE__);
+                        jlog(WARNING, "Add order expression error");
                 }
                 //END:Added by qinbo
             }
@@ -2475,8 +2414,7 @@ int resolve_limit_clause(
             if ((ret = resolve_independ_expr(result_plan, select_stmt, offset_node, limit_offset)) != OB_SUCCESS
                     || (ret = resolve_independ_expr(result_plan, select_stmt, limit_node, limit_count)) != OB_SUCCESS)
             {
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Resolve limit/offset error, ret=%d at %s:%d", ret, __FILE__,__LINE__);
+                jlog(WARNING, "Resolve limit/offset error, ret=%d", ret);
             }
         }
         else
@@ -2485,26 +2423,22 @@ int resolve_limit_clause(
             {
                 if (limit_node->type_ != T_INT && limit_node->type_ != T_QUESTIONMARK)
                 {
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Wrong type of limit value at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Wrong type of limit value");
                 }
                 else if ((ret = resolve_independ_expr(result_plan, select_stmt, limit_node, limit_count)) != OB_SUCCESS)
                 {
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Resolve limit error, ret=%d at %s:%d", ret, __FILE__,__LINE__);
+                    jlog(WARNING, "Resolve limit error, ret=%d", ret);
                 }
             }
             if (ret == OB_SUCCESS && offset_node != NULL)
             {
                 if (offset_node->type_ != T_INT && offset_node->type_ != T_QUESTIONMARK)
                 {
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Wrong type of limit value at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING,"Wrong type of limit value");
                 }
                 else if ((ret = resolve_independ_expr(result_plan, select_stmt, offset_node, limit_offset)) != OB_SUCCESS)
                 {
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Resolve offset error, ret=%d at %s:%d", ret, __FILE__,__LINE__);
+                    jlog(WARNING, "Resolve offset error, ret=%d", ret);
                 }
             }
         }
@@ -2550,8 +2484,7 @@ int resolve_select_stmt(
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc ObLogicalPlan at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
         {
@@ -2571,8 +2504,7 @@ int resolve_select_stmt(
         if (select_stmt == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc ObSelectStmt at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObSelectStmt");
         }
     }
 
@@ -2584,8 +2516,7 @@ int resolve_select_stmt(
         ret = logical_plan->add_query(select_stmt);
         if (ret != OB_SUCCESS)
         {
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not add ObSelectStmt to logical plan at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING,"Can not add ObSelectStmt to logical plan");
         }
     }
 
@@ -2613,8 +2544,7 @@ int resolve_select_stmt(
         if (node->children_[12] && node->children_[12]->value_ == 1)
         {
             ret = OB_ERR_ILLEGAL_ID;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Select for update statement can not process set query at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING,"Select for update statement can not process set query");
         }
 
         // assign set type
@@ -2633,8 +2563,7 @@ int resolve_select_stmt(
                     break;
                 default:
                     ret = OB_ERR_OPERATOR_UNKNOWN;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "unknown set operator of set clause at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "unknown set operator of set clause");
                     break;
             }
         }
@@ -2671,14 +2600,12 @@ int resolve_select_stmt(
             if (!left_select || !right_select)
             {
                 ret = OB_ERR_ILLEGAL_ID;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "resolve set clause error at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "resolve set clause error");
             }
             else if (left_select->get_select_item_size() != right_select->get_select_item_size())
             {
                 ret = OB_ERR_COLUMN_SIZE;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "The used SELECT statements have a different number of columns at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "The used SELECT statements have a different number of columns");
             }
             else
                 ret = select_stmt->copy_select_items(left_select);
@@ -2708,8 +2635,7 @@ int resolve_select_stmt(
             if (select_stmt->get_table_size() != 1)
             {
                 ret = OB_ERR_ILLEGAL_ID;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Select for update statement can only process one table at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Select for update statement can only process one table");
             }
             else
             {
@@ -2795,8 +2721,7 @@ int resolve_hints(
                     break;
                 default:
                     ret = OB_ERR_HINT_UNKNOWN;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Unknown hint '%s' at %s:%d", get_type_name(hint_node->type_), __FILE__,__LINE__);
+                    jlog(WARNING, "Unknown hint '%s'", get_type_name(hint_node->type_));
                     break;
             }
         }
@@ -2822,8 +2747,7 @@ int resolve_delete_stmt(
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc ObLogicalPlan at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
         {
@@ -2842,8 +2766,7 @@ int resolve_delete_stmt(
         if (delete_stmt == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc ObDeleteStmt at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObDeleteStmt");
         }
         else
         {
@@ -2853,8 +2776,7 @@ int resolve_delete_stmt(
             ret = logical_plan->add_query(delete_stmt);
             if (ret != OB_SUCCESS)
             {
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Can not add ObDeleteStmt to logical plan at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Can not add ObDeleteStmt to logical plan");
             }
             else
             {
@@ -2862,8 +2784,7 @@ int resolve_delete_stmt(
                 if (table_node->type_ != T_IDENT)
                 {
                     ret = OB_ERR_PARSER_SYNTAX;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Only single base table is supported for delete at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING,  "Only single base table is supported for delete");
                 }
                 if (ret == OB_SUCCESS)
                 {
@@ -2915,8 +2836,7 @@ int resolve_insert_columns(
             else
             {
                 ret = OB_ERR_COLUMN_DUPLICATE;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Column %s are duplicate at %s:%d", column_node->str_value_, __FILE__,__LINE__);
+                jlog(WARNING, "Column %s are duplicate", column_node->str_value_);
                 break;
             }
         }
@@ -2926,8 +2846,7 @@ int resolve_insert_columns(
         if (insert_stmt->get_table_size() != 1)
         {
             ret = OB_ERR_PARSER_SYNTAX;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Insert statement only support one table at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Insert statement only support one table");
         }
         if (ret == OB_SUCCESS)
         {
@@ -2935,8 +2854,7 @@ int resolve_insert_columns(
             if (table_item.type_ != TableItem::BASE_TABLE)
             {
                 ret = OB_ERR_PARSER_SYNTAX;
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Only base table can be inserted at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Only base table can be inserted");
             }
             else
                 ret = resolve_table_columns(result_plan, insert_stmt, table_item);
@@ -2955,16 +2873,14 @@ int resolve_insert_columns(
                 if (g_metareader == NULL)
                 {
                     ret = OB_ERR_SCHEMA_UNSET;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Schema(s) are not set");
+                    jlog(WARNING,"Schema(s) are not set");
                     break;
                 }
 
                 if (g_metareader->is_join_column(column_item->table_id_, column_item->column_id_))
                 {
                     ret = OB_ERR_INSERT_INNER_JOIN_COLUMN;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Cannot insert inner join column: %.*s", column_item->column_name_.size(), column_item->column_name_.data());
+                    jlog(WARNING, "Cannot insert inner join column: %.*s", column_item->column_name_.size(), column_item->column_name_.data());
                     break;
                 }
 #endif        
@@ -2993,8 +2909,7 @@ int resolve_insert_values(
                     expr_id, T_INSERT_LIMIT);
             if (ret != OB_SUCCESS)
             {
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Can not add expr_id to vector at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Can not add expr_id to vector");
             }
             value_row.push_back(expr_id);
         }
@@ -3003,14 +2918,12 @@ int resolve_insert_values(
                 insert_stmt->get_column_size() != value_row.size())
         {
             ret = OB_ERR_COLUMN_SIZE;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Column count doesn't match value count at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Column count doesn't match value count");
         }
         if (ret == OB_SUCCESS)
         {
             if ((ret = insert_stmt->add_value_row(value_row)) != OB_SUCCESS)
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Add value-row to ObInsertStmt error at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Add value-row to ObInsertStmt error");
         }
         value_row.clear();
     }
@@ -3036,8 +2949,7 @@ int resolve_insert_stmt(
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc ObLogicalPlan at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
         {
@@ -3058,8 +2970,7 @@ int resolve_insert_stmt(
         if (insert_stmt == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc ObInsertStmt at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObInsertStmt");
         }
         else
         {
@@ -3070,8 +2981,7 @@ int resolve_insert_stmt(
 
             if (ret != OB_SUCCESS)
             {
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Can not add ObInsertStmt to logical plan at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Can not add ObInsertStmt to logical plan");
             }
             else
             {
@@ -3079,8 +2989,7 @@ int resolve_insert_stmt(
                 if (table_node->type_ != T_IDENT)
                 {
                     ret = OB_ERR_PARSER_SYNTAX;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Only single base table is supported for insert at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Only single base table is supported for insert");
                 }
                 if (ret == OB_SUCCESS)
                     ret = resolve_table(result_plan, insert_stmt, table_node, table_id);
@@ -3110,15 +3019,13 @@ int resolve_insert_stmt(
                             if (select_stmt == NULL)
                             {
                                 ret = OB_ERR_ILLEGAL_ID;
-                                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                        "Invalid query id of sub-query at %s:%d", __FILE__,__LINE__);
+                                jlog(WARNING, "Invalid query id of sub-query");
                             }
                             if (ret == OB_SUCCESS &&
                                     insert_stmt->get_column_size() != select_stmt->get_select_item_size())
                             {
                                 ret = OB_ERR_COLUMN_SIZE;
-                                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                        "select values are not match insert columns at %s:%d", __FILE__,__LINE__);
+                                jlog(WARNING, "select values are not match insert columns");
                             }
                         }
                     }
@@ -3155,8 +3062,7 @@ int resolve_update_stmt(
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc ObLogicalPlan at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
         {
@@ -3175,8 +3081,7 @@ int resolve_update_stmt(
         if (update_stmt == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Can not malloc ObUpdateStmt at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObUpdateStmt");
         }
         else
         {
@@ -3186,8 +3091,7 @@ int resolve_update_stmt(
             ret = logical_plan->add_query(update_stmt);
             if (ret != OB_SUCCESS)
             {
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                        "Can not add ObUpdateStmt to logical plan at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Can not add ObUpdateStmt to logical plan");
             }
             else
             {
@@ -3195,8 +3099,7 @@ int resolve_update_stmt(
                 if (table_node->type_ != T_IDENT)
                 {
                     ret = OB_ERR_PARSER_SYNTAX;
-                    snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                            "Only single base table is supported for Update at %s:%d", __FILE__,__LINE__);
+                    jlog(WARNING, "Only single base table is supported for Update");
                 }
                 if (ret == OB_SUCCESS)
                 {
@@ -3245,8 +3148,7 @@ int resolve_update_stmt(
                         {
                             if ((ret = update_stmt->add_update_expr(ref_id)) != OB_SUCCESS)
                             {
-                                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                                        "Add update value error at %s:%d", __FILE__,__LINE__);
+                                jlog(WARNING, "Add update value error");
                             }
                         }
                     }
@@ -3304,7 +3206,7 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
                 break;
             }
             default:
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,"unknown top node type=%d", node->type_);
+                jlog(WARNING, "unknown top node type=%d", node->type_);
                 ret = OB_ERR_UNEXPECTED;
                 break;
         };

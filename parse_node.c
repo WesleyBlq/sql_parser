@@ -153,6 +153,7 @@ const char* get_type_name(int type)
 	case T_SYSTEM_ACTION : return "T_SYSTEM_ACTION";
 	case T_CLUSTER : return "T_CLUSTER";
 	case T_SERVER_ADDRESS : return "T_SERVER_ADDRESS";
+    case T_SHOW_DATABASES:  return "T_SHOW_DATABASES";
 	case T_SHOW_TABLES : return "T_SHOW_TABLES";
 	case T_SHOW_VARIABLES : return "T_SHOW_VARIABLES";
 	case T_SHOW_COLUMNS : return "T_SHOW_COLUMNS";

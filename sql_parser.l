@@ -224,6 +224,7 @@ OR                { return OR; }
 ORDER             { return ORDER; }
 OUTER             { return OUTER; }
 COMMENT           { return COMMENT; }
+DATABASES		  { return DATABASES; }	
 PARAMETERS        { return PARAMETERS; }
 PASSWORD          { return PASSWORD; }
 PRECISION         { return PRECISION; }

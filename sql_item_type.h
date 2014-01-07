@@ -178,6 +178,7 @@ extern "C"
         T_CLUSTER,
         T_SERVER_ADDRESS,
 
+        T_SHOW_DATABASES,
         T_SHOW_TABLES,
         T_SHOW_VARIABLES,
         T_SHOW_COLUMNS,

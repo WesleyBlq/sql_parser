@@ -65,8 +65,7 @@ int prepare_resolve_stmt(ResultPlan* result_plan,
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                  "Can not malloc ObLogicalPlan at %s:%d", __FILE__,__LINE__); 
+            jlog(WARNING, "Can not malloc ObLogicalPlan");
             return ret;
         }
         else
@@ -79,11 +78,10 @@ int prepare_resolve_stmt(ResultPlan* result_plan,
     {
         logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
     }
-  
     if (NULL == (stmt = create_stmt<T>(result_plan)))
     {
         ret = OB_ERR_PARSER_MALLOC_FAILED;
-        snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,"Failed to allocate memory at %s:%d", __FILE__,__LINE__);
+        jlog(WARNING, "Failed to allocate memory");
     }
     else
     {
@@ -91,7 +89,7 @@ int prepare_resolve_stmt(ResultPlan* result_plan,
         stmt->set_query_id(query_id);
         if (OB_SUCCESS != (ret = logical_plan->add_query(stmt)))
         {
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,"Can not add query to logical plan at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not add query to logical plan");
             stmt->~T();
             stmt = NULL;
         }
@@ -114,6 +112,7 @@ int resolve_variable_set_stmt(
     }
     else
     {
+    #if 0
         ParseNode* set_node = NULL;
         ObVariableSetStmt::VariableSetNode var_node;
         for (int32_t i = 0; ret == OB_SUCCESS && i < node->num_child_; i++)
@@ -149,13 +148,13 @@ int resolve_variable_set_stmt(
             if ((ret = resolve_independ_expr(result_plan, NULL, set_node->children_[1], var_node.value_expr_id_,
                                             T_VARIABLE_VALUE_LIMIT)) != OB_SUCCESS)
             {
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                    "Resolve set value error at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Resolve set value error");
                 break;
             }
 
             stmt->add_variable_node(var_node);
         }
+    #endif
     }
     return ret;
 }
@@ -170,7 +169,7 @@ int resolve_show_stmt(
     uint64_t  sys_table_id = OB_INVALID_ID;
     ParseNode *show_table_node = NULL;
     ParseNode *condition_node = NULL;
-    OB_ASSERT(node && node->type_ >= T_SHOW_TABLES && node->type_ <= T_SHOW_PROCESSLIST);
+    OB_ASSERT(node && node->type_ >= T_SHOW_DATABASES && node->type_ <= T_SHOW_PROCESSLIST);
     query_id = OB_INVALID_ID;
 
     ObLogicalPlan* logical_plan = NULL;
@@ -180,8 +179,7 @@ int resolve_show_stmt(
         if (logical_plan == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not malloc ObLogicalPlan at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
         {
@@ -193,15 +191,13 @@ int resolve_show_stmt(
     {
         logical_plan = static_cast<ObLogicalPlan*>(result_plan->plan_tree_);
     }
-
     if (ret == OB_SUCCESS)
     {
         ObShowStmt* show_stmt = (ObShowStmt*)parse_malloc(sizeof(ObShowStmt), NULL);
         if (show_stmt == NULL)
         {
             ret = OB_ERR_PARSER_MALLOC_FAILED;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not malloc ObShowStmt at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Can not malloc ObShowStmt");
         }
         else
         {
@@ -209,6 +205,12 @@ int resolve_show_stmt(
             sys_table_name.type_ = T_IDENT;
             switch (node->type_)
             {
+                case T_SHOW_DATABASES:
+                    OB_ASSERT(node->num_child_ == 1);
+                    condition_node = node->children_[0];
+                    show_stmt = new(show_stmt) ObShowStmt(ObBasicStmt::T_SHOW_DATABASES);
+                    sys_table_name.str_value_ = OB_TABLES_SHOW_DATABASE_NAME;
+                    break;
                 case T_SHOW_TABLES:
                   OB_ASSERT(node->num_child_ == 1);
                   condition_node = node->children_[0];
@@ -275,8 +277,8 @@ int resolve_show_stmt(
                   break;
             }
             
-            if (node->type_ >= T_SHOW_TABLES && node->type_ <= T_SHOW_SERVER_STATUS
-                && (ret = resolve_table(result_plan, show_stmt, &sys_table_name, sys_table_id)) == OB_SUCCESS)
+            if (node->type_ >= T_SHOW_DATABASES && node->type_ <= T_SHOW_SERVER_STATUS)
+            //    && (ret = resolve_table(result_plan, show_stmt, &sys_table_name, sys_table_id)) == OB_SUCCESS)
             {
                 show_stmt->set_sys_table(sys_table_id);
                 query_id = logical_plan->generate_query_id();
@@ -285,15 +287,14 @@ int resolve_show_stmt(
             
             if (ret == OB_SUCCESS && (ret = logical_plan->add_query(show_stmt)) != OB_SUCCESS)
             {
-                snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Can not add ObShowStmt to logical plan at %s:%d", __FILE__,__LINE__);
+                jlog(WARNING, "Can not add ObShowStmt to logical plan");
             }
             if (ret != OB_SUCCESS && show_stmt != NULL)
             {
                 show_stmt->~ObShowStmt();
             }
         }
-
+#if 0
         if (ret == OB_SUCCESS && sys_table_id != OB_INVALID_ID)
         {
             TableItem *table_item = show_stmt->get_table_item_by_id(sys_table_id);
@@ -309,7 +310,7 @@ int resolve_show_stmt(
             if (schema_checker == NULL)
             {
             ret = OB_ERR_SCHEMA_UNSET;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG, "Schema(s) are not set at %s:%d", __FILE__,__LINE__);
+            jlog(WARNING, "Schema(s) are not set");
             }
             int32_t len = static_cast<int32_t>(strlen(show_table_node->str_value_));
             ObString table_name(len, len, show_table_node->str_value_);
@@ -317,8 +318,7 @@ int resolve_show_stmt(
             if (show_table_id == OB_INVALID_ID)
             {
             ret = OB_ERR_TABLE_UNKNOWN;
-            snprintf(result_plan->err_stat_.err_msg_, MAX_ERROR_MSG,
-                "Unknown table \"%s\" at %s:%d", show_table_node->str_value_, __FILE__,__LINE__);
+            jlog(WARNING, "Unknown table \"%s\", show_table_node->str_value_);
             }
             else
             {
@@ -381,6 +381,7 @@ int resolve_show_stmt(
         }
       }
     }
+#endif    
   }
   return ret;
 }
