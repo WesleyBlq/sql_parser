@@ -27,7 +27,7 @@
 #include "log.h"
 
 using namespace std;
-using namespace oceanbase::common;
+using namespace jdbd::common;
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -68,7 +68,37 @@ using namespace oceanbase::common;
 
 extern string make_string(const char* cstr);
 extern int ob_write_string(const string &src, string &dst);
-
+//BEGIN: Added by qinbo for add print stack process
+#ifndef BACKTRACE
+#define BACKTRACE() \
+ do \
+ { \
+    void *array[100];   \
+    int size = backtrace(array, 100);\
+    char **strings; \
+    int i;  \
+    strings = backtrace_symbols(array, size);\
+    printf("\nObtained %d stack frames:\n", size);\
+    free(strings);  \
+    char cmd[64] = "addr2line -C -f -e ";   \
+    char* prog = cmd + strlen(cmd); \
+    readlink("/proc/self/exe", prog, sizeof(cmd) - strlen(cmd) - 1);\
+    FILE* fp = popen(cmd, "w");\
+    if (fp != NULL)\
+    {\
+        for (i = 0; i < size; ++i)\
+        {\
+            fprintf(fp, "%p\n", array[i]);\
+        }\
+        pclose(fp);\
+    }\
+    int fd = open("coredump.log", O_CREAT | O_WRONLY);\
+    backtrace_symbols_fd(array, size, fd);\
+    close(fd);\
+ } \
+ while (false)
+#endif
+//END: Added by qinbo for add print stack process
 
 #define STR_BOOL(b) ((b) ? "true" : "false")
 
@@ -89,9 +119,9 @@ extern int ob_write_string(const string &src, string &dst);
 #define DEFAULT_TIME_FORMAT "%Y-%m-%d %H:%M:%S"
 
 #define HAS_MEMBER(type, sign, member) \
-  oceanbase::common::__has_##member##__<type, sign>::value
+  jdbd::common::__has_##member##__<type, sign>::value
 
-namespace oceanbase
+namespace jdbd
 {
     namespace common
     {
@@ -127,7 +157,7 @@ namespace oceanbase
         int64_t to_string<string>(const string &obj, char *buffer, const int64_t buffer_size);
 
     } // end namespace common
-} // end namespace oceanbase
+} // end namespace jdbd
 
 
 #endif //OCEANBASE_COMMON_UTILITY_H_

@@ -1,16 +1,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "ob_update_stmt.h"
+#include "sql_update_stmt.h"
+#include "sql_logical_plan.h"
 #include "parse_malloc.h"
-#include "ob_logical_plan.h"
 #include "utility.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {
-        using namespace oceanbase::common;
+        using namespace jdbd::common;
 
         ObUpdateStmt::ObUpdateStmt()
         : ObStmt(T_UPDATE)
@@ -81,7 +81,34 @@ namespace oceanbase
          **************************************************/
         int64_t ObUpdateStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql)
         {
-            return OB_SUCCESS;
+            int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+            ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+            OB_ASSERT(NULL != logical_plan);
+
+            assembled_sql.append("UPDATE ");
+            string table_name = ObStmt::get_table_item_by_id(table_id_)->table_name_ ;
+            if (table_name != shard_info.at(0)->get_table_name())
+            {
+                assembled_sql.append(shard_info.at(0)->get_shard_name());
+            }
+            else
+            {
+                assembled_sql.append(table_name);
+            }
+
+            assembled_sql.append(" SET ");
+            make_update_column_string(result_plan, assembled_sql);
+            
+            if (where_conditions.empty())
+            {
+                make_update_where_string(result_plan, assembled_sql);
+            }
+            else
+            {
+                assembled_sql.append(where_conditions);
+                assembled_sql.append(" ");
+            }
+            return ret;
         }
 
         
@@ -99,12 +126,7 @@ namespace oceanbase
             int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
 
             ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-            if (logical_plan == NULL)
-            {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                jlog(WARNING, "logical_plan must exist!!!");
-                return ret;
-            }
+            OB_ASSERT(NULL != logical_plan);
 
             assembled_sql.append("UPDATE ");
             assembled_sql.append(ObStmt::get_table_item_by_id(table_id_)->table_name_);
@@ -128,12 +150,7 @@ namespace oceanbase
             ObSqlRawExpr* sql_expr = NULL;
 
             ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-            if (logical_plan == NULL)
-            {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                jlog(WARNING, "logical_plan must exist!!!");
-                return ret;
-            }
+            OB_ASSERT(NULL != logical_plan);
             
             for (i = 0; i < update_columns_.size(); i++)
             {
@@ -183,12 +200,7 @@ namespace oceanbase
             ObSqlRawExpr* sql_expr = NULL;
 
             ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-            if (logical_plan == NULL)
-            {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                jlog(WARNING, "logical_plan must exist!!!");
-                return ret;
-            }
+            OB_ASSERT(NULL != logical_plan);
             
             vector<uint64_t>& where_exprs = ObStmt::get_where_exprs();
 

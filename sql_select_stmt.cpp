@@ -1,14 +1,13 @@
 #include <string>
 #include <sstream>
 #include <iostream> 
-#include "ob_select_stmt.h"
+#include "sql_select_stmt.h"
+#include "sql_logical_plan.h"
 #include "parse_malloc.h"
-#include "ob_logical_plan.h"
-//#include "sql_parser.tab.h"
 #include "utility.h"
 
-using namespace oceanbase::sql;
-using namespace oceanbase::common;
+using namespace jdbd::sql;
+using namespace jdbd::common;
 using namespace std;
 
 ObSelectStmt::ObSelectStmt()
@@ -51,10 +50,11 @@ int ObSelectStmt::check_alias_name(
 {
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     ObLogicalPlan *logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-
+    OB_ASSERT(NULL != logical_plan);
+    
     for (uint32_t i = 0; ret == OB_SUCCESS && i < table_items_.size(); i++)
     {
-        /* check if it is column of base-table */
+        // check if it is column of base-table
         TableItem& item = table_items_[i];
         if (item.type_ == TableItem::BASE_TABLE
                 || item.type_ == TableItem::ALIAS_TABLE)
@@ -71,7 +71,7 @@ int ObSelectStmt::check_alias_name(
         }
         else if (item.type_ == TableItem::GENERATED_TABLE)
         {
-            /* check if it is column of generated-table */
+            // check if it is column of generated-table
             ObSelectStmt* sub_query = static_cast<ObSelectStmt*> (logical_plan->get_query(item.ref_id_));
             for (uint32_t j = 0; ret == OB_SUCCESS && j < sub_query->get_select_item_size(); j++)
             {
@@ -86,7 +86,7 @@ int ObSelectStmt::check_alias_name(
         }
     }
 
-    /* check if it is alias name of self-select */
+    // check if it is alias name of self-select
     for (uint32_t i = 0; ret == OB_SUCCESS && i < select_items_.size(); i++)
     {
         const SelectItem& select_item = get_select_item(i);
@@ -141,11 +141,7 @@ int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& off
     ObConstRawExpr *const_raw_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
+    OB_ASSERT(NULL != logical_plan);
 
     limit_count_id_ = limit;
     limit_offset_id_ = offset;
@@ -255,6 +251,57 @@ JoinedTable* ObSelectStmt::get_joined_table(uint64_t table_id)
     return joined_table;
 }
 
+/**************************************************
+Funtion     :   current_join_is_supported
+Author      :   qinbo
+Date        :   2014.1.7
+Description :   check whether current JOIN OP is supported
+Input       :   string &first_join_table
+Output      :   
+ **************************************************/
+bool ObSelectStmt::current_join_is_supported(ResultPlan& result_plan, string &first_join_table )
+{
+    JoinedTable *joined_table = NULL;
+    uint32_t num = get_joined_table_size();
+    vector<string> binding_join_tables;
+    
+    if (0 == num)
+    {
+        return true;
+    }
+
+    if (num > 2)
+    {
+        jlog(WARNING, "Now we DO NOT support JOIN which tables num > 2");
+        return false;
+    }
+
+    
+    joined_table = get_joined_table(from_items_[0].table_id_);
+    first_join_table = ObStmt::get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_;
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+    if (NULL == db_schema)
+    {
+        jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
+        return false;
+    }
+    
+    schema_table* table_schema = db_schema->get_table_from_db(first_join_table);
+    if (NULL == table_schema)
+    {
+        jlog(WARNING, "Table %s should not be empty in table schema", first_join_table.data());
+        return false;
+    }
+    
+    binding_join_tables = table_schema->get_relation_table();
+    if (binding_join_tables.at(0) == ObStmt::get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_)
+    {
+        return true;
+    }
+    return false;
+}
+
+
 int ObSelectStmt::check_having_ident(
         ResultPlan& result_plan,
         string& column_name,
@@ -266,12 +313,7 @@ int ObSelectStmt::check_having_ident(
     ret_expr = NULL;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
-
+    OB_ASSERT(NULL != logical_plan);
 
     for (uint32_t i = 0; ret == OB_SUCCESS && i < select_items_.size(); i++)
     {
@@ -770,12 +812,8 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
-
+    OB_ASSERT(NULL != logical_plan);
+    
     if (is_distinct_)
         assembled_sql.append("SELECT DISTINCT ");
     else
@@ -856,11 +894,7 @@ int64_t ObSelectStmt::append_select_items_reduce_used(
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
+    OB_ASSERT(NULL != logical_plan);
 
     vector<SelectItem> select_items = get_all_select_items();
     vector<GroupItem> group_items = get_all_group_items();
@@ -907,52 +941,30 @@ int64_t ObSelectStmt::append_select_items_reduce_used(
             if (!try_fetch_select_item_by_having(select_items,
                     Having_items[i], column_off))
             {
-#if 0
-                if (exist_column_names.size() > 0)
+                assembled_sql.append(",");
+                switch (Having_items[i].aggr_fun_type)
                 {
-                    vector<string>::iterator pos;
-                    pos = find(exist_column_names.begin(),
-                            exist_column_names.end(),
-                            Having_items[i].having_column_name);
-                    if (pos == exist_column_names.end())
-                    {
-                        assembled_sql.append(",");
-                        assembled_sql.append(Having_items[i].having_column_name);
-                        assembled_sql.append(" ");
-                        exist_column_names.push_back(
-                                Having_items[i].having_column_name);
-                    }
+                    case T_FUN_MAX:
+                        assembled_sql.append("MAX(");
+                        break;
+                    case T_FUN_MIN:
+                        assembled_sql.append("MIN(");
+                        break;
+                    case T_FUN_SUM:
+                        assembled_sql.append("SUM(");
+                        break;
+                    case T_FUN_COUNT:
+                        assembled_sql.append("COUNT(");
+                        break;
+                    case T_FUN_AVG:
+                        assembled_sql.append("AVG(");
+                        break;
+                    default:
+                        break;
                 }
-                else
-#endif
-                {
-                    assembled_sql.append(",");
-                    switch (Having_items[i].aggr_fun_type)
-                    {
-                        case T_FUN_MAX:
-                            assembled_sql.append("MAX(");
-                            break;
-                        case T_FUN_MIN:
-                            assembled_sql.append("MIN(");
-                            break;
-                        case T_FUN_SUM:
-                            assembled_sql.append("SUM(");
-                            break;
-                        case T_FUN_COUNT:
-                            assembled_sql.append("COUNT(");
-                            break;
-                        case T_FUN_AVG:
-                            assembled_sql.append("AVG(");
-                            break;
-                        default:
-                            break;
-                    }
-                    assembled_sql.append(Having_items[i].having_column_name);
-                    assembled_sql.append(")");
-                    assembled_sql.append(" ");
-                    //exist_column_names.push_back(
-                      //      Having_items[i].having_column_name);
-                }
+                assembled_sql.append(Having_items[i].having_column_name);
+                assembled_sql.append(")");
+                assembled_sql.append(" ");
             }
         }
     }
@@ -1007,11 +1019,7 @@ int64_t ObSelectStmt::make_from_string(ResultPlan& result_plan, string &assemble
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
+    OB_ASSERT(NULL != logical_plan);
     
     assembled_sql.append("FROM ");
     
@@ -1100,16 +1108,14 @@ int64_t ObSelectStmt::make_group_by_string(ResultPlan& result_plan, string &asse
         for (i = 0; i < group_items_.size(); i++)
         {
             assembled_sql.append(group_items_.at(i).group_column_);
-            assembled_sql.append(" ");
-        }
-        
-        if ((group_items_.size() > 1)&&(i != group_items_.size()- 1))
-        {
-            assembled_sql.append(", ");        
-        }
-        else
-        {
-            assembled_sql.append(" ");        
+            if (i != group_items_.size()- 1)
+            {
+                assembled_sql.append(", ");
+            }
+            else
+            {
+                assembled_sql.append(" ");        
+            }
         }
     }
 
@@ -1143,7 +1149,7 @@ int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan, string &asse
         assembled_sql.append(item.order_column_);        
         assembled_sql.append(" ");
         assembled_sql.append(item.order_type_ == T_SORT_ASC ? "ASC " : "DESC ");
-        if ((order_items_.size() > 1)&&(i != order_items_.size()- 1))
+        if (i != order_items_.size()- 1)
         {
             assembled_sql.append(", ");        
         }
@@ -1172,12 +1178,7 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan, string &assemb
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
-
+    OB_ASSERT(NULL != logical_plan);
 
     if (having_expr_ids_.size() > 0)
     {
@@ -1196,7 +1197,7 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan, string &assemb
             sql_expr->to_string(result_plan, assembled_sql_tmp);
             assembled_sql.append(assembled_sql_tmp);        
             assembled_sql.append(") ");
-            if ((having_expr_ids_.size() > 1)&&(i != having_expr_ids_.size()- 1))
+            if (i != having_expr_ids_.size()- 1)
             {
                 assembled_sql.append(", ");        
             }
@@ -1266,11 +1267,7 @@ int64_t ObSelectStmt::make_where_string(ResultPlan& result_plan, string &assembl
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
+    OB_ASSERT(NULL != logical_plan);
 
     vector<uint64_t>& where_exprs = ObStmt::get_where_exprs();
 
@@ -1329,12 +1326,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
     string          assembled_sql_tmp;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_ILLEGAL_ID;
-        jlog(WARNING, "logical_plan must exist!!!");
-        return ret;
-    }
+    OB_ASSERT(NULL != logical_plan);
     
     sql_expr = logical_plan->get_expr_by_id(expr_id);
     
@@ -1366,16 +1358,16 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
         if (sql_expr->get_expr()->is_aggr_fun())
         {
             ObAggFunRawExpr *agg_fun_raw_expr = dynamic_cast<ObAggFunRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+            
+            if ((!agg_fun_raw_expr->get_param_expr())||(!agg_fun_raw_expr->get_param_expr()->is_column()))
+            {
+                ret = OB_ERR_ILLEGAL_ID;
+                jlog(WARNING, "Now we DO NOT support aggr function with parameter which is NOT column type!!!");
+                return ret;
+            }
     
             if (NULL != agg_fun_raw_expr->get_param_expr())
             {
-                if (!agg_fun_raw_expr->get_param_expr()->is_column())
-                {
-                    ret = OB_ERR_ILLEGAL_ID;
-                    jlog(WARNING, "select item error!!!");
-                    return ret;
-                }
-    
                 agg_fun_raw_expr->get_param_expr()->to_string(*result_plan, assembled_sql_tmp);
                 column_type = agg_fun_raw_expr->get_param_expr()->get_result_type();
                 column_name.assign(assembled_sql_tmp);
@@ -1440,12 +1432,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     float           float_value = 0.0;
     
     ObLogicalPlan*  logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_ILLEGAL_ID;
-        jlog(WARNING, "logical_plan must exist!!!");
-        return ret;
-    }
+    OB_ASSERT(NULL != logical_plan);
 
     sql_expr = logical_plan->get_expr_by_id(expr_id);
 
@@ -1486,16 +1473,16 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
         if (sql_expr->get_expr()->is_aggr_fun())
         {
             ObAggFunRawExpr *agg_fun_raw_expr = dynamic_cast<ObAggFunRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+
+            if ((!agg_fun_raw_expr->get_param_expr())||(!agg_fun_raw_expr->get_param_expr()->is_column()))
+            {
+                ret = OB_ERR_ILLEGAL_ID;
+                jlog(WARNING, "Now we DO NOT support aggr function with parameter which is NOT column type!!!");
+                return ret;
+            }
     
             if (NULL != agg_fun_raw_expr->get_param_expr())
             {
-                if (!agg_fun_raw_expr->get_param_expr()->is_column())
-                {
-                    ret = OB_ERR_ILLEGAL_ID;
-                    jlog(WARNING, "having item error!!!");
-                    return ret;
-                }
-    
                 agg_fun_raw_expr->get_param_expr()->to_string(*result_plan, assembled_sql_tmp);
                 column_type = agg_fun_raw_expr->get_param_expr()->get_result_type();
                 column_name.assign(assembled_sql_tmp);

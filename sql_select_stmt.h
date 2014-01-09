@@ -1,11 +1,8 @@
-#ifndef OCEANBASE_SQL_SELECTSTMT_H_
-#define OCEANBASE_SQL_SELECTSTMT_H_
+#ifndef SQL_SELECTSTMT_H_
+#define SQL_SELECTSTMT_H_
 
 #include "ob_stmt.h"
-#include "ob_raw_expr.h"
-//#include "common/ob_string.h"
-//#include "common/ob_string_buf.h"
-//#include "common/ob_array.h"
+#include "sql_raw_expr.h"
 #include <vector>
 #include <map>
 #include <string>
@@ -27,9 +24,9 @@
 //sql sent to shard should have max rows num MAX_LIMIT_ROWS
 #define MAX_LIMIT_ROWS  1000000
 
-using namespace oceanbase::common;
+using namespace jdbd::common;
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {
@@ -136,44 +133,6 @@ namespace oceanbase
             ulong op;
         } select_tpl;
     }
-#if 0
-    namespace common
-    {
-
-        template <>
-        struct ob_vector_traits<oceanbase::sql::SelectItem>
-        {
-            typedef oceanbase::sql::SelectItem* pointee_type;
-            typedef oceanbase::sql::SelectItem value_type;
-            typedef const oceanbase::sql::SelectItem const_value_type;
-            typedef value_type* iterator;
-            typedef const value_type* const_iterator;
-            typedef int32_t difference_type;
-        };
-
-        template <>
-        struct ob_vector_traits<oceanbase::sql::OrderItem>
-        {
-            typedef oceanbase::sql::OrderItem* pointee_type;
-            typedef oceanbase::sql::OrderItem value_type;
-            typedef const oceanbase::sql::OrderItem const_value_type;
-            typedef value_type* iterator;
-            typedef const value_type* const_iterator;
-            typedef int32_t difference_type;
-        };
-
-        template <>
-        struct ob_vector_traits<oceanbase::sql::FromItem>
-        {
-            typedef oceanbase::sql::FromItem* pointee_type;
-            typedef oceanbase::sql::FromItem value_type;
-            typedef const oceanbase::sql::FromItem const_value_type;
-            typedef value_type* iterator;
-            typedef const value_type* const_iterator;
-            typedef int32_t difference_type;
-        };
-    }
-#endif
     namespace sql
     {
         class ObSelectStmt : public ObStmt
@@ -343,7 +302,7 @@ namespace oceanbase
                 return false;
             }
 
-            /*BEGIN: add by tangchao at 20140106 */
+            //BEGIN: add by tangchao at 20140106
             const bool try_fetch_select_item_by_group(
                     vector<SelectItem> &select_items, string column_name,
                     uint32_t &offset)
@@ -380,8 +339,7 @@ namespace oceanbase
 
                 return false;
             }
-
-            /*END: add by tangchao at 20140106 */
+            //END: add by tangchao at 20140106
 
                 const bool try_fetch_group_from_order_by_column_name(
                         vector<OrderItem> &order_items, string column_name)
@@ -616,8 +574,9 @@ namespace oceanbase
             {
                 return is_sql_relate_multi_shards;
             }
+            bool current_join_is_supported(ResultPlan& result_plan, string &first_join_table );
         private:
-            /* These fields are only used by normal select */
+            // These fields are only used by normal select
             bool is_distinct_;
             vector<SelectItem> select_items_;
             vector<FromItem> from_items_;
@@ -627,30 +586,30 @@ namespace oceanbase
             vector<uint64_t> having_expr_ids_;
             vector<uint64_t> agg_func_ids_;
 
-            /* These fields are only used by set select */
+            // These fields are only used by set select
             SetOperator set_op_;
             bool is_set_distinct_;
             uint64_t left_query_id_;
             uint64_t right_query_id_;
 
-            /* These fields are used by both normal select and set select */
+            // These fields are used by both normal select and set select
             vector<GroupItem> group_items_;
             vector<OrderItem> order_items_;
             vector<HavingItem> having_items_;
 
-            /* -1 means no limit */
+            // -1 means no limit
             uint64_t limit_count_id_;
             uint64_t limit_offset_id_;
 
-            /* FOR UPDATE clause */
+            // FOR UPDATE clause
             bool for_update_;
 
             uint64_t gen_joined_tid_;
 
-            /* this sql is exec on multi shard(>1)*/
+            // this sql is exec on multi shard(>1)
             bool is_sql_relate_multi_shards;
         };
     }
 }
 
-#endif //OCEANBASE_SQL_SELECTSTMT_H_
+#endif //SQL_SELECTSTMT_H_

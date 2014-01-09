@@ -1,20 +1,16 @@
-#include "ob_logical_plan.h"
-#include "ob_select_stmt.h"
-#include "ob_delete_stmt.h"
-#include "ob_insert_stmt.h"
-#include "ob_update_stmt.h"
-//#include "ob_show_stmt.h"
-//#include "ob_execute_stmt.h"
-//#include "ob_prepare_stmt.h"
-//#include "ob_sql_session_info.h"
+#include "sql_logical_plan.h"
+#include "sql_select_stmt.h"
+#include "sql_delete_stmt.h"
+#include "sql_insert_stmt.h"
+#include "sql_update_stmt.h"
 #include "parse_malloc.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {
-        using namespace oceanbase::sql;
-        using namespace oceanbase::common;
+        using namespace jdbd::sql;
+        using namespace jdbd::common;
 
         ObLogicalPlan::ObLogicalPlan()
         {

@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <openssl/md5.h>
 #include "log.h"
+#include "utility.h"
 #include "../route/meta_reader.h"
 #include "../route/router.h"
 #include "../route/shard.h"
@@ -88,10 +89,11 @@ typedef struct
   string    db_name;        //record current db name
   string    meta_db_name;   //record meta db name 
   bool      is_show_sys_var;//this sql is "select @@xxxxx" 
+  bool      has_sub_query;
 } ResultPlan;
 
 
-namespace oceanbase
+namespace jdbd
 {
     namespace common
     {
@@ -675,7 +677,7 @@ virtual int serialize(char* buf, const int64_t buf_len, int64_t& pos) const = 0;
 
 #define ARRAYSIZEOF(a) (sizeof(a)/sizeof(a[0]))
 
-#define OB_ASSERT(x) do{ if(!(x)) jlog(ERROR, "assert fail, exp=%s", #x); assert(x);} while(false)
+#define OB_ASSERT(x) do{ if(!(x)) {jlog(ERROR, "assert fail, exp=%s", #x); BACKTRACE(); }assert(x);} while(false)
 
 #define ATOMIC_CAS(val, cmpv, newv) __sync_val_compare_and_swap((val), (cmpv), (newv))
 #define ATOMIC_ADD(val, addv) __sync_add_and_fetch((val), (addv))

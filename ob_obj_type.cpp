@@ -17,7 +17,7 @@
 #include "ob_define.h"
 #include "ob_obj_type.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace common
     {

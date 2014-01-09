@@ -1,13 +1,11 @@
-#ifndef OCEANBASE_SQL_INSERTSTMT_H_
-#define OCEANBASE_SQL_INSERTSTMT_H_
+#ifndef SQL_INSERTSTMT_H_
+#define SQL_INSERTSTMT_H_
 #include "ob_stmt.h"
 #include <stdio.h>
 #include <vector>
-//#include "common/ob_string.h"
 #include <string>
-//#include "common/ob_string_buf.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {
@@ -130,4 +128,4 @@ namespace oceanbase
     }
 }
 
-#endif //OCEANBASE_SQL_INSERTSTMT_H_
+#endif //SQL_INSERTSTMT_H_

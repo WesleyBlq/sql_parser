@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "parse_malloc.h"
-#include "ob_logical_plan.h"
+#include "sql_logical_plan.h"
 #include "utility.h"
-#include "ob_delete_stmt.h"
+#include "sql_delete_stmt.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {
-        using namespace oceanbase::common;
+        using namespace jdbd::common;
 
         ObDeleteStmt::ObDeleteStmt()
         : ObStmt(ObStmt::T_DELETE)
@@ -67,7 +67,31 @@ namespace oceanbase
          **************************************************/
         int64_t ObDeleteStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql)
         {
-            return OB_SUCCESS;
+            int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+            ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+            OB_ASSERT(NULL != logical_plan);
+
+            assembled_sql.append("DELETE FROM ");
+            string table_name = ObStmt::get_table_item_by_id(table_id_)->table_name_ ;
+            if (table_name != shard_info.at(0)->get_table_name())
+            {
+                assembled_sql.append(shard_info.at(0)->get_shard_name());
+            }
+            else
+            {
+                assembled_sql.append(table_name);
+            }
+
+            if (where_conditions.empty())
+            {
+                make_delete_where_string(result_plan, assembled_sql);
+            }
+            else
+            {
+                assembled_sql.append(where_conditions);
+                assembled_sql.append(" ");
+            }
+            return ret;
         }
 
         
@@ -86,11 +110,7 @@ namespace oceanbase
             string assembled_sql_tmp;
 
             ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-            if (logical_plan == NULL)
-            {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                jlog(WARNING, "logical_plan must exist!!!");
-            }
+            OB_ASSERT(NULL != logical_plan);
 
             assembled_sql.append("DELETE FROM ");
             assembled_sql.append(ObStmt::get_table_item_by_id(table_id_)->table_name_);
@@ -115,11 +135,7 @@ namespace oceanbase
             ObSqlRawExpr* sql_expr = NULL;
 
             ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-            if (logical_plan == NULL)
-            {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
-                jlog(WARNING, "logical_plan must exist!!!");
-            }
+            OB_ASSERT(NULL != logical_plan);
             
             vector<uint64_t>& where_exprs = ObStmt::get_where_exprs();
 

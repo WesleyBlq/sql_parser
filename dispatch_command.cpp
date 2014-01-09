@@ -12,6 +12,7 @@
  * In fact, this is a complicated process.
  */
 
+#include <pthread.h>
 #include "../acl/sql_acl.h"
 #include "../acl/acl_schema.h"
 #include "../acl/privileges.h"
@@ -19,8 +20,10 @@
 #include "../include/jderror.h"
 #include "dispatch_command.h"
 
-using namespace oceanbase;
-using namespace oceanbase::sql;
+extern pthread_mutex_t flush_mutex;
+
+using namespace jdbd;
+using namespace jdbd::sql;
 
 dispatch_command::dispatch_command() : error(0), r_or_w(QUERY_READ)
 {
@@ -34,6 +37,130 @@ dispatch_command::dispatch_command(const dispatch_command& orig)
 
 dispatch_command::~dispatch_command()
 {
+}
+
+void dispatch_command::flush_all_privileges(vector<cuh>& connections)
+{
+    unsigned int next = 0;
+    Connection* conn = NULL;
+    ACL_SCHEMA* schema = NULL;
+    string user;
+    string host;
+    
+    for(; next < connections.size(); next++)
+    {
+        conn = connections[next].conn;
+        user = connections[next].user;
+        host = connections[next].host;
+        schema = SQL_ACL::get_instance(false)->find_user(SCHEMA(user, host));
+        conn->setSchema(schema);
+    }
+    
+    return;
+}
+
+/**************************************************************
+Function:com_refresh
+Description:Reload configs & flush memory.
+Author:tangchao
+Date:
+Input:
+Output:
+Return:
+Other:
+ **************************************************************/
+void dispatch_command::com_refresh(Connection *conn)
+{
+    Connection* connection = NULL;
+    string user;
+    string host;
+    ACL_SCHEMA* schema = NULL;
+    struct cuh conn_old; 
+    vector<cuh> active_connections;
+    
+    pthread_mutex_lock(&flush_mutex);
+
+    connection = conn->getNext();
+    for (; connection; connection = conn->getNext())
+    {
+        if(connection == conn)
+        {
+            continue;
+        }
+        schema = connection->getSchema();
+        if (!schema)
+        {
+            conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR,
+                    "Hit a bug, we abort!!");
+            jlog(FATAL, "reload acl error, abort!");
+            goto failed;
+        }
+        user = schema->get_username();
+        host = schema->get_host();
+        conn_old.conn = connection;
+        conn_old.user = user;
+        conn_old.host = host;
+        active_connections.push_back(conn_old);
+    }
+
+    schema = conn->getSchema();
+    if (!schema)
+    {
+        conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR,
+                "Hit a bug, we abort!!");
+        jlog(FATAL, "reload acl error, abort!");
+        goto failed;
+    }
+
+    user = schema->get_username();
+    host = schema->get_host();
+    if (!user.size() || !host.size())
+    {
+        conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR,
+                "Hit a bug, we abort!!");
+        jlog(FATAL, "reload acl error, abort!");
+        goto failed;
+    }
+    /* If super user, we reload acl. */
+    if (!schema->get_super())
+    {
+        jlog(WARNING, "%s@%s reload acl has not enought privileges.",
+                user.c_str(), host.c_str());
+        conn->queryError(ERROR_ACCESS_DENY_REFRESH,
+                "ERROR_ACCESS_DENY_REFRESH");
+        goto failed;
+    }
+
+     /* reload acl */
+    if (!SQL_ACL::get_instance(false)->reset())
+    { 
+        conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR,
+                "Hit a bug, we abort!!");
+        jlog(FATAL, "reload acl error, abort!");
+        goto failed;
+    }
+    
+     /* find schema in current connection. */
+    schema = SQL_ACL::get_instance(false)->find_user(SCHEMA(user, host));
+    if (NULL == schema)
+    {
+        conn->queryError(ERROR_ACCESS_DROP_YOUSELF,
+                "ERROR_ACCESS_DROP_YOUSELF");
+        conn->setStatus(CONN_QUIT);
+    }
+    else
+    {
+        conn->setSchema(schema);
+    }
+#if DEBUG_ON
+    SQL_ACL::get_instance(false)->print();
+#endif
+    /* add in here. */
+    conn->sendOk(2, 0, 0, 0, "Query OK");
+
+failed:
+    pthread_mutex_unlock(&flush_mutex);
+    return;
 }
 
 /**************************************************************
@@ -134,6 +261,7 @@ bool dispatch_command::dispatch(Connection *conn, unsigned char* buf)
             conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
                     "ERROR_ACCESS_DO_NOT_SUPPORT");
             goto toWaitting;
+            break;
         }
         case COM_QUIT:
         {
@@ -144,44 +272,16 @@ bool dispatch_command::dispatch(Connection *conn, unsigned char* buf)
         case COM_BINLOG_DUMP:
         {
             goto toWaitting;
+            break;
         }
         case COM_REFRESH:
         {
             /*
              * Reload configs & flush memory.
              */
-
-            /* If super user, we reload acl. */
-            if (!conn->getSchema()->get_super())
-            {
-                jlog(WARNING, "%s@%s reload acl has not enought privileges.",
-                        conn->getSchema()->get_username().c_str(),
-                        conn->getSchema()->get_host().c_str());
-                conn->queryError(ERROR_ACCESS_DENY_REFRESH,
-                        "ERROR_ACCESS_DENY_REFRESH");
-                goto toWaitting;
-            }
-            string user = conn->getSchema()->get_username();
-            string host = conn->getSchema()->get_host();
-            res = SQL_ACL::get_instance(false)->reset();
-            ACL_SCHEMA* schema =
-                    SQL_ACL::get_instance(false)->find_user(SCHEMA(user, host));
-            if (NULL == schema)
-            {
-                conn->queryError(ERROR_ACCESS_DROP_YOUSELF,
-                        "ERROR_ACCESS_DROP_YOUSELF");
-                conn->setStatus(CONN_QUIT);
-            }
-            else
-            {
-                conn->setSchema(schema);
-            }
-#if DEBUG_ON
-            SQL_ACL::get_instance(false)->print();
-#endif
-            /* add in here. */
-            conn->sendOk(2, 0, 0, 0, "OK");
+            com_refresh(conn);
             goto toWaitting;
+            break;
         }
         case COM_SHUTDOWN:
         {
@@ -257,26 +357,26 @@ toWaitting:
     return res;
 }
 
-/**************************************************************
-  Function:execute_command
-  Description:We sent some query to SCHEMA dictionary, sent some query to 
- * data node. If query database is mysql or information_schema, it is sent to
- * dictionnary. And if some query type should be sent to dictionnary, we set
- * flag. And last, we set read/write flag.
-  Author:tangchao
-  Date:
-  Input:
-  Output:
-  Return:true or false
-  Other:
- **************************************************************/
+
+/**************************************************
+Funtion     :   execute_command
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   We sent some query to SCHEMA dictionary, sent some query to 
+                data node. If query database is mysql or information_schema, it is sent to
+                dictionnary. And if some query type should be sent to dictionnary, we set
+                flag. And last, we set read/write flag.
+Input       :   
+Output      :   true or false
+return      :   
+**************************************************/
 bool dispatch_command::execute_command(Connection *conn)
 {
     QueryActuator *query = NULL;
     bool dict_or_dataNode = false;
     string db;
     int queryType = 0;
-    unsigned int next = 0;
+    ACL_SCHEMA* schema = NULL;
     vector<string>::iterator iter;
     error = 0;
     r_or_w = QUERY_READ;
@@ -296,7 +396,15 @@ bool dispatch_command::execute_command(Connection *conn)
         return dict_or_dataNode; //for compiler through
     }
 
-
+    schema = conn->getSchema();
+    if (!schema)
+    {
+        conn->queryError(ERROR_ACCESS_UNKNOWN_USER,
+                "Unknown user, maybe is invalid user.");
+        error = ERROR_ACCESS_UNKNOWN_USER;
+        return dict_or_dataNode;
+    }
+    
     queryType = query->get_query_type();
     db = query->get_result_plan().meta_db_name;
 
@@ -360,6 +468,7 @@ bool dispatch_command::execute_command(Connection *conn)
         case ObBasicStmt::T_DELETE:
         case ObBasicStmt::T_REPLACE:
         case ObBasicStmt::T_UPDATE:
+        case ObBasicStmt::T_INSERT:
         {
             r_or_w = QUERY_WRITE;
         }
@@ -377,11 +486,12 @@ bool dispatch_command::execute_command(Connection *conn)
         case ObBasicStmt::T_SHOW_VARIABLES:
         case ObBasicStmt::T_SHOW_CREATE_TABLE:
         case ObBasicStmt::T_SHOW_TABLE_STATUS:
+        {
+            break;
+        }
         case ObBasicStmt::T_SELECT:
         {
-            next = next;
-            if (!conn->getSchema()->check_table(conn->getDb(),
-                    "tt", SELECT_PRI))
+            if (!schema->check_table(conn->getDb(), "tt", SELECT_PRI))
             {
                 error = ERROR_ACCESS_DENY_SELECT_TABLE;
             }
@@ -390,8 +500,7 @@ bool dispatch_command::execute_command(Connection *conn)
             /* Write from database */
         case ObBasicStmt::T_DELETE:
         {
-            if (!conn->getSchema()->check_table(conn->getDb(),
-                    "tt", DELETE_PRI))
+            if (!schema->check_table(conn->getDb(), "tt", DELETE_PRI))
             {
                 error = ERROR_ACCESS_DENY_SELECT_TABLE;
             }
@@ -400,8 +509,7 @@ bool dispatch_command::execute_command(Connection *conn)
         case ObBasicStmt::T_VARIABLE_SET:
         case ObBasicStmt::T_REPLACE:
         {
-            if (!conn->getSchema()->check_table(conn->getDb(),
-                    "tt", INSERT_PRI))
+            if (!schema->check_table(conn->getDb(), "tt", INSERT_PRI))
             {
                 error = ERROR_ACCESS_DENY_INSERT_TABLE;
             }
@@ -409,7 +517,7 @@ bool dispatch_command::execute_command(Connection *conn)
             break;
         case ObBasicStmt::T_UPDATE:
         {
-            if (!conn->getSchema()->check_table(conn->getDb(),
+            if (!schema->check_table(conn->getDb(),
                     "tt", UPDATE_PRI))
             {
                 error = ERROR_ACCESS_DENY_UPDATE_TABLE;
@@ -422,7 +530,7 @@ bool dispatch_command::execute_command(Connection *conn)
         case ObBasicStmt::T_SHOW_PARAMETERS:
         case ObBasicStmt::T_SHOW_PROCESSLIST:
         {
-            if (!conn->getSchema()->get_super())
+            if (!schema->get_super())
             {
                 error = ERROR_ACCESS_DENY_NO_SUPER_PRIVILEGE;
             }
@@ -446,46 +554,43 @@ bool dispatch_command::execute_command(Connection *conn)
     return dict_or_dataNode;
 }
 
-/**************************************************************
-  Function:read_or_write
-  Description:return query type, read or write.
-  Author:tangchao
-  Date:
-  Input:
-  Output:
-  Return:true or false
-  Other:
- **************************************************************/
+/**************************************************
+Funtion     :   read_or_write
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   return query type, read or write.
+Input       :   
+Output      :   true or false
+return      :   
+**************************************************/
 int dispatch_command::read_or_write()
 {
     return this->r_or_w;
 }
 
-/**************************************************************
-  Function:get_error
-  Description:
-  Author:tangchao
-  Date:
-  Input:
-  Output:
-  Return:
-  Other:
- **************************************************************/
+/**************************************************
+Funtion     :   get_error
+Author      :   tangchao
+Date        :   2013.11.20
+Description :    
+Input       :   
+Output      :   
+return      :   
+**************************************************/
 int dispatch_command::get_error()
 {
     return error;
 }
 
-/**************************************************************
-  Function:debug
-  Description:my debug, i think put here it's ok.
-  Author:tangchao
-  Date:
-  Input:
-  Output:
-  Return:
-  Other:
- **************************************************************/
+/**************************************************
+Funtion     :   debug
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   my debug, i think put here it's ok.
+Input       :   
+Output      :   
+return      :   
+**************************************************/
 void dispatch_command::debug(int command)
 {
     switch (command)

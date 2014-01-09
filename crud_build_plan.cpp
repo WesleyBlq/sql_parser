@@ -14,10 +14,10 @@
  *
  */
 #include "crud_build_plan.h"
-#include "ob_raw_expr.h"
-#include "ob_show_stmt.h"
-#include "ob_variable_set_stmt.h"
-#include "ob_logical_plan.h"
+#include "sql_raw_expr.h"
+#include "sql_show_stmt.h"
+#include "sql_variable_set_stmt.h"
+#include "sql_logical_plan.h"
 #include "parse_malloc.h"
 #include "dml_build_plan.h"
 #include <vector>
@@ -27,8 +27,8 @@
 #include "ob_obj_type.h"
 #include "ob_expr_obj.h"
 
-using namespace oceanbase::common;
-using namespace oceanbase::sql;
+using namespace jdbd::common;
+using namespace jdbd::sql;
 using namespace std;
 
 
@@ -56,7 +56,7 @@ int prepare_resolve_stmt(ResultPlan* result_plan,
     OB_ASSERT(result_plan);
     int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
     query_id = OB_INVALID_ID;
-    oceanbase::sql::ObLogicalPlan *logical_plan = NULL;
+    jdbd::sql::ObLogicalPlan *logical_plan = NULL;
     stmt = NULL;
 
     if (result_plan->plan_tree_ == NULL)

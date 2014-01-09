@@ -19,7 +19,7 @@
 #include "ob_object.h"
 #include "ob_expr_obj.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace common
     {

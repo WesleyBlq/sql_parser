@@ -14,28 +14,22 @@
  *
  */
 #include "dml_build_plan.h"
-#include "ob_raw_expr.h"
-//#include "ob_bit_set.h"
-#include "ob_select_stmt.h"
-#include "ob_insert_stmt.h"
-#include "ob_delete_stmt.h"
-#include "ob_update_stmt.h"
-//#include "ob_multi_logic_plan.h"
-//#include "ob_type_convertor.h"
-//#include "ob_sql_session_info.h"
-#include "ob_logical_plan.h"
+#include "sql_raw_expr.h"
+#include "sql_select_stmt.h"
+#include "sql_insert_stmt.h"
+#include "sql_delete_stmt.h"
+#include "sql_update_stmt.h"
+#include "sql_logical_plan.h"
 #include "parse_malloc.h"
 #include <vector>
 #include "ob_define.h"
-//#include <array>
-//#include "common/ob_string_buf.h"
 #include "utility.h"
 #include <stdint.h>
 #include "ob_obj_type.h"
 #include "ob_expr_obj.h"
 
-using namespace oceanbase::common;
-using namespace oceanbase::sql;
+using namespace jdbd::common;
+using namespace jdbd::sql;
 using namespace std;
 
 
@@ -867,6 +861,7 @@ int resolve_expr(
                 }
                 case T_REF_QUERY:
                 {
+                    result_plan->has_sub_query = true; //added by qinbo
                     ObUnaryRefRawExpr *left_expr = dynamic_cast<ObUnaryRefRawExpr *> (in_expr->get_first_op_expr());
                     ObSelectStmt *sub_select = dynamic_cast<ObSelectStmt *> (logical_plan->get_query(left_expr->get_ref_id()));
                     if (!sub_select)
@@ -904,6 +899,7 @@ int resolve_expr(
                             }
                             case T_REF_QUERY:
                             {
+                                result_plan->has_sub_query = true; //added by qinbo
                                 uint64_t query_id = (dynamic_cast<ObUnaryRefRawExpr *> (sub_expr))->get_ref_id();
                                 ObSelectStmt *sub_query = dynamic_cast<ObSelectStmt*> (logical_plan->get_query(query_id));
                                 if (sub_query)
@@ -925,6 +921,7 @@ int resolve_expr(
                 }
                 case T_REF_QUERY:
                 {
+                    result_plan->has_sub_query = true; //added by qinbo
                     uint64_t query_id = (dynamic_cast<ObUnaryRefRawExpr *> (in_expr->get_second_op_expr()))->get_ref_id();
                     ObSelectStmt *sub_query = dynamic_cast<ObSelectStmt*> (logical_plan->get_query(query_id));
                     if (sub_query)
@@ -1117,6 +1114,7 @@ int resolve_expr(
             ObUnaryRefRawExpr *sub_query_expr = NULL;
             if (CREATE_RAW_EXPR(sub_query_expr, ObUnaryRefRawExpr, result_plan) == NULL)
                 break;
+            result_plan->has_sub_query = true; //added by qinbo
             sub_query_expr->set_expr_type(T_REF_QUERY);
             // not mathematic expression, result type is of no use.
             // should be ObRowType
@@ -1751,12 +1749,7 @@ int resolve_table_columns(
     ColumnItem *column_item = NULL;
     ColumnItem new_column_item;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
-
+    OB_ASSERT(NULL != logical_plan);
 
     if (ret == OB_SUCCESS)
     {
@@ -2107,6 +2100,7 @@ int resolve_select_clause(
             break;
 
         ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
+        OB_ASSERT(NULL != logical_plan);
         ObSqlRawExpr *select_expr = NULL;
         if ((select_expr = logical_plan->get_expr(expr_id)) == NULL)
         {

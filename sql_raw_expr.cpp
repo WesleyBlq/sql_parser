@@ -1,15 +1,12 @@
 #include <string.h>
-#include "ob_raw_expr.h"
-//#include "ob_transformer.h"
 #include "parse_node.h"
-//#include "ob_prepare.h"
-//#include "ob_result_set.h"
-#include "ob_select_stmt.h"
-#include "ob_logical_plan.h"
+#include "sql_raw_expr.h"
+#include "sql_select_stmt.h"
+#include "sql_logical_plan.h"
 
 
-using namespace oceanbase::sql;
-using namespace oceanbase::common;
+using namespace jdbd::sql;
+using namespace jdbd::common;
 
 
 bool ObRawExpr::is_const() const
@@ -238,6 +235,12 @@ bool ObRawExpr::is_contain_filter_need_route(ResultPlan& result_plan) const
     if ((type_ == T_OP_IN) || (type_ == T_OP_NOT_IN))
     {
         ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
+        
+        if (!binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan))
+        {
+            return false;
+        }
+        
         ObMultiOpRawExpr *multi_expr = dynamic_cast<ObMultiOpRawExpr *> (const_cast<ObRawExpr *> (binary_expr->get_second_op_expr()));
         expr_size = multi_expr->get_expr_size();
 
@@ -255,10 +258,6 @@ bool ObRawExpr::is_contain_filter_need_route(ResultPlan& result_plan) const
             }
         }
 
-        if (binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan))
-        {
-            return true;
-        }
     }
     return ret;
 }
@@ -768,6 +767,9 @@ int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql
             assembled_sql.append("\'");
             break;
         }
+        case T_NULL:
+            assembled_sql.append("null");
+            break;
         default:
             value_.to_string(buf_tmp, RAW_EXPR_BUF_SIZE);
             assembled_sql.append(buf_tmp, strlen(buf_tmp));
@@ -923,12 +925,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_
     string assembled_sql_tmp;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-        return ret;
-    }
+    OB_ASSERT(NULL != logical_plan);
 
     assembled_sql.append("(");
     id = get_ref_id();
@@ -1013,12 +1010,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
     if (first_id_ == OB_INVALID_ID)
     {
         ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-        if (logical_plan == NULL)
-        {
-            ret = OB_ERR_LOGICAL_PLAN_FAILD;
-            jlog(WARNING, "logical_plan must exist!!!");
-            return ret;
-        }
+        OB_ASSERT(NULL != logical_plan);
 
         sql_expr = logical_plan->get_expr_by_id(related_sql_raw_id);
         if (NULL == sql_expr)
@@ -1433,12 +1425,11 @@ Output		:	string&  assembled_sql
  **************************************************/
 int64_t ObMultiOpRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
 {
-    string  assembled_sql_tmp;
-
     assembled_sql.append("(");
 
     for (uint32_t i = 0; i < exprs_.size(); i++)
     {
+        string  assembled_sql_tmp;
         exprs_[i]->to_string(result_plan, assembled_sql_tmp);
         assembled_sql.append(assembled_sql_tmp);
 
@@ -1572,6 +1563,11 @@ int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, string& assembled_sq
         param_expr_->to_string(result_plan, assembled_sql_tmp);
         assembled_sql.append(assembled_sql_tmp);
         assembled_sql.append(")");
+    }
+    //set it to '*'
+    else
+    {
+        assembled_sql.append("(*)");
     }
     return ret;
 }

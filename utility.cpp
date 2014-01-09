@@ -17,6 +17,7 @@
 #include "utility.h"
 #include "ob_define.h"
 
+
 string make_string(const char* cstr)
 {
     string ret(const_cast<char*> (cstr), static_cast<int32_t> (strlen(cstr)));
@@ -25,12 +26,12 @@ string make_string(const char* cstr)
 
 int ob_write_string(const string &src, string &dst)
 {
-    int ret = oceanbase::common::OB_SUCCESS;
+    int ret = jdbd::common::OB_SUCCESS;
     dst.assign(src);
     return ret;
 }
 
-namespace oceanbase
+namespace jdbd
 {
     namespace common
     {

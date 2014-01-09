@@ -1,12 +1,12 @@
-#include "ob_stmt.h"
-#include "ob_select_stmt.h"
-#include "parse_malloc.h"
 #include <string>
-#include "ob_logical_plan.h"
+#include "ob_stmt.h"
+#include "sql_select_stmt.h"
+#include "sql_logical_plan.h"
+#include "parse_malloc.h"
 #include "utility.h"
 
-using namespace oceanbase::sql;
-using namespace oceanbase::common;
+using namespace jdbd::sql;
+using namespace jdbd::common;
 using namespace std;
 
 ObStmt::ObStmt(StmtType type)
@@ -33,11 +33,7 @@ int ObStmt::add_table_item(
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
     table_id = OB_INVALID_ID;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
+    OB_ASSERT(NULL != logical_plan);
 
     TableItem item;
     if (ret == OB_SUCCESS)
@@ -422,72 +418,65 @@ int ObStmt::check_table_column(
     column_id = OB_INVALID_ID;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
+    OB_ASSERT(NULL != logical_plan);
+    
+    switch (table_item.type_)
     {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
-
-
-    if (ret == OB_SUCCESS)
-    {
-        switch (table_item.type_)
+        case TableItem::BASE_TABLE:
+            // get through
+        case TableItem::ALIAS_TABLE:
         {
-            case TableItem::BASE_TABLE:
-                // get through
-            case TableItem::ALIAS_TABLE:
+            string db_name_tmp;
+            db_name_tmp.assign(result_plan.db_name);
+            schema_column* schema_column = meta_reader::get_instance().get_column_schema(db_name_tmp, table_item.table_name_, column_name);
+            if (NULL != schema_column)
             {
-                string db_name_tmp;
-                db_name_tmp.assign(result_plan.db_name);
-                schema_column* schema_column = meta_reader::get_instance().get_column_schema(db_name_tmp, table_item.table_name_, column_name);
-                if (NULL != schema_column)
-                {
-                    column_id = schema_column->get_column_id();
-                    column_type = trans_int_type2obj_type(schema_column->get_column_type());
-                }
-                break;
+                column_id = schema_column->get_column_id();
+                column_type = trans_int_type2obj_type(schema_column->get_column_type());
             }
-            case TableItem::GENERATED_TABLE:
+            break;
+        }
+        case TableItem::GENERATED_TABLE:
+        {
+            ObBasicStmt* stmt = logical_plan->get_query(table_item.ref_id_);
+            if (stmt == NULL)
             {
-                ObBasicStmt* stmt = logical_plan->get_query(table_item.ref_id_);
-                if (stmt == NULL)
+                ret = OB_ERR_ILLEGAL_ID;
+                jlog(WARNING, "Wrong query id %lu", table_item.ref_id_);
+            }
+            ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
+            int32_t num = select_stmt->get_select_item_size();
+            for (int32_t i = 0; i < num; i++)
+            {
+                const SelectItem& select_item = select_stmt->get_select_item(i);
+                if (column_name == select_item.alias_name_)
                 {
-                    ret = OB_ERR_ILLEGAL_ID;
-                    jlog(WARNING, "Wrong query id %lu", table_item.ref_id_);
-                }
-                ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
-                int32_t num = select_stmt->get_select_item_size();
-                for (int32_t i = 0; i < num; i++)
-                {
-                    const SelectItem& select_item = select_stmt->get_select_item(i);
-                    if (column_name == select_item.alias_name_)
+                    if (column_id == OB_INVALID_ID)
                     {
-                        if (column_id == OB_INVALID_ID)
-                        {
-                            column_id = i + OB_APP_MIN_COLUMN_ID;
-                            column_type = select_item.type_;
-                        }
-                        else
-                        {
-                            ret = OB_ERR_COLUMN_DUPLICATE;
-                            jlog(WARNING, "column %.*s is ambiguous", (int32_t)column_name.size(), column_name.data());
-                            break;
-                        }
+                        column_id = i + OB_APP_MIN_COLUMN_ID;
+                        column_type = select_item.type_;
+                    }
+                    else
+                    {
+                        ret = OB_ERR_COLUMN_DUPLICATE;
+                        jlog(WARNING, "column %.*s is ambiguous", (int32_t)column_name.size(), column_name.data());
+                        break;
                     }
                 }
-                break;
             }
-            default:
-                // won't be here
-                ret = OB_ERR_PARSER_SYNTAX;
-                jlog(WARNING, "Unknown table type when check_table_column1");
-                break;
+            break;
         }
-        if (ret == OB_SUCCESS && column_id == OB_INVALID_ID)
-        {
-            ret = OB_ERR_COLUMN_UNKNOWN;
-            jlog(WARNING, "Unknown table type when check_table_column2");
-        }
+        default:
+            // won't be here
+            ret = OB_ERR_PARSER_SYNTAX;
+            jlog(WARNING, "Unknown table type when check_table_column1");
+            break;
+    }
+    
+    if (ret == OB_SUCCESS && column_id == OB_INVALID_ID)
+    {
+        ret = OB_ERR_COLUMN_UNKNOWN;
+        jlog(WARNING, "Unknown table type when check_table_column2");
     }
     return ret;
 }

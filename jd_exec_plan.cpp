@@ -14,8 +14,8 @@
 #include "jd_exec_plan.h"
 
 
-using namespace oceanbase::common;
-using namespace oceanbase::sql;
+using namespace jdbd::common;
+using namespace jdbd::sql;
 using namespace std;
 
 /**************************************************
@@ -25,6 +25,7 @@ Date        :   2013.12.11
 Description :   
 Input       :   
 Output      :   
+return      :
  **************************************************/
 ExecPlanUnit::ExecPlanUnit()
 {   
@@ -38,10 +39,11 @@ Date        :   2013.12.11
 Description :   
 Input       :   
 Output      :   
+return      :
  **************************************************/
+
 ExecPlanUnit::~ExecPlanUnit()
 {   
-    
 }
 
 
@@ -52,6 +54,7 @@ Date        :   2013.11.1
 Description :   
 Input       :   
 Output      :   
+return      :
  **************************************************/
 SameLevelExecPlan::SameLevelExecPlan()
 {
@@ -68,7 +71,8 @@ Date        :   2013.11.1
 Description :   
 Input       :   
 Output      :   
- **************************************************/
+return      :
+**************************************************/
 SameLevelExecPlan::~SameLevelExecPlan()
 {
     for(uint32_t i = 0; i < exec_plan_units.size(); i++)
@@ -84,30 +88,72 @@ SameLevelExecPlan::~SameLevelExecPlan()
     }
 }
 
+/**************************************************
+Funtion     :   get_parent_sql_type
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   
+Input       :   
+Output      :   
+return      :
+**************************************************/
 bool SameLevelExecPlan::get_parent_sql_type()
 {
     return false;
 }
 
+/**************************************************
+Funtion     :   set_parent_sql_type
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   
+Input       :   
+Output      :   
+return      :
+**************************************************/
 void SameLevelExecPlan::set_parent_sql_type(uint8_t parent_sql_type)
 {
-
 }
 
+/**************************************************
+Funtion     :   set_first_plan_true
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   
+Input       :   
+Output      :   
+return      :
+**************************************************/
 void SameLevelExecPlan::set_first_plan_true()
 {
-
 }
 
-void SameLevelExecPlan::is_first_plan()
+/**************************************************
+Funtion     :   is_first_plan
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   
+Input       :   
+Output      :   
+return      :
+**************************************************/
+bool SameLevelExecPlan::is_first_plan()
 {
-
+    return false;
 }
 
+/**************************************************
+Funtion     :   add_exec_plan_unit
+Author      :   qinbo
+Date        :   2013.11.1
+Description :   add exec_plan unit
+Input       :   
+Output      :   
+return      :
+**************************************************/
 void SameLevelExecPlan::add_exec_plan_unit(ExecPlanUnit* exec_plan_unit)
 {
     exec_plan_units.push_back(exec_plan_unit);
-
 }
 
 /**************************************************
@@ -206,7 +252,7 @@ void FinalExecPlan::add_same_level_exec_plan(SameLevelExecPlan* same_level_exec_
 /**************************************************
 Funtion     :   get_all_same_level_exec_plans
 Author      :   qinbo
-Date        :   2013.11.
+Date        :   2013.11.7
 Description :   get all same level exec plans
 Input       :   
 Output      :   
@@ -217,6 +263,15 @@ vector<SameLevelExecPlan*> FinalExecPlan::get_all_same_level_exec_plans()
     return same_level_exec_plans;
 }
 
+/**************************************************
+Funtion     :   get_stmt
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   get stmt
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 template <class T>
 int QueryActuator::get_stmt(
         ObLogicalPlan *logical_plan,
@@ -237,59 +292,126 @@ int QueryActuator::get_stmt(
     return ret;
 }
 
+/**************************************************
+Funtion     :   QueryActuator
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 QueryActuator::QueryActuator(string current_db_name)
 {
     init_exec_plan(current_db_name);
 }
 
+/**************************************************
+Funtion     :   ~QueryActuator
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 QueryActuator::~QueryActuator()
 {
     release_exec_plan();
 }
 
+/**************************************************
+Funtion     :   popActuator
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   get stmt
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 FinalExecPlan* QueryActuator::popActuator()
 {
-    return NULL;;
-
+    return NULL;
 }
 
+/**************************************************
+Funtion     :   get_stmt
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   get stmt
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 void QueryActuator::pushActuator(FinalExecPlan* exec_plan)
 {
-
-
-
 }
 
+/**************************************************
+Funtion     :   is_all_plan_done
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   is_all_plan_done
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 bool QueryActuator::is_all_plan_done()
 {
-
     return false;;
-
 }
 
+/**************************************************
+Funtion     :   set_all_plan_done
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   all plan is done
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 void QueryActuator::set_all_plan_done()
 {
-
-
-
 }
 
+/**************************************************
+Funtion     :   set_next_plan_reparsed
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   set_next_plan_reparsed
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 void QueryActuator::set_next_plan_reparsed()
 {
-
-
-
 }
 
+/**************************************************
+Funtion     :   get_next_plan_reparsed
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   get_next_plan_reparsed
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 bool QueryActuator::get_next_plan_reparsed()
 {
     return false;;
 }
 
+/**************************************************
+Funtion     :   reparse_next_plan
+Author      :   qinbo
+Date        :   2013.11.7
+Description :   reparse netx plan
+Input       :   
+Output      :   
+return      :
+ **************************************************/
 void QueryActuator::reparse_next_plan()
 {
-
-
 }
 
 /**************************************************
@@ -302,56 +424,15 @@ Output      :
  **************************************************/
 int QueryActuator::init_exec_plan(string current_db_name)
 {
-#if 0
-    g_metareader->add_DB_schema("qinbo");
-    g_metareader->add_table_schema("qinbo", "persons", 100);
-    g_metareader->add_column_schema("qinbo", "persons", "lastname", 1111, T_STRING, 0);
-    g_metareader->add_column_schema("qinbo", "persons", "address", 1112, T_STRING, 0);
-    g_metareader->add_column_schema("qinbo", "persons", "id", 1113, T_INT, 0);
-
-    g_metareader->add_table_schema("qinbo", "order_list", 101);
-    g_metareader->add_column_schema("qinbo", "order_list", "id", 1211, T_INT, 0);
-    g_metareader->add_column_schema("qinbo", "order_list", "item_id", 1212, T_INT, 0);
-    g_metareader->add_column_schema("qinbo", "order_list", "order_desc", 1213, T_STRING, 0);
-
-    schema_table* schema_table = g_metareader->get_table_schema("qinbo", "persons");
-    if (schema_table)
-    {
-        cout << "get_table_id:" << schema_table->get_table_id() << endl;
-    }
-
-    schema_shard *shard_info1 = new schema_shard("person1");
-    schema_shard *shard_info2 = new schema_shard("person2");
-    schema_table->add_shard_to_table(shard_info1);
-    schema_table->add_shard_to_table(shard_info2);
-    schema_table->set_is_distributed_table(true);
-
-
-    schema_column* schema_column = g_metareader->get_column_schema("qinbo", "persons", "id");
-    if (schema_column)
-    {
-        cout << "address: get_column_id:" << schema_column->get_column_id() << endl;
-    }
-
-    schema_column->set_sharding_key_status(true);
-
-    schema_column = g_metareader->get_column_schema("qinbo", "persons", "lastname");
-    if (schema_column)
-    {
-        cout << "lastName: get_column_id:" << schema_column->get_column_id() << endl;
-    }
-
-    schema_column->set_sharding_key_status(false);
-#endif
     memset(&result, 0, sizeof(ParseResult));
     result_plan.name_pool_ = NULL;
     result_plan.plan_tree_ = NULL;
     result_plan.db_name    = current_db_name;
     final_exec_plan        = NULL;
-    
-    /*BEGIN: add by tangchao 20131225 */
+    result_plan.has_sub_query= false;
+    //BEGIN: add by tangchao 20131225
     query_type = ObBasicStmt::T_NONE;
-    /*END: add by tangchao 20131225 */
+    //END: add by tangchao 20131225
     
     return 0;
 }
@@ -373,6 +454,7 @@ void QueryActuator::release_exec_plan()
         parse_free(result_plan.plan_tree_);
         result_plan.plan_tree_ = NULL;
         result_plan.name_pool_ = NULL;
+        result_plan.has_sub_query= false;
     }
 
     if (final_exec_plan)
@@ -461,9 +543,9 @@ int QueryActuator::generate_exec_plan(
     }
     else
     {
-#if DEBUG_ON 
-    //jlog(INFO, "<<Part 2 : PARSE TREE>>");
-    //print_tree(result.result_tree_, 0);
+#if 0
+    jlog(INFO, "<<Part 2 : PARSE TREE>>");
+    print_tree(result.result_tree_, 0);
 #endif        
     }
 
@@ -535,11 +617,11 @@ int QueryActuator::generate_exec_plan(
         
     if (logic_plan)
     {
-#if DEBUG_ON 
-        //jlog(INFO, "\n=======================================\n");
-        //jlog(INFO, "\n<<Part 2 : LOGICAL PLAN>>\n");
-        //logic_plan->print();
-        //logic_plan->make_stmt_string(result_plan);
+#if 0
+        jlog(INFO, "\n=======================================\n");
+        jlog(INFO, "\n<<Part 2 : LOGICAL PLAN>>\n");
+        logic_plan->print();
+        logic_plan->make_stmt_string(result_plan);
 #endif
         if (result_plan.is_show_sys_var)
         {
@@ -573,12 +655,11 @@ int QueryActuator::generate_exec_plan(
             }
         }
 
-
         if (OB_LIKELY(ret == OB_SUCCESS))
         {
-            /*BEGIN: add by tangchao 20131225 */
+            //BEGIN: add by tangchao 20131225
             query_type = stmt->get_stmt_type();
-            /*END: add by tangchao 20131225 */
+            //END: add by tangchao 20131225
             switch (stmt->get_stmt_type())
             {
                 case ObBasicStmt::T_SELECT:
@@ -670,12 +751,20 @@ int QueryActuator::gen_exec_plan_select(
     int ret = err_stat.err_code_ = OB_SUCCESS;
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-
+    OB_ASSERT(NULL != logical_plan);
+    
     //get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
+        return ret;
+    }
+
+    if (result_plan.has_sub_query)
+    {
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support sub-query");
         return ret;
     }
 
@@ -694,19 +783,21 @@ int QueryActuator::gen_exec_plan_select(
     }
     else if (ObSelectStmt::NONE == select_stmt->get_set_op())
     {
+    #if 0
         if (select_stmt->is_from_item_with_join())
         {
             ret = OB_ERR_GEN_PLAN;
             jlog(WARNING, "Can not support stmt with JOIN now");
         }
         else
+    #endif        
         {
-            /*related to 1 table*/
+            //related to 1 table
             if (1 == select_stmt->get_from_item_size())
             {
                 ret = generate_select_plan_single_table(result_plan, physical_plan, err_stat, query_id, index);
             }
-            /*related to >1 tables*/
+            //related to >1 tables
             else if (1 < select_stmt->get_from_item_size())
             {
                 ret = generate_select_plan_multi_table(result_plan, physical_plan, err_stat, query_id, index);
@@ -732,6 +823,18 @@ Input       :   ObLogicalPlan *logical_plan,
                 FinalExecPlan*& physical_plan,
                 ErrStat& err_stat
 Output      :   
+
+ Single-table syntax:
+ UPDATE [LOW_PRIORITY] [IGNORE] table_reference
+ SET col_name1={expr1|DEFAULT} [, col_name2={expr2|DEFAULT}] ...
+ [WHERE where_condition]
+ [ORDER BY ...]
+ 
+ [LIMIT row_count]
+ Multiple-table syntax:
+ UPDATE [LOW_PRIORITY] [IGNORE] table_references
+ SET col_name1={expr1|DEFAULT} [, col_name2={expr2|DEFAULT}] ...
+ [WHERE where_condition]
  **************************************************/
 int QueryActuator::gen_exec_plan_update(
         ResultPlan& result_plan,
@@ -744,7 +847,8 @@ int QueryActuator::gen_exec_plan_update(
     int where_ret = WHERE_IS_OR_AND;
     ObUpdateStmt *update_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-
+    OB_ASSERT(NULL != logical_plan);
+    
     string db_name;
     string table_name;
     string sql_exec_plan_unit;
@@ -764,8 +868,20 @@ int QueryActuator::gen_exec_plan_update(
 
     db_name.assign(result_plan.db_name);
     schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
+    if (NULL == db_schema)
+    {
+        ret = JD_ERR_CONFIG_ROUTE_ERR;
+        jlog(WARNING, "Database %s should not be empty in db schema", db_name.data());
+        return ret;
+    }
     table_name.assign(update_stmt->get_table_item_by_id(update_stmt->get_update_table_id())->table_name_);
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
+    if (NULL == table_schema)
+    {
+        ret = JD_ERR_CONFIG_ROUTE_ERR;
+        jlog(WARNING, "Table %s should not be empty in table schema", table_name.data());
+        return ret;
+    }
 
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
@@ -778,6 +894,14 @@ int QueryActuator::gen_exec_plan_update(
     {
         exec_plan = new(exec_plan) SameLevelExecPlan();
         physical_plan->add_same_level_exec_plan(exec_plan);
+    }
+
+
+    if (result_plan.has_sub_query)
+    {
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support sub-query");
+        return ret;
     }
 
     //this table is not distributed table
@@ -826,7 +950,7 @@ int QueryActuator::gen_exec_plan_update(
 
         vector<schema_shard*>   table_all_shards= table_schema->get_all_shards();
         vector<uint64_t>        expr_ids        = update_stmt->get_where_exprs();
-        /*if there is no where conditions*/
+        //if there is no where conditions
         if (0 == expr_ids.size())
         {
             ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
@@ -834,7 +958,7 @@ int QueryActuator::gen_exec_plan_update(
         }
         else
         {
-            /*decompose where conditions into seperate sql which is linked by AND*/
+            //decompose where conditions into seperate sql which is linked by AND
             sql_expr = logical_plan->get_expr_by_id(expr_ids.at(0));
             vector<vector<ObRawExpr*> > atomic_exprs_array;
             
@@ -844,7 +968,6 @@ int QueryActuator::gen_exec_plan_update(
             {
                 multimap<uint32_t, vector<ObRawExpr*> > opted_raw_exprs;
                 schema_shard* shard_key = NULL;
-                jlog(INFO, "atomic_exprs_array num: %d" ,atomic_exprs_array.size());
                 multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map1;
                 multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map_tmp;
                 multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map2;
@@ -866,6 +989,8 @@ int QueryActuator::gen_exec_plan_update(
                     vector<vector<ObRawExpr*> > final_exprs_array;
                     string assembled_sql;
                     shard_key = table_all_shards.at(p_map1->first);
+                    vector<schema_shard*> shard_tmp;
+                    shard_tmp.push_back(shard_key);
                     raw_exprs_same_shard = opted_raw_exprs.equal_range(p_map1->first);
                     for (p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
                     {
@@ -876,10 +1001,11 @@ int QueryActuator::gen_exec_plan_update(
                     {
                         p_map1++;
                     }
+
                     
-                    update_stmt->make_update_table_string(result_plan, assembled_sql);
-                    update_stmt->make_update_column_string(result_plan, assembled_sql);
-                    append_distributed_where_items(result_plan, assembled_sql, final_exprs_array);
+                    string where_conditions;
+                    append_distributed_where_items(result_plan, where_conditions, final_exprs_array);
+                    update_stmt->make_exec_plan_unit_string(result_plan, where_conditions, shard_tmp, assembled_sql);
             
                     ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                     if (exec_plan_unit == NULL)
@@ -898,7 +1024,7 @@ int QueryActuator::gen_exec_plan_update(
                     jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
                     exec_plan_unit->set_exec_uint_shard_info(shard_key);
             
-                    /*add exec_plan_unit*/
+                    //add exec_plan_unit
                     exec_plan->add_exec_plan_unit(exec_plan_unit);
                 }
             }
@@ -944,6 +1070,12 @@ Input       :   ObLogicalPlan *logical_plan,
                 FinalExecPlan*& physical_plan,
                 ErrStat& err_stat
 Output      :   
+
+ DELETE [LOW_PRIORITY] [QUICK] [IGNORE] FROM tbl_name
+ [PARTITION (partition_name,...)]
+ [WHERE where_condition]
+ [ORDER BY ...]
+ [LIMIT row_count]
  **************************************************/
 int QueryActuator::gen_exec_plan_delete(
         ResultPlan& result_plan,
@@ -956,14 +1088,15 @@ int QueryActuator::gen_exec_plan_delete(
     int where_ret = WHERE_IS_OR_AND;
     ObDeleteStmt *delete_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    OB_ASSERT(NULL != logical_plan);
+    
     string table_name;
-
     string db_name;
     string sql_exec_plan_unit;
     ObSqlRawExpr* sql_expr = NULL;
     uint32_t    i = 0;
 
-    /* get statement */
+    //get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, delete_stmt)))
     {
         ret = OB_ERR_GEN_PLAN;
@@ -973,7 +1106,20 @@ int QueryActuator::gen_exec_plan_delete(
 
     db_name.assign(result_plan.db_name);
     schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
-    schema_table* table_schema = db_schema->get_table_from_db_by_id(delete_stmt->get_delete_table_id());
+    if (NULL == db_schema)
+    {
+        ret = JD_ERR_CONFIG_ROUTE_ERR;
+        jlog(WARNING, "Database %s should not be empty in db schema", db_name.data());
+        return ret;
+    }
+    table_name.assign(delete_stmt->get_table_item_by_id(delete_stmt->get_delete_table_id())->table_name_);
+    schema_table* table_schema = db_schema->get_table_from_db(table_name);
+    if (NULL == table_schema)
+    {
+        ret = JD_ERR_CONFIG_ROUTE_ERR;
+        jlog(WARNING, "Table %s should not be empty in table schema", table_name.data());
+        return ret;
+    }
 
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
@@ -988,7 +1134,15 @@ int QueryActuator::gen_exec_plan_delete(
         physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
-    /*this table is not distributed table*/
+
+    if (result_plan.has_sub_query)
+    {
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support sub-query");
+        return ret;
+    }
+
+    //this table is not distributed table
     if (!table_schema->get_is_distributed_table())
     {
         if (1 != table_schema->get_all_shards().size())
@@ -1006,7 +1160,7 @@ int QueryActuator::gen_exec_plan_delete(
     {
         vector<schema_shard*>   table_all_shards= table_schema->get_all_shards();
         vector<uint64_t>        expr_ids        = delete_stmt->get_where_exprs();
-        /*if there is no where conditions*/
+        //if there is no where conditions
         if (0 == expr_ids.size())
         {
             ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
@@ -1014,7 +1168,7 @@ int QueryActuator::gen_exec_plan_delete(
         }
         else
         {
-            /*decompose where conditions into seperate sql which is linked by AND*/
+            //decompose where conditions into seperate sql which is linked by AND
             sql_expr = logical_plan->get_expr_by_id(expr_ids.at(0));
             vector<vector<ObRawExpr*> > atomic_exprs_array;
             
@@ -1024,7 +1178,6 @@ int QueryActuator::gen_exec_plan_delete(
             {
                 multimap<uint32_t, vector<ObRawExpr*> > opted_raw_exprs;
                 schema_shard* shard_key = NULL;
-                jlog(INFO, "atomic_exprs_array num: %d" ,atomic_exprs_array.size());
                 multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map1;
                 multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map_tmp;
                 multimap<uint32_t, vector<ObRawExpr*> >::iterator p_map2;
@@ -1045,6 +1198,8 @@ int QueryActuator::gen_exec_plan_delete(
                     vector<vector<ObRawExpr*> > final_exprs_array;
                     string assembled_sql;
                     shard_key = table_all_shards.at(p_map1->first);
+                    vector<schema_shard*> shard_tmp;
+                    shard_tmp.push_back(shard_key);
                     raw_exprs_same_shard = opted_raw_exprs.equal_range(p_map1->first);
                     for (p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
                     {
@@ -1056,8 +1211,9 @@ int QueryActuator::gen_exec_plan_delete(
                         p_map1++;
                     }
 
-                    delete_stmt->make_delete_table_string(result_plan, assembled_sql);
-                    append_distributed_where_items(result_plan, assembled_sql, final_exprs_array);
+                    string where_conditions;
+                    append_distributed_where_items(result_plan, where_conditions, final_exprs_array);
+                    delete_stmt->make_exec_plan_unit_string(result_plan, where_conditions, shard_tmp, assembled_sql);
 
                     ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                     if (exec_plan_unit == NULL)
@@ -1076,7 +1232,7 @@ int QueryActuator::gen_exec_plan_delete(
                     jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
                     exec_plan_unit->set_exec_uint_shard_info(shard_key);
 
-                    /*add exec_plan_unit*/
+                    //add exec_plan_unit
                     exec_plan->add_exec_plan_unit(exec_plan_unit);
                 }
             }
@@ -1113,7 +1269,8 @@ int QueryActuator::gen_exec_plan_insert(
     int ret = err_stat.err_code_ = OB_SUCCESS;
     ObInsertStmt *insert_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-
+    OB_ASSERT(NULL != logical_plan);
+    
     string table_name;
     string sql_exec_plan_unit;
     vector<schema_shard*> all_related_shards;
@@ -1129,8 +1286,20 @@ int QueryActuator::gen_exec_plan_insert(
     }
 
     schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+    if (NULL == db_schema)
+    {
+        ret = JD_ERR_CONFIG_ROUTE_ERR;
+        jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
+        return ret;
+    }
     table_name.assign(insert_stmt->get_table_item_by_id(insert_stmt->get_table_id())->table_name_);
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
+    if (NULL == table_schema)
+    {
+        ret = JD_ERR_CONFIG_ROUTE_ERR;
+        jlog(WARNING, "Table %s should not be empty in table schema", table_name.data());
+        return ret;
+    }
 
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
@@ -1143,6 +1312,14 @@ int QueryActuator::gen_exec_plan_insert(
     {
         exec_plan = new(exec_plan) SameLevelExecPlan();
         physical_plan->add_same_level_exec_plan(exec_plan);
+    }
+
+
+    if (result_plan.has_sub_query)
+    {
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support sub-query");
+        return ret;
     }
 
     all_table_shards = table_schema->get_all_shards();
@@ -1240,7 +1417,7 @@ int QueryActuator::gen_exec_plan_insert(
                 jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
                 exec_plan_unit->set_exec_uint_shard_info(shard_info);
             
-                /*add exec_plan_unit*/
+                //add exec_plan_unit
                 exec_plan->add_exec_plan_unit(exec_plan_unit);
             }
         }
@@ -1272,9 +1449,10 @@ int QueryActuator::generate_select_plan_single_table(
     int where_ret = WHERE_IS_OR_AND;
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    OB_ASSERT(NULL != logical_plan);
+    
     vector<FromItem> from_items;
     string table_name;
-    string db_name;
     string sql_exec_plan_unit;
     ObSqlRawExpr* sql_expr = NULL;
 
@@ -1294,12 +1472,33 @@ int QueryActuator::generate_select_plan_single_table(
         return ret;
     }
 
-    table_name = from_items.at(0).table_name_;
-    db_name.assign(result_plan.db_name);
-
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
+    if (select_stmt->get_joined_table_size() == 0)
+    {
+        table_name = from_items.at(0).table_name_;
+    }
+    else  if (!select_stmt->current_join_is_supported(result_plan,table_name))
+    {
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support unbinded join query");
+        return ret;
+    }
+    
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+    if (NULL == db_schema)
+    {
+        ret = JD_ERR_CONFIG_ROUTE_ERR;
+        jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
+        return ret;
+    }
+    
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
-
+    if (NULL == table_schema)
+    {
+        ret = JD_ERR_CONFIG_ROUTE_ERR;
+        jlog(WARNING, "Table %s should not be empty in table schema", table_name.data());
+        return ret;
+    }
+    
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
     {
@@ -1380,8 +1579,8 @@ int QueryActuator::generate_select_plan_single_table(
                 {
                     return ret;
                 }
-                set_sql_dispatched_info(select_stmt, opted_raw_exprs);
                 
+                set_sql_dispatched_info(select_stmt, opted_raw_exprs);
                 for (p_map1 = opted_raw_exprs.begin(); p_map1 != opted_raw_exprs.end();)
                 {
                     vector<vector<ObRawExpr*> > final_exprs_array;
@@ -1423,7 +1622,7 @@ int QueryActuator::generate_select_plan_single_table(
                     jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
                     exec_plan_unit->set_exec_uint_shard_info(shard_key);
 
-                    /*add exec_plan_unit*/
+                    //add exec_plan_unit
                     exec_plan->add_exec_plan_unit(exec_plan_unit);
                 }
             }
@@ -1459,6 +1658,7 @@ int QueryActuator::generate_select_plan_multi_table(
     int where_ret = WHERE_IS_OR_AND;
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    OB_ASSERT(NULL != logical_plan);
     vector<FromItem> from_items;
     ObSqlRawExpr* sql_expr = NULL;
     vector<vector<schema_shard*> >  all_binding_table_shards;
@@ -1481,10 +1681,17 @@ int QueryActuator::generate_select_plan_multi_table(
         return ret;
     }
 
+    if (select_stmt->get_joined_table_size() > 0)
+    {
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support unbinded join query");
+        return ret;
+    }
+    
     //now we only support binding tables in multi-table query
     if(!is_from_tables_binding(result_plan,from_items))
     {
-        ret = OB_ERR_GEN_PLAN;
+        ret = JD_ERR_SQL_NOT_SUPPORT;
         jlog(WARNING, "Can not support no-binding tables query");
         return ret;
     }
@@ -1634,7 +1841,7 @@ int QueryActuator::generate_select_plan_multi_table(
                 jlog(INFO, "exec_plan_unit shard name: %s" ,one_binding_table_shards.at(0)->get_shard_name().data());
                 jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
                 
-                /*add exec_plan_unit*/
+                //add exec_plan_unit
                 exec_plan->add_exec_plan_unit(exec_plan_unit);
             }
         }
@@ -1987,6 +2194,7 @@ int QueryActuator::build_shard_exprs_array_with_route_one_table(
 
         if (shard_info.size() > 0)
         {
+            jlog(INFO, "The first found shard: %s", shard_info.at(0)->get_shard_name().data());
             all_related_shards.push_back(shard_info);
         }
     }
@@ -2325,7 +2533,7 @@ int QueryActuator::decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRa
             right_atomic_exprs_array.push_back(atomic_exprs2);
         }
 
-        /*add with each other*/
+        //add with each other
         for (i = 0; i < left_atomic_exprs_array.size(); i++)
         {
             atomic_exprs_array.push_back(left_atomic_exprs_array.at(i));
@@ -2370,7 +2578,7 @@ int QueryActuator::decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRa
             right_atomic_exprs_array.push_back(atomic_exprs2);
         }
 
-        /*X with each other*/
+        //X with each other
         for (i = 0; i < left_atomic_exprs_array.size(); i++)
         {
             uint32_t j;
@@ -2511,6 +2719,7 @@ int QueryActuator::distribute_sql_to_all_shards(
     schema_shard*   shard_info  = NULL;
     ObBasicStmt*    stmt        = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    OB_ASSERT(NULL != logical_plan);
     
     if (0 == table_schema->get_all_shards().size())
     {
@@ -2541,13 +2750,12 @@ int QueryActuator::distribute_sql_to_all_shards(
         }
     
         stmt->make_exec_plan_unit_string(result_plan, "", shard_tmp, assembled_sql);
-        JD_DEBUG;
-        /*generate sql exec plan*/
+        //generate sql exec plan
         exec_plan_unit->set_exec_unit_sql(assembled_sql);
         exec_plan_unit->set_exec_uint_shard_info(shard_info);
         jlog(INFO, "exec_plan_unit shard name: %s" ,shard_info->get_shard_name().c_str());
         jlog(INFO, "exec_plan_unit SQL name  : %s" ,assembled_sql.data());
-        /*add exec_plan_unit*/
+        //add exec_plan_unit
         exec_plan->add_exec_plan_unit(exec_plan_unit);
     }
 

@@ -1,13 +1,12 @@
-#ifndef OCEANBASE_SQL_UPDATESTMT_H_
-#define OCEANBASE_SQL_UPDATESTMT_H_
+#ifndef SQL_UPDATESTMT_H_
+#define SQL_UPDATESTMT_H_
 #include "ob_stmt.h"
 #include <stdio.h>
 #include <vector>
 #include <string>
-#include "ob_raw_expr.h"
-//#include "common/ob_string_buf.h"
+#include "sql_raw_expr.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {
@@ -20,8 +19,8 @@ namespace oceanbase
 
             uint64_t set_update_table(uint64_t id)
             {
-                if (id == oceanbase::common::OB_INVALID_ID)
-                    return oceanbase::common::OB_INVALID_ID;
+                if (id == jdbd::common::OB_INVALID_ID)
+                    return jdbd::common::OB_INVALID_ID;
                 table_id_ = id;
                 return id;
             }
@@ -34,7 +33,7 @@ namespace oceanbase
             int add_update_column(uint64_t column_id)
             {
                 int ret = common::OB_SUCCESS;
-                if (column_id != oceanbase::common::OB_INVALID_ID)
+                if (column_id != jdbd::common::OB_INVALID_ID)
                     update_columns_.push_back(column_id);
                 return ret;
             }
@@ -56,7 +55,7 @@ namespace oceanbase
             int add_update_expr(uint64_t expr_id)
             {
                 int ret = common::OB_SUCCESS;
-                if (expr_id == oceanbase::common::OB_INVALID_ID)
+                if (expr_id == jdbd::common::OB_INVALID_ID)
                     ret = common::OB_ERROR;
                 else
                     update_exprs_.push_back(expr_id);
@@ -97,5 +96,5 @@ namespace oceanbase
     }
 }
 
-#endif //OCEANBASE_SQL_UPDATESTMT_H_
+#endif //SQL_UPDATESTMT_H_
 

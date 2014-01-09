@@ -241,6 +241,10 @@ const char* get_type_symbol(int type)
         return " LIKE ";
     case T_OP_NOT_LIKE:
         return " NOT LIKE ";
+    case T_OP_IS:
+        return " IS ";
+    case T_OP_IS_NOT:
+        return " IS NOT ";
     case T_OP_POS:
     case T_OP_NEG:
     default:

@@ -11,11 +11,11 @@
 #include <mysql.h>
 #include <vector>
 #include "sql_item_type.h"
-#include "ob_select_stmt.h"
+#include "sql_select_stmt.h"
 #include <mysql.h>
 
-using namespace oceanbase::common;
-using namespace oceanbase::sql;
+using namespace jdbd::common;
+using namespace jdbd::sql;
 
 #define NO_REDUCE                                       1
 #define REDUCE_GROUP                                    2
@@ -29,8 +29,8 @@ using namespace oceanbase::sql;
 #define EXECUTE_ORDER                                   13
 
 using namespace std;
-using namespace oceanbase::common;
-using namespace oceanbase::sql;
+using namespace jdbd::common;
+using namespace jdbd::sql;
 
 class OrderPostReduce
 {

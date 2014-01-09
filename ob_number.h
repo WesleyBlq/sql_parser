@@ -19,7 +19,7 @@
 #include <iostream>
 #include "utility.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace common
     {
@@ -40,7 +40,7 @@ namespace oceanbase
             int from(const char* buf, int64_t buf_len);
             int from(const char* str);
             void from(int64_t i64);
-            static const int64_t MAX_PRINTABLE_SIZE = 128;
+            static const uint32_t MAX_PRINTABLE_SIZE = 128;
             int64_t to_string(char* buf, const int64_t buf_len) const;
             int to_int64(int64_t &i64) const;
             bool can_convert_to_int64() const;

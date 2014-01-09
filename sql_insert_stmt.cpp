@@ -4,13 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "parse_malloc.h"
-#include "ob_logical_plan.h"
+#include "sql_logical_plan.h"
 #include "utility.h"
-#include "ob_insert_stmt.h"
+#include "sql_insert_stmt.h"
 
 using namespace std;
-using namespace oceanbase::common;
-using namespace oceanbase::sql;
+using namespace jdbd::common;
+using namespace jdbd::sql;
 
 ObInsertStmt::ObInsertStmt()
 : ObStmt(T_INSERT)
@@ -82,11 +82,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
+    OB_ASSERT(NULL != logical_plan);
 
     if (is_replace_)
     {
@@ -200,11 +196,7 @@ int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-    }
+    OB_ASSERT(NULL != logical_plan);
 
     if (is_replace_)
     {
@@ -335,12 +327,7 @@ int ObInsertStmt::append_distributed_insert_items(  ResultPlan& result_plan,
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
-    if (logical_plan == NULL)
-    {
-        ret = OB_ERR_LOGICAL_PLAN_FAILD;
-        jlog(WARNING, "logical_plan must exist!!!");
-        return ret;
-    }
+    OB_ASSERT(NULL != logical_plan);
 
     assembled_sql.append("VALUES ");
     

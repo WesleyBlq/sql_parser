@@ -1,10 +1,9 @@
-#ifndef OCEANBASE_SQL_DELETESTMT_H_
-#define OCEANBASE_SQL_DELETESTMT_H_
+#ifndef SQL_DELETESTMT_H_
+#define SQL_DELETESTMT_H_
 #include "ob_stmt.h"
 #include <string>
-//#include "common/ob_string_buf.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {
@@ -41,5 +40,5 @@ namespace oceanbase
     }
 }
 
-#endif //OCEANBASE_SQL_DELETESTMT_H_
+#endif //SQL_DELETESTMT_H_
 

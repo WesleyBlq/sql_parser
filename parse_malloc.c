@@ -1,4 +1,6 @@
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "parse_malloc.h"
 
 /*mem pool function is not implemented now*/
@@ -9,7 +11,7 @@
 void *parse_malloc(const size_t nbyte, void *malloc_pool)
 {
     void *ptr = NULL;
-    /*当前该参数没有被使用*/
+    /*锟斤拷前锟矫诧拷锟斤拷没锟叫憋拷使锟斤拷*/
     malloc_pool = malloc_pool;
 
     ptr = malloc(nbyte);
@@ -26,7 +28,7 @@ void *parse_malloc(const size_t nbyte, void *malloc_pool)
 void *parse_realloc(void *ptr, size_t nbyte, void *malloc_pool)
 {
     void *new_ptr = NULL;
-    /*当前该参数没有被使用*/
+    /*锟斤拷前锟矫诧拷锟斤拷没锟叫憋拷使锟斤拷*/
     malloc_pool = malloc_pool;
 
     new_ptr = realloc(ptr, nbyte);

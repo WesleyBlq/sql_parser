@@ -10,19 +10,10 @@
 #include <string>
 
 using namespace std;
-using namespace oceanbase::common;
+using namespace jdbd::common;
 
-namespace oceanbase
+namespace jdbd
 {
-#if 0
-    namespace tests
-    {
-        namespace common
-        {
-            class ObjTest;
-        }
-    }
-#endif
     namespace common
     {
 

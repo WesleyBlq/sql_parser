@@ -32,18 +32,18 @@
 #include "ob_obj_type.h"
 #include "ob_expr_obj.h"
 
-#include "ob_logical_plan.h"
-#include "ob_select_stmt.h"
-#include "ob_delete_stmt.h"
-#include "ob_insert_stmt.h"
-#include "ob_update_stmt.h"
+#include "sql_logical_plan.h"
+#include "sql_select_stmt.h"
+#include "sql_delete_stmt.h"
+#include "sql_insert_stmt.h"
+#include "sql_update_stmt.h"
 #include "dml_build_plan.h"
 #include "crud_build_plan.h"
-#include "ob_logical_plan.h"
+#include "sql_logical_plan.h"
 #include "query_reduce.h"
 
-using namespace oceanbase::common;
-using namespace oceanbase::sql;
+using namespace jdbd::common;
+using namespace jdbd::sql;
 
 #define MAX_SQL_EXEC_PLAN_SHARD_NUM   200
 
@@ -101,7 +101,7 @@ public:
     bool get_parent_sql_type();
     void set_parent_sql_type(uint8_t parent_sql_type);
     void set_first_plan_true();
-    void is_first_plan();
+    bool is_first_plan();
     void add_exec_plan_unit(ExecPlanUnit* exec_plan_unit);
     vector<ExecPlanUnit*> get_all_exec_plan_units();
     void set_query_post_reduce_info(QueryPostReduce* query_post_reduce_info_)
@@ -259,12 +259,12 @@ public:
         return true;
     }
     
-    /*BEGIN: add by tangchao 20131225 */
+    //BEGIN: add by tangchao 20131225
     int get_query_type()
     {
         return query_type;
     }
-    /*END: add by tangchao 20131225 */
+    //END: add by tangchao 20131225
 private:
     // types and constants
     bool is_plan_done;

@@ -7,13 +7,22 @@
 
 #include "../log/log.h"
 #include "query_reduce.h"
-#include "ob_select_stmt.h"
+#include "sql_select_stmt.h"
 
 
 using namespace std;
-using namespace oceanbase::common;
-using namespace oceanbase::sql;
+using namespace jdbd::common;
+using namespace jdbd::sql;
 
+/**************************************************
+Funtion     :   OrderPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 OrderPostReduce::OrderPostReduce(bool sort, int32_t pos,
         enum enum_field_types field_type) :
 sort(sort), pos(pos), field_type(field_type)
@@ -21,103 +30,283 @@ sort(sort), pos(pos), field_type(field_type)
 
 }
 
+/**************************************************
+Funtion     :   OrderPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 OrderPostReduce::OrderPostReduce(const OrderPostReduce& orig) :
 sort(orig.sort), pos(orig.pos), field_type(orig.field_type)
 {
 
 }
 
+/**************************************************
+Funtion     :   ~OrderPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 OrderPostReduce::~OrderPostReduce()
 {
 
 }
 
+/**************************************************
+Funtion     :   get_sort
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 bool OrderPostReduce::get_sort()
 {
     return this->sort;
 }
 
+/**************************************************
+Funtion     :   get_pos
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 int32_t OrderPostReduce::get_pos()
 {
     return this->pos;
 }
 
+/**************************************************
+Funtion     :   get_field_type
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 enum enum_field_types OrderPostReduce::get_field_type()
 {
     return this->field_type;
 }
 
+/**************************************************
+Funtion     :   AggrFuncPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 AggrFuncPostReduce::AggrFuncPostReduce(int32_t pos, int32_t func,
         enum enum_field_types field_type) : pos(pos), func(func),
 field_type(field_type)
 {
 }
 
+/**************************************************
+Funtion     :   AggrFuncPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 AggrFuncPostReduce::AggrFuncPostReduce(const AggrFuncPostReduce& orig)
 : pos(orig.pos), func(orig.func), field_type(orig.field_type)
 {
 }
 
+/**************************************************
+Funtion     :   ~AggrFuncPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 AggrFuncPostReduce::~AggrFuncPostReduce()
 {
 }
 
+/**************************************************
+Funtion     :   get_pos
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 int32_t AggrFuncPostReduce::get_pos()
 {
     return pos;
 }
 
+/**************************************************
+Funtion     :   get_func
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 int32_t AggrFuncPostReduce::get_func()
 {
     return func;
 }
 
+/**************************************************
+Funtion     :   get_field_type
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 enum enum_field_types AggrFuncPostReduce::get_field_type()
 {
     return field_type;
 }
 
+/**************************************************
+Funtion     :   HavingPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 HavingPostReduce::HavingPostReduce(int32_t pos, int32_t func, int32_t operate,
         double value, enum enum_field_types field_type) : pos(pos), func(func),
 operate(operate), value(value), field_type(field_type)
 {
 }
 
+/**************************************************
+Funtion     :   HavingPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 HavingPostReduce::HavingPostReduce(const HavingPostReduce& orig) : pos(orig.pos),
 func(orig.func), operate(orig.operate), value(orig.value),
 field_type(orig.field_type)
 {
 }
 
+/**************************************************
+Funtion     :   ~HavingPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 HavingPostReduce::~HavingPostReduce()
 {
 }
 
+/**************************************************
+Funtion     :   get_pos
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 int32_t HavingPostReduce::get_pos()
 {
     return pos;
 }
 
+/**************************************************
+Funtion     :   get_func
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 int32_t HavingPostReduce::get_func()
 {
     return func;
 }
 
+/**************************************************
+Funtion     :   get_operate
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 int32_t HavingPostReduce::get_operate()
 {
     return operate;
 }
 
+/**************************************************
+Funtion     :   get_value
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 double HavingPostReduce::get_value()
 {
     return value;
 }
 
+/**************************************************
+Funtion     :   get_field_type
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 enum enum_field_types HavingPostReduce::get_field_type()
 {
     return field_type;
 }
 
+/**************************************************
+Funtion     :   QueryPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 QueryPostReduce::QueryPostReduce()
 {
     row_offset = 0;
@@ -125,11 +314,29 @@ QueryPostReduce::QueryPostReduce()
     execute_code = NO_REDUCE;
 }
 
+/**************************************************
+Funtion     :   QueryPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 QueryPostReduce::QueryPostReduce(const QueryPostReduce& orig)
 {
 
 }
 
+/**************************************************
+Funtion     :   ~QueryPostReduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 QueryPostReduce::~QueryPostReduce()
 {
     group.clear();
@@ -138,6 +345,16 @@ QueryPostReduce::~QueryPostReduce()
     having.clear();
 }
 
+/**************************************************
+Funtion     :   set_post_reduce_info
+Author      :   qinbo
+Date        :   2013.11.20
+Description :   add sql post process info
+Input       :   ResultPlan& result_plan,
+                ObSelectStmt *select_stmt
+Output      :   
+return      :   
+ **************************************************/
 void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
         ObSelectStmt *select_stmt)
 {
@@ -225,27 +442,12 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
             if (!select_stmt->try_fetch_select_item_by_having(select_items,
                     having_item, column_off))
             {
-           //     if (!find_column_if_exist(exist_column_names,
-          //              having_item.having_column_name, vector_off))
-           //     {
-                    add_having_reduce_info(raw_select_num
-                            + exist_column_names.size(),
-                            having_item.aggr_fun_type,
-                            having_item.aggr_fun_operate,
-                            having_item.aggr_fun_value,
-                            trans_ob_sql2_mysql(having_item.column_type_));
-     //               exist_column_names.push_back(having_item.having_column_name);
-          //      }
-#if 0
-                else
-                {
-                    add_having_reduce_info(raw_select_num + vector_off,
-                            having_item.aggr_fun_type,
-                            having_item.aggr_fun_operate,
-                            having_item.aggr_fun_value,
-                            trans_ob_sql2_mysql(having_item.column_type_));
-                }
-#endif
+                add_having_reduce_info(raw_select_num
+                        + exist_column_names.size(),
+                        having_item.aggr_fun_type,
+                        having_item.aggr_fun_operate,
+                        having_item.aggr_fun_value,
+                        trans_ob_sql2_mysql(having_item.column_type_));
             }
             else
             {
@@ -281,7 +483,6 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
                     add_order_reduce_info(is_sort_asc(order_item.order_type_),
                             raw_select_num + exist_column_names.size(),
                             trans_ob_sql2_mysql(order_item.column_type_));
-                    exist_column_names.push_back(order_item.order_column_);
                 }
                 else
                 {
@@ -307,11 +508,29 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
     set_appended_column_num(select_items.size(), exist_column_names.size());
 }
 
+/**************************************************
+Funtion     :   set_post_reduce_type
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   add sql post process info
+Input       :   int32_t reduce
+Output      :   
+return      :   
+ **************************************************/
 void QueryPostReduce::set_post_reduce_type(int32_t reduce)
 {
     this->reduce = reduce;
 }
 
+/**************************************************
+Funtion     :   set_appended_column_num
+Author      :   qinbo
+Date        :   2013.11.20
+Description :   add sql post process info
+Input       :   int32_t reduce
+Output      :   
+return      :   
+ **************************************************/
 void QueryPostReduce::set_appended_column_num(uint32_t original_field_num,
         uint32_t real_field_num)
 {
@@ -319,6 +538,15 @@ void QueryPostReduce::set_appended_column_num(uint32_t original_field_num,
     this->real_field_num = real_field_num;
 }
 
+/**************************************************
+Funtion     :   set_limit_reduce_info
+Author      :   qinbo
+Date        :   2013.11.20
+Description :   add sql post process info
+Input       :   int32_t reduce
+Output      :   
+return      :   
+ **************************************************/
 void QueryPostReduce::set_limit_reduce_info(uint64_t row_offset,
         uint64_t row_count)
 {
@@ -326,17 +554,46 @@ void QueryPostReduce::set_limit_reduce_info(uint64_t row_offset,
     this->row_count = row_count;
 }
 
+/**************************************************
+Funtion     :   set_original_field_item
+Author      :   qinbo
+Date        :   2013.11.20
+Description :   add sql post process info
+Input       :   int32_t reduce
+Output      :   
+return      :   
+ **************************************************/
 void QueryPostReduce::set_original_field_item(
         vector<SelectItem> &select_items_)
 {
     select_items = select_items_;
 }
 
+/**************************************************
+Funtion     :   set_original_field_item
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get sql post process info
+Input       :   int32_t reduce
+Output      :   
+return      :   
+ **************************************************/
 vector<SelectItem> &QueryPostReduce::get_original_field_item()
 {
     return select_items;
 }
 
+/**************************************************
+Funtion     :   find_column_if_exist
+Author      :   qinbo
+Date        :   2013.11.20
+Description :   whether the column already exist
+Input       :   vector<string> &columns,
+                string goal_column, 
+                uint32_t column_off
+Output      :   
+return      :   
+ **************************************************/
 bool QueryPostReduce::find_column_if_exist(vector<string> &columns,
         string goal_column, uint32_t column_off)
 {
@@ -356,18 +613,53 @@ bool QueryPostReduce::find_column_if_exist(vector<string> &columns,
     return false;
 }
 
+/**************************************************
+Funtion     :   add_group_reduce_info
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   bool sort, 
+                int32_t pos,
+                enum enum_field_types field_type
+Output      :   
+return      :   
+ **************************************************/
 void QueryPostReduce::add_group_reduce_info(bool sort, int32_t pos,
         enum enum_field_types field_type)
 {
     this->group.push_back(OrderPostReduce(sort, pos, field_type));
 }
 
+/**************************************************
+Funtion     :   add_aggr_func_reduce_info
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   int32_t pos, 
+                int32_t func,
+                enum enum_field_types field_type
+Output      :   
+return      :   
+ **************************************************/
 void QueryPostReduce::add_aggr_func_reduce_info(int32_t pos, int32_t func,
         enum enum_field_types field_type)
 {
     this->func.push_back(AggrFuncPostReduce(pos, func, field_type));
 }
 
+/**************************************************
+Funtion     :   add_having_reduce_info
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   int32_t pos, 
+                int32_t func,
+                int32_t operate, 
+                double value, 
+                enum enum_field_types field_type
+Output      :   
+return      :   
+ **************************************************/
 void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func,
         int32_t operate, double value, enum enum_field_types field_type)
 {
@@ -402,12 +694,32 @@ void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func,
             field_type));
 }
 
+/**************************************************
+Funtion     :   add_order_reduce_info
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   
+Input       :   bool sort, 
+                int32_t pos,
+                enum enum_field_types field_type
+Output      :   
+return      :   
+ **************************************************/
 void QueryPostReduce::add_order_reduce_info(bool sort, int32_t pos,
         enum enum_field_types field_type)
 {
     this->order.push_back(OrderPostReduce(sort, pos, field_type));
 }
 
+/**************************************************
+Funtion     :   trans_ob_sql2_mysql
+Author      :   qinbo
+Date        :   2013.11.20
+Description :   transfer OB sql expression to MYSQL  sql expression
+Input       :   ObObjType ob_sql_type
+Output      :   
+return      :   
+ **************************************************/
 enum enum_field_types QueryPostReduce::trans_ob_sql2_mysql(
         ObObjType ob_sql_type)
 {
@@ -432,6 +744,7 @@ enum enum_field_types QueryPostReduce::trans_ob_sql2_mysql(
         case ObMinType:
         case ObCreateTimeType:
         case ObModifyTimeType:
+            return MYSQL_TYPE_DATETIME;
         case ObExtendType:
         case ObSeqType:
         default:
@@ -439,193 +752,212 @@ enum enum_field_types QueryPostReduce::trans_ob_sql2_mysql(
     }
 }
 
+/**************************************************
+Funtion     :   get_reduce
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 int32_t QueryPostReduce::get_reduce()
 {
     return this->reduce;
 }
 
+/**************************************************
+Funtion     :   get_group_size
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 uint32_t QueryPostReduce::get_group_size()
 {
     return this->group.size();
 }
 
+/**************************************************
+Funtion     :   get_func_size
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 uint32_t QueryPostReduce::get_func_size()
 {
     return this->func.size();
 }
 
+/**************************************************
+Funtion     :   get_having_size
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 uint32_t QueryPostReduce::get_having_size()
 {
     return this->having.size();
 }
 
+/**************************************************
+Funtion     :   get_order_size
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 uint32_t QueryPostReduce::get_order_size()
 {
     return this->order.size();
 }
 
+/**************************************************
+Funtion     :   get_group
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 vector<OrderPostReduce> QueryPostReduce::get_group()
 {
     return this->group;
 }
 
+/**************************************************
+Funtion     :   get_order
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 vector<OrderPostReduce> QueryPostReduce::get_order()
 {
     return this->order;
 }
 
+/**************************************************
+Funtion     :   get_func
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 vector<AggrFuncPostReduce> QueryPostReduce::get_func()
 {
     return this->func;
 }
 
+/**************************************************
+Funtion     :   get_having
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 vector<HavingPostReduce> QueryPostReduce::get_having()
 {
     return this->having;
 }
 
+/**************************************************
+Funtion     :   get_original_field_num
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 uint32_t QueryPostReduce::get_original_field_num()
 {
     return this->original_field_num;
 }
 
+/**************************************************
+Funtion     :   get_real_field_num
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 uint32_t QueryPostReduce::get_real_field_num()
 {
     return this->real_field_num;
 }
 
+/**************************************************
+Funtion     :   get_row_offset
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 uint64_t QueryPostReduce::get_row_offset()
 {
     return this->row_offset;
 }
 
+/**************************************************
+Funtion     :   get_row_count
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 uint64_t QueryPostReduce::get_row_count()
 {
     return this->row_count;
 }
 
+/**************************************************
+Funtion     :   get_execute_code
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 int32_t QueryPostReduce::get_execute_code()
 {
     jlog(INFO, "get_execute_code:%d", execute_code);
     return execute_code;
 }
 
-#if 0
-
-vector<OrderPostReduce> QueryPostReduce::get_using_key()
-{
-    vector<OrderPostReduce> tmp;
-    int32_t pos;
-    enum enum_field_types field_type;
-    bool sort;
-    execute_code = NO_REDUCE;
-
-    jlog(INFO, "sql execute step GROUP");
-    if (REDUCE_GROUP == reduce)
-    {
-        if (tmp.size())
-        {
-            jlog(ERROR, "first explain is error.");
-            tmp.clear();
-        }
-        reduce++;
-        tmp = group;
-        execute_code = EXECUTE_GROUP;
-        goto explain_reduce_aggregate;
-    }
-
-explain_reduce_aggregate:
-    jlog(INFO, "sql execute step aggregate");
-    if (REDUCE_AGGREGATE == reduce)
-    {
-        if (tmp.size())
-        {
-            reduce++;
-            goto explain_reduce_having;
-        }
-        reduce++;
-        execute_code = EXECUTE_AGGREGATE;
-        pos = func[0].get_pos();
-        field_type = func[0].get_field_type();
-        sort = false;
-        tmp.push_back(OrderPostReduce(sort, pos, field_type));
-        goto explain_reduce_having;
-    }
-
-explain_reduce_having:
-    jlog(INFO, "sql execute step HAVING");
-    if (REDUCE_HAVING == reduce)
-    {
-
-        if (tmp.size())
-        {
-            if (having.size())
-            {
-                goto explain_current_reduce;
-            }
-            else
-            {
-                reduce++;
-                goto explain_reduce_order;
-            }
-        }
-
-        reduce++;
-        if (group.size())
-        {
-            execute_code = EXECUTE_HAVING;
-            tmp = group;
-            goto explain_reduce_order;
-        }
-        else
-        {
-            jlog(ERROR, "SQL syntax error.");
-            goto explain_no_reduce;
-        }
-    }
-
-explain_reduce_order:
-    jlog(INFO, "sql execute step ORDER");
-    if (REDUCE_ORDER == reduce)
-    {
-
-        if (tmp.size())
-        {
-            if (order.size())
-            {
-            }
-            else
-            {
-                reduce = NO_REDUCE;
-            }
-            goto explain_current_reduce;
-        }
-
-        reduce = NO_REDUCE;
-        execute_code = EXECUTE_ORDER;
-        if (order.size())
-        {
-            tmp = order;
-        }
-        goto explain_current_reduce;
-    }
-
-explain_no_reduce:
-    jlog(INFO, "sql execute step END");
-    if (reduce == NO_REDUCE)
-    {
-
-        tmp.clear();
-        execute_code = NO_REDUCE;
-        return tmp;
-    }
-
-explain_current_reduce:
-    jlog(INFO, "sql next execute step %d", execute_code);
-    return tmp;
-}
-#endif
-
+/**************************************************
+Funtion     :   get_using_key
+Author      :   tangchao
+Date        :   2013.11.20
+Description :   get post process info
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
 vector<OrderPostReduce> QueryPostReduce::get_using_key()
 {
     vector<OrderPostReduce> tmp;

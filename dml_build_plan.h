@@ -57,25 +57,25 @@ extern int resolve_update_stmt(
         uint64_t& query_id);
 extern int resolve_table(
         ResultPlan * result_plan,
-        oceanbase::sql::ObStmt* stmt,
+        jdbd::sql::ObStmt* stmt,
         ParseNode* node,
         uint64_t& table_id);
 extern int resolve_and_exprs(
         ResultPlan * result_plan,
-        oceanbase::sql::ObStmt* stmt,
+        jdbd::sql::ObStmt* stmt,
         ParseNode* node,
         vector<uint64_t>& and_exprs,
         int32_t expr_scope_type = T_NONE_LIMIT);
 extern int resolve_independ_expr(
         ResultPlan * result_plan,
-        oceanbase::sql::ObStmt* stmt,
+        jdbd::sql::ObStmt* stmt,
         ParseNode* node,
         uint64_t& expr_id,
         int32_t expr_scope_type = T_NONE_LIMIT);
 extern int resolve_table_columns(
         ResultPlan * result_plan,
-        oceanbase::sql::ObStmt* stmt,
-        oceanbase::sql::TableItem& table_item,
+        jdbd::sql::ObStmt* stmt,
+        jdbd::sql::TableItem& table_item,
         int64_t num_columns = -1);
 
 

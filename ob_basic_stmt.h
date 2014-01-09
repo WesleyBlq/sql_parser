@@ -20,7 +20,7 @@
 #include "ob_define.h"
 #include "parse_node.h"
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {

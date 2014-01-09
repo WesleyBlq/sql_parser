@@ -13,10 +13,10 @@
  *   Guibin Du <tianguan.dgb@taobao.com>
  *
  */
-#include "ob_variable_set_stmt.h"
+#include "sql_variable_set_stmt.h"
 
-using namespace oceanbase::common;
-using namespace oceanbase::sql;
+using namespace jdbd::common;
+using namespace jdbd::sql;
 using namespace std;
 
 

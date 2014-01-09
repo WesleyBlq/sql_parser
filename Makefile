@@ -39,17 +39,17 @@ OBJS_SQL =  \
 	ob_number.o \
 	ob_object.o \
 	ob_obj_type.o \
-	ob_raw_expr.o \
+	sql_raw_expr.o \
 	ob_obj_cast.o \
 	ob_expr_obj.o \
 	ob_stmt.o \
-	ob_delete_stmt.o \
-	ob_insert_stmt.o  \
-	ob_update_stmt.o \
-	ob_select_stmt.o \
-	ob_show_stmt.o \
-	ob_variable_set_stmt.o \
-	ob_logical_plan.o\
+	sql_delete_stmt.o \
+	sql_insert_stmt.o  \
+	sql_update_stmt.o \
+	sql_select_stmt.o \
+	sql_show_stmt.o \
+	sql_variable_set_stmt.o \
+	sql_logical_plan.o\
 	dml_build_plan.o \
 	crud_build_plan.o \
 	query_reduce.o \

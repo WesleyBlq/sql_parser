@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-namespace oceanbase
+namespace jdbd
 {
     namespace common
     {

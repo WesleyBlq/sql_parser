@@ -1,30 +1,22 @@
-#ifndef OCEANBASE_SQL_RAWEXPR_H_
-#define OCEANBASE_SQL_RAWEXPR_H_
+#ifndef SQL_RAWEXPR_H_
+#define SQL_RAWEXPR_H_
 
-//#include "common/ob_vector.h"
 #include <string>
-//#include "common/ob_string_buf.h"
 #include <vector>
-//#include "ob_bit_set.h"
 #include "ob_obj_type.h"
-//#include "ob_sql_expression.h"
 #include "ob_define.h"
 #include "sql_item_type.h"
 #include "ob_object.h"
 #include "utility.h"
 #include "parse_node.h"
 
-using namespace oceanbase::common;
+using namespace jdbd::common;
 
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {
-        //class ObTransformer;
-        //class ObLogicalPlan;
-        //class ObPhysicalPlan;
-
         class ObRawExpr
         {
         public:
@@ -220,7 +212,7 @@ namespace oceanbase
             {
             }
 
-            ObConstRawExpr(oceanbase::common::ObObj& val, SqlItemType expr_type = T_INVALID)
+            ObConstRawExpr(jdbd::common::ObObj& val, SqlItemType expr_type = T_INVALID)
             : ObRawExpr(expr_type), value_(val)
             {
             }
@@ -229,12 +221,12 @@ namespace oceanbase
             {
             }
 
-            const oceanbase::common::ObObj& get_value() const
+            const jdbd::common::ObObj& get_value() const
             {
                 return value_;
             }
 
-            void set_value(const oceanbase::common::ObObj& val)
+            void set_value(const jdbd::common::ObObj& val)
             {
                 value_ = val;
             }
@@ -260,7 +252,7 @@ namespace oceanbase
             void get_ob_const_expr_to_key_data(key_data& key_relation,
                     uint32_t seq) const;
         private:
-            oceanbase::common::ObObj value_;
+            jdbd::common::ObObj value_;
         };
 
         class ObUnaryRefRawExpr : public ObRawExpr
@@ -761,8 +753,8 @@ namespace oceanbase
             ObSqlRawExpr();
             ObSqlRawExpr(
                     uint64_t expr_id,
-                    uint64_t table_id = oceanbase::common::OB_INVALID_ID,
-                    uint64_t column_id = oceanbase::common::OB_INVALID_ID,
+                    uint64_t table_id = jdbd::common::OB_INVALID_ID,
+                    uint64_t column_id = jdbd::common::OB_INVALID_ID,
                     ObRawExpr* expr = NULL);
 
             virtual ~ObSqlRawExpr()
@@ -894,4 +886,4 @@ namespace oceanbase
 
 }
 
-#endif //OCEANBASE_SQL_RAWEXPR_H_
+#endif //SQL_RAWEXPR_H_

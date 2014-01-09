@@ -10,7 +10,7 @@
 #include <mysql.h>
 #include <vector>
 #include <string>
-#include "../new/connection.h"
+#include "../server/connection.h"
 
 #define QUERY_WRITE     0    
 #define QUERY_READ      1
@@ -51,6 +51,17 @@ public:
     int get_error();
     int read_or_write();
     void debug(int command);
+
+private:
+    struct cuh
+    {
+        Connection* conn;
+        string user;
+        string host;
+    };
+    
+    void com_refresh(Connection *conn);
+    void flush_all_privileges(vector<cuh>& connections);
 private:
     int error;
     int r_or_w;

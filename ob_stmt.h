@@ -16,7 +16,7 @@ using std::string;
 #define JD_DEBUG   jlog(INFO, "DEBUG");
 
 
-namespace oceanbase
+namespace jdbd
 {
     namespace sql
     {

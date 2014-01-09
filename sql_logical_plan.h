@@ -1,15 +1,13 @@
-#ifndef OCEANBASE_SQL_LOGICALPLAN_H_
-#define OCEANBASE_SQL_LOGICALPLAN_H_
+#ifndef SQL_LOGICALPLAN_H_
+#define SQL_LOGICALPLAN_H_
 #include "parse_node.h"
-#include "ob_raw_expr.h"
+#include "sql_raw_expr.h"
 #include "ob_stmt.h"
-#include "ob_select_stmt.h"
-//#include "ob_result_set.h"
+#include "sql_select_stmt.h"
 #include <string>
-//#include "common/ob_string_buf.h"
 #include <vector>
-//#include "common/ob_stack_allocator.h"
-namespace oceanbase
+
+namespace jdbd
 {
     namespace sql
     {
@@ -20,14 +18,6 @@ namespace oceanbase
         public:
             explicit ObLogicalPlan();
             virtual ~ObLogicalPlan();
-
-#if 0
-
-            oceanbase::common::ObStringBuf* get_name_pool() const
-            {
-                return name_pool_;
-            }
-#endif
             ObBasicStmt* get_query(uint64_t query_id) const;
 
             ObBasicStmt* get_main_stmt()
@@ -155,10 +145,6 @@ namespace oceanbase
             Output      :   
              **************************************************/
             void make_stmt_string(ResultPlan& result_plan);
-#if 0
-        protected:
-            oceanbase::common::ObStringBuf* name_pool_;
-#endif
 
         private:
             vector<ObBasicStmt*> stmts_;
@@ -173,4 +159,4 @@ namespace oceanbase
     }
 }
 
-#endif //OCEANBASE_SQL_LOGICALPLAN_H_
+#endif //SQL_LOGICALPLAN_H_

@@ -1,25 +1,10 @@
-/**
- * (C) 2010-2012 Alibaba Group Holding Limited.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
- *
- * Version: $Id$
- *
- * ob_show_stmt.h
- *
- * Authors:
- *   Guibin Du <tianguan.dgb@taobao.com>
- *
- */
 
-#ifndef OCEANBASE_SQL_OB_SHOW_STMT_H_
-#define OCEANBASE_SQL_OB_SHOW_STMT_H_
+#ifndef SQL_OB_SHOW_STMT_H_
+#define SQL_OB_SHOW_STMT_H_
 #include <string>
 #include "ob_stmt.h"
 
-namespace oceanbase
+namespace jdbd
 {
   namespace sql
   {
@@ -140,4 +125,4 @@ namespace oceanbase
   }
 }
 
-#endif //OCEANBASE_SQL_OB_SHOW_STMT_H_
+#endif //SQL_OB_SHOW_STMT_H_
