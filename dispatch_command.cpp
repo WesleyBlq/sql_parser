@@ -14,7 +14,6 @@
 
 #include <pthread.h>
 #include "../acl/sql_acl.h"
-#include "../acl/acl_schema.h"
 #include "../acl/privileges.h"
 #include "../log/log.h"
 #include "../include/jderror.h"
@@ -39,23 +38,9 @@ dispatch_command::~dispatch_command()
 {
 }
 
-void dispatch_command::flush_all_privileges(vector<cuh>& connections)
+void dispatch_command::flush_all_privileges()
 {
-    unsigned int next = 0;
-    Connection* conn = NULL;
-    ACL_SCHEMA* schema = NULL;
-    string user;
-    string host;
-    
-    for(; next < connections.size(); next++)
-    {
-        conn = connections[next].conn;
-        user = connections[next].user;
-        host = connections[next].host;
-        schema = SQL_ACL::get_instance(false)->find_user(SCHEMA(user, host));
-        conn->setSchema(schema);
-    }
-    
+    flush_acl();
     return;
 }
 
@@ -71,58 +56,16 @@ Other:
  **************************************************************/
 void dispatch_command::com_refresh(Connection *conn)
 {
-    Connection* connection = NULL;
     string user;
     string host;
-    ACL_SCHEMA* schema = NULL;
-    struct cuh conn_old; 
-    vector<cuh> active_connections;
     
     pthread_mutex_lock(&flush_mutex);
 
-    connection = conn->getNext();
-    for (; connection; connection = conn->getNext())
-    {
-        if(connection == conn)
-        {
-            continue;
-        }
-        schema = connection->getSchema();
-        if (!schema)
-        {
-            conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR,
-                    "Hit a bug, we abort!!");
-            jlog(FATAL, "reload acl error, abort!");
-            goto failed;
-        }
-        user = schema->get_username();
-        host = schema->get_host();
-        conn_old.conn = connection;
-        conn_old.user = user;
-        conn_old.host = host;
-        active_connections.push_back(conn_old);
-    }
+    user = conn->getUser();
+    host = conn->getHost();
 
-    schema = conn->getSchema();
-    if (!schema)
-    {
-        conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR,
-                "Hit a bug, we abort!!");
-        jlog(FATAL, "reload acl error, abort!");
-        goto failed;
-    }
-
-    user = schema->get_username();
-    host = schema->get_host();
-    if (!user.size() || !host.size())
-    {
-        conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR,
-                "Hit a bug, we abort!!");
-        jlog(FATAL, "reload acl error, abort!");
-        goto failed;
-    }
     /* If super user, we reload acl. */
-    if (!schema->get_super())
+    if (!acl_check(user, host, SUPER_PRIV))
     {
         jlog(WARNING, "%s@%s reload acl has not enought privileges.",
                 user.c_str(), host.c_str());
@@ -131,30 +74,19 @@ void dispatch_command::com_refresh(Connection *conn)
         goto failed;
     }
 
-     /* reload acl */
-    if (!SQL_ACL::get_instance(false)->reset())
-    { 
+
+    /* reload acl */
+    flush_all_privileges();
+
+    /* find schema in current connection. */
+    if (!acl_check(user, host))
+    {
         conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR,
-                "Hit a bug, we abort!!");
-        jlog(FATAL, "reload acl error, abort!");
+                "drop itself.");
+        jlog(WARNING, "User %s@%s drop itself!");
         goto failed;
     }
     
-     /* find schema in current connection. */
-    schema = SQL_ACL::get_instance(false)->find_user(SCHEMA(user, host));
-    if (NULL == schema)
-    {
-        conn->queryError(ERROR_ACCESS_DROP_YOUSELF,
-                "ERROR_ACCESS_DROP_YOUSELF");
-        conn->setStatus(CONN_QUIT);
-    }
-    else
-    {
-        conn->setSchema(schema);
-    }
-#if DEBUG_ON
-    SQL_ACL::get_instance(false)->print();
-#endif
     /* add in here. */
     conn->sendOk(2, 0, 0, 0, "Query OK");
 
@@ -191,6 +123,7 @@ bool dispatch_command::dispatch(Connection *conn, unsigned char* buf)
         {
             /* change db */
             conn->setDb((const char*) conn->getRequest());
+            conn->sendOk(2, 0, 0, 0, "JDDB OK");
             goto toWaitting;
         }
         case COM_CHANGE_USER:
@@ -374,9 +307,10 @@ bool dispatch_command::execute_command(Connection *conn)
 {
     QueryActuator *query = NULL;
     bool dict_or_dataNode = false;
+    string user;
+    string host;
     string db;
     int queryType = 0;
-    ACL_SCHEMA* schema = NULL;
     vector<string>::iterator iter;
     error = 0;
     r_or_w = QUERY_READ;
@@ -395,15 +329,6 @@ bool dispatch_command::execute_command(Connection *conn)
         jlog(FATAL, "Hit a bug.");
         return dict_or_dataNode; //for compiler through
     }
-
-    schema = conn->getSchema();
-    if (!schema)
-    {
-        conn->queryError(ERROR_ACCESS_UNKNOWN_USER,
-                "Unknown user, maybe is invalid user.");
-        error = ERROR_ACCESS_UNKNOWN_USER;
-        return dict_or_dataNode;
-    }
     
     queryType = query->get_query_type();
     db = query->get_result_plan().meta_db_name;
@@ -418,6 +343,8 @@ bool dispatch_command::execute_command(Connection *conn)
         }
     }
 
+    user = conn->getUser();
+    host = conn->getHost();
     jlog(INFO, "query type %d", queryType);
     /* convenient */
     switch (queryType)
@@ -491,7 +418,7 @@ bool dispatch_command::execute_command(Connection *conn)
         }
         case ObBasicStmt::T_SELECT:
         {
-            if (!schema->check_table(conn->getDb(), "tt", SELECT_PRI))
+            if (!acl_check(user, host, conn->getDb(), "tt", SELECT_PRIV))
             {
                 error = ERROR_ACCESS_DENY_SELECT_TABLE;
             }
@@ -500,7 +427,7 @@ bool dispatch_command::execute_command(Connection *conn)
             /* Write from database */
         case ObBasicStmt::T_DELETE:
         {
-            if (!schema->check_table(conn->getDb(), "tt", DELETE_PRI))
+            if (!acl_check(user, host, conn->getDb(), "tt", DELETE_PRIV))
             {
                 error = ERROR_ACCESS_DENY_SELECT_TABLE;
             }
@@ -509,7 +436,7 @@ bool dispatch_command::execute_command(Connection *conn)
         case ObBasicStmt::T_VARIABLE_SET:
         case ObBasicStmt::T_REPLACE:
         {
-            if (!schema->check_table(conn->getDb(), "tt", INSERT_PRI))
+            if (!acl_check(user, host, conn->getDb(), "tt", INSERT_PRIV))
             {
                 error = ERROR_ACCESS_DENY_INSERT_TABLE;
             }
@@ -517,8 +444,7 @@ bool dispatch_command::execute_command(Connection *conn)
             break;
         case ObBasicStmt::T_UPDATE:
         {
-            if (!schema->check_table(conn->getDb(),
-                    "tt", UPDATE_PRI))
+            if (!acl_check(user, host, conn->getDb(), "tt", UPDATE_PRIV))
             {
                 error = ERROR_ACCESS_DENY_UPDATE_TABLE;
             }
@@ -530,7 +456,7 @@ bool dispatch_command::execute_command(Connection *conn)
         case ObBasicStmt::T_SHOW_PARAMETERS:
         case ObBasicStmt::T_SHOW_PROCESSLIST:
         {
-            if (!schema->get_super())
+            if (!acl_check(user, host, SUPER_PRIV))
             {
                 error = ERROR_ACCESS_DENY_NO_SUPER_PRIVILEGE;
             }

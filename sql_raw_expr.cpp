@@ -653,7 +653,7 @@ int ObConstRawExpr::set_value_and_type(const common::ObObj& val)
             this->set_result_type(ObBoolType);
             break;
         default:
-            ret = OB_NOT_SUPPORTED;
+            ret = JD_ERR_SQL_NOT_SUPPORT;
             jlog(WARNING, "obj type not support, type=%d", val.get_type());
             break;
     }
@@ -870,13 +870,13 @@ int ObConstRawExpr::fill_sql_expression(
             else if (item.type_ == T_SYSTEM_VARIABLE
                     && (var_ptr = sql_context->session_info_->get_sys_variable_value(var_name)) == NULL)
             {
-                ret = OB_ERR_VARIABLE_UNKNOWN;
+                ret = JD_ERR_VARIABLE_UNKNOWN;
                 jlog(ERROR, "System variable %.*s does not exists", var_name.size(), var_name.data());
             }
             else if (item.type_ == T_TEMP_VARIABLE
                     && (var_ptr = sql_context->session_info_->get_variable_value(var_name)) == NULL)
             {
-                ret = OB_ERR_VARIABLE_UNKNOWN;
+                ret = JD_ERR_VARIABLE_UNKNOWN;
                 jlog(USER_ERROR, "Variable %.*s does not exists", var_name.size(), var_name.data());
             }
             else
@@ -891,7 +891,7 @@ int ObConstRawExpr::fill_sql_expression(
             break;
         default:
             jlog(WARNING, "unexpected expression type %d", item.type_);
-            ret = OB_ERR_EXPR_UNKNOWN;
+            ret = JD_ERR_EXPR_UNKNOWN;
             break;
     }
     if (OB_SUCCESS == ret)
@@ -934,7 +934,7 @@ int64_t ObUnaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled_
 
     if (!sub_select)
     {
-        ret = OB_ERR_PARSER_SYNTAX;
+        ret = JD_ERR_PARSER_SYNTAX;
         jlog(WARNING, "Sub-query of In operator is not select statment");
         return ret;
     }
@@ -1015,7 +1015,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         sql_expr = logical_plan->get_expr_by_id(related_sql_raw_id);
         if (NULL == sql_expr)
         {
-            ret = OB_ERR_LOGICAL_PLAN_FAILD;
+            ret = JD_ERR_LOGICAL_PLAN_FAILD;
             jlog(WARNING, "ref column error!!!");
             return ret;
         }
@@ -1028,7 +1028,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id(result_plan.db_name, first_id_);
         if (NULL == table_schema)
         {
-            ret = OB_ERR_SCHEMA_UNSET;
+            ret = JD_ERR_SCHEMA_UNSET;
             jlog(WARNING, "Schema(s) are not set");
             return ret;
         }
@@ -1036,7 +1036,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
         schema_column* column_schema = table_schema->get_column_from_table_by_id(second_id_);
         if (column_schema == NULL)
         {
-            ret = OB_ERR_SCHEMA_UNSET;
+            ret = JD_ERR_SCHEMA_UNSET;
             jlog(WARNING, "Schema(s) are not set");
             return ret;
         }
@@ -1247,7 +1247,7 @@ int ObBinaryOpRawExpr::fill_sql_expression(
     {
         if (!first_expr_ || !second_expr_)
         {
-            ret = OB_ERR_EXPR_UNKNOWN;
+            ret = JD_ERR_EXPR_UNKNOWN;
         }
         else if (first_expr_->get_expr_type() != T_OP_ROW
                 && first_expr_->get_expr_type() != T_REF_QUERY
@@ -1316,7 +1316,7 @@ int ObBinaryOpRawExpr::fill_sql_expression(
             }
             else
             {
-                ret = OB_ERR_EXPR_UNKNOWN;
+                ret = JD_ERR_EXPR_UNKNOWN;
             }
         }
     }

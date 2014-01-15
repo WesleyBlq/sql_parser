@@ -132,7 +132,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
 
                 if (NULL == sql_expr)
                 {
-                    ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                    ret = JD_ERR_LOGICAL_PLAN_FAILD;
                     jlog(WARNING, "insert value expr error!!!");
                     return ret;
                 }
@@ -164,7 +164,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
 
         if (NULL == query_stmt)
         {
-            ret = OB_ERR_LOGICAL_PLAN_FAILD;
+            ret = JD_ERR_LOGICAL_PLAN_FAILD;
             jlog(WARNING, "can not get query stmt by query id!!!");
             return ret;
         }
@@ -257,7 +257,7 @@ int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
             
                     if (NULL == sql_expr)
                     {
-                        ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                        ret = JD_ERR_LOGICAL_PLAN_FAILD;
                         jlog(WARNING, "insert value expr error!!!");
                         return ret;
                     }
@@ -295,7 +295,7 @@ int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
 
         if (NULL == query_stmt)
         {
-            ret = OB_ERR_LOGICAL_PLAN_FAILD;
+            ret = JD_ERR_LOGICAL_PLAN_FAILD;
             jlog(WARNING, "can not get query stmt by query id!!!");
             return ret;
         }
@@ -345,7 +345,7 @@ int ObInsertStmt::append_distributed_insert_items(  ResultPlan& result_plan,
 
             if (NULL == sql_expr)
             {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
                 jlog(WARNING, "insert value expr error!!!");
                 return ret;
             }

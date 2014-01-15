@@ -21,7 +21,6 @@
 #include "parse_malloc.h"
 #include "dml_build_plan.h"
 #include <vector>
-#include "ob_define.h"
 #include "utility.h"
 #include <stdint.h>
 #include "ob_obj_type.h"
@@ -64,7 +63,7 @@ int prepare_resolve_stmt(ResultPlan* result_plan,
         logical_plan = (ObLogicalPlan*) parse_malloc(sizeof (ObLogicalPlan), NULL);
         if (logical_plan == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObLogicalPlan");
             return ret;
         }
@@ -80,7 +79,7 @@ int prepare_resolve_stmt(ResultPlan* result_plan,
     }
     if (NULL == (stmt = create_stmt<T>(result_plan)))
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Failed to allocate memory");
     }
     else
@@ -178,7 +177,7 @@ int resolve_show_stmt(
         logical_plan = (ObLogicalPlan*)parse_malloc(sizeof(ObLogicalPlan), NULL);
         if (logical_plan == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
@@ -196,7 +195,7 @@ int resolve_show_stmt(
         ObShowStmt* show_stmt = (ObShowStmt*)parse_malloc(sizeof(ObShowStmt), NULL);
         if (show_stmt == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObShowStmt");
         }
         else
@@ -309,7 +308,7 @@ int resolve_show_stmt(
             ObSchemaChecker *schema_checker = static_cast<ObSchemaChecker*>(result_plan->schema_checker_);
             if (schema_checker == NULL)
             {
-            ret = OB_ERR_SCHEMA_UNSET;
+            ret = JD_ERR_SCHEMA_UNSET;
             jlog(WARNING, "Schema(s) are not set");
             }
             int32_t len = static_cast<int32_t>(strlen(show_table_node->str_value_));
@@ -317,7 +316,7 @@ int resolve_show_stmt(
             uint64_t show_table_id = schema_checker->get_table_id(table_name);
             if (show_table_id == OB_INVALID_ID)
             {
-            ret = OB_ERR_TABLE_UNKNOWN;
+            ret = JD_ERR_TABLE_UNKNOWN;
             jlog(WARNING, "Unknown table \"%s\", show_table_node->str_value_);
             }
             else

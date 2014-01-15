@@ -1,20 +1,5 @@
-/*
- *  (C) 2007-2010 Taobao Inc.
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 as
- *  published by the Free Software Foundation.
- *
- *         ????.cpp is for what ...
- *
- *  Version: $Id: ipvsadm.c,v 1.27 2005/12/10 16:00:07 wensong Exp $
- *
- *  Authors:
- *     qushan <qushan@taobao.com>
- *        - some work details if you want
- */
-#ifndef OCEANBASE_COMMON_UTILITY_H_
-#define OCEANBASE_COMMON_UTILITY_H_
+#ifndef COMMON_UTILITY_H_
+#define COMMON_UTILITY_H_
 
 #include <stdint.h>
 #include <execinfo.h>
@@ -22,6 +7,7 @@
 #include <algorithm>
 #include <stdarg.h>
 #include <string>
+#include "../include/jderror.h"
 #include "ob_define.h"
 #include "ob_obj_type.h"
 #include "log.h"
@@ -86,7 +72,7 @@ extern int ob_write_string(const string &src, string &dst);
     FILE* fp = popen(cmd, "w");\
     if (fp != NULL)\
     {\
-        for (i = 0; i < size; ++i)\
+        for (i = 0; i < size-2; ++i)\
         {\
             fprintf(fp, "%p\n", array[i]);\
         }\
@@ -160,4 +146,4 @@ namespace jdbd
 } // end namespace jdbd
 
 
-#endif //OCEANBASE_COMMON_UTILITY_H_
+#endif //COMMON_UTILITY_H_

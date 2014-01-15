@@ -100,7 +100,7 @@ inline int ObNumber::mul_uint32(const ObNumber &multiplicand, uint32_t multiplie
             else
             {
                 jlog(WARNING, "multiply overflow, carry=%ld", carry);
-                ret = OB_VALUE_OUT_OF_RANGE;
+                ret = JD_VALUE_OUT_OF_RANGE;
             }
         }
     }
@@ -167,7 +167,7 @@ inline int ObNumber::add_uint32(const ObNumber &n1, uint32_t n2, ObNumber &res)
         else
         {
             jlog(WARNING, "add overflow, carry=%ld", carry);
-            ret = OB_VALUE_OUT_OF_RANGE;
+            ret = JD_VALUE_OUT_OF_RANGE;
         }
     }
     return ret;
@@ -367,7 +367,7 @@ int ObNumber::from(const char* str, int64_t buf_len)
                 break;
             default:
                 jlog(WARNING, "invalid numeric char=%c", *str);
-                ret = OB_ERR_UNEXPECTED;
+                ret = JD_ERR_UNEXPECTED;
                 break;
         }
         if (OB_SUCCESS != ret)
@@ -379,7 +379,7 @@ int ObNumber::from(const char* str, int64_t buf_len)
     if (SINGLE_PRECISION_NDIGITS < vscale)
     {
         jlog(WARNING, "too many fractional digits, vscale=%hhd", vscale);
-        ret = OB_VALUE_OUT_OF_RANGE;
+        ret = JD_VALUE_OUT_OF_RANGE;
     }
     else if (OB_SUCCESS == ret)
     {
@@ -438,7 +438,7 @@ int ObNumber::to_int64(int64_t &i64) const
     {
         jlog(WARNING, "the number cannot be converted to int64, vscale=%hhd nwords=%hhd",
                 vscale_, nwords_);
-        ret = OB_VALUE_OUT_OF_RANGE;
+        ret = JD_VALUE_OUT_OF_RANGE;
     }
     else
     {
@@ -560,7 +560,7 @@ int ObNumber::round_to(int8_t precision, int8_t scale, int8_t &nwords, int8_t &v
     }
     if (vprec > precision)
     {
-        ret = OB_VALUE_OUT_OF_RANGE;
+        ret = JD_VALUE_OUT_OF_RANGE;
         jlog(WARNING, "value is not representable with the precision and scale, p=%hhd s=%hhd vp=%hhd vs=%hhd",
                 precision, scale, vprec, this->vscale_);
     }
@@ -619,7 +619,7 @@ int ObNumber::add(const ObNumber &other, ObNumber &res) const
     if (res_nwords > MAX_NWORDS)
     {
         jlog(WARNING, "number out of range");
-        ret = OB_VALUE_OUT_OF_RANGE;
+        ret = JD_VALUE_OUT_OF_RANGE;
     }
     else
     {
@@ -707,7 +707,7 @@ int ObNumber::sub(const ObNumber &other, ObNumber &res) const
     if (neg_other.nwords_ >= MAX_NWORDS)
     {
         jlog(WARNING, "value out of range for sub");
-        ret = OB_VALUE_OUT_OF_RANGE;
+        ret = JD_VALUE_OUT_OF_RANGE;
     }
     else
     {
@@ -783,7 +783,7 @@ int ObNumber::mul_words(const ObNumber &n1, const ObNumber &n2, ObNumber &res)
     if (OB_UNLIKELY(res.nwords_ > MAX_NWORDS))
     {
         jlog(WARNING, "multiply precision overflow, res_nwords=%hhd", res.nwords_);
-        ret = OB_VALUE_OUT_OF_RANGE;
+        ret = JD_VALUE_OUT_OF_RANGE;
     }
     else
     {
@@ -1095,7 +1095,7 @@ int ObNumber::div(const ObNumber &other, ObNumber &res) const
     if (other.is_zero())
     {
         jlog(WARNING, "divisor is zero");
-        ret = OB_DIVISION_BY_ZERO;
+        ret = JD_DIVISION_BY_ZERO;
     }
     else if (!this->is_zero())
     {
@@ -1151,7 +1151,7 @@ int ObNumber::negate(ObNumber &res) const
     if (this->nwords_ >= MAX_NWORDS)
     {
         jlog(WARNING, "value out of range to do negate");
-        ret = OB_VALUE_OUT_OF_RANGE;
+        ret = JD_VALUE_OUT_OF_RANGE;
     }
     else
     {

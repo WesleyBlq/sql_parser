@@ -15,7 +15,6 @@
  */
 
 #include "utility.h"
-#include "ob_define.h"
 
 
 string make_string(const char* cstr)
@@ -110,7 +109,6 @@ namespace jdbd
                         pthread_self(), addrstr, hexstr);
             }
         }
-#endif
 
         int32_t parse_string_to_int_array(const char* line,
                 const char del, int32_t *array, int32_t& size)
@@ -173,7 +171,7 @@ namespace jdbd
             }
             return ret;
         }
-
+#endif
         int32_t hex_to_str(const void* in_data, const int32_t data_length, void* buff, const int32_t buff_size)
         {
             unsigned const char *p = NULL;
@@ -538,7 +536,6 @@ namespace jdbd
             }
             return err;
         }
-#endif
 
         int64_t min(const int64_t x, const int64_t y)
         {
@@ -568,7 +565,6 @@ namespace jdbd
             }
             return ret;
         }
-#if 0
 
         easy_addr_t convert_addr_from_server(const ObServer *server)
         {

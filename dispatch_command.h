@@ -53,16 +53,9 @@ public:
     void debug(int command);
 
 private:
-    struct cuh
-    {
-        Connection* conn;
-        string user;
-        string host;
-    };
-    
     void com_refresh(Connection *conn);
-    void flush_all_privileges(vector<cuh>& connections);
-private:
+    void flush_all_privileges();
+
     int error;
     int r_or_w;
     vector<string> dictDatabase;

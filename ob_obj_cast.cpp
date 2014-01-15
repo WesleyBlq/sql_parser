@@ -37,7 +37,7 @@ namespace jdbd
             UNUSED(params);
             UNUSED(in);
             UNUSED(out);
-            return OB_NOT_SUPPORTED;
+            return JD_ERR_SQL_NOT_SUPPORT;
         }
         ////////////////////////////////////////////////////////////////
         // Int -> XXX
@@ -82,7 +82,7 @@ namespace jdbd
             if (NULL == varchar.data() || varchar.length() <= 0)
             {
                 jlog(WARNING, "output buffer for varchar not enough, buf_len=%u", (uint32_t)varchar.length());
-                ret = OB_INVALID_ARGUMENT;
+                ret = JD_INVALID_ARGUMENT;
             }
             else
             {
@@ -492,7 +492,7 @@ namespace jdbd
             if (NULL == str)
             {
                 jlog(ERROR, "no memory");
-                ret = OB_ALLOCATE_MEMORY_FAILED;
+                ret = JD_ERR_PARSER_MALLOC_FAILED;
             }
             else
             {
@@ -502,7 +502,7 @@ namespace jdbd
                 va_end(args);
                 if (items != matched)
                 {
-                    ret = OB_INVALID_ARGUMENT;
+                    ret = JD_INVALID_ARGUMENT;
                 }
             }
             return ret;
@@ -1122,7 +1122,7 @@ namespace jdbd
             if (varchar.length() < ObNumber::MAX_PRINTABLE_SIZE)
             {
                 jlog(WARNING, "output buffer for varchar not enough, buf_len=%d", (uint32_t)varchar.length());
-                ret = OB_INVALID_ARGUMENT;
+                ret = JD_INVALID_ARGUMENT;
             }
             else
             {

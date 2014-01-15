@@ -17,14 +17,13 @@
 #ifndef OCEANBASE_SQL_OB_BASIC_STMT_H_
 #define OCEANBASE_SQL_OB_BASIC_STMT_H_
 
-#include "ob_define.h"
+#include "utility.h"
 #include "parse_node.h"
 
 namespace jdbd
 {
     namespace sql
     {
-
         class ObBasicStmt
         {
         public:

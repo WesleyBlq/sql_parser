@@ -437,7 +437,7 @@ namespace jdbd
                 }
                 else
                 {
-                    ret = OB_ERR_ILLEGAL_ID;
+                    ret = JD_ERR_ILLEGAL_ID;
                 }
                 return ret;
             }
@@ -574,7 +574,28 @@ namespace jdbd
             {
                 return is_sql_relate_multi_shards;
             }
-            bool current_join_is_supported(ResultPlan& result_plan, string &first_join_table );
+            bool is_join_tables_binded(ResultPlan& result_plan, ObSelectStmt *select_stmt, string& first_join_table);
+            /**************************************************
+            Funtion     :   decompose_where_items
+            Author      :   qinbo
+            Date        :   2013.9.24
+            Description :   generate distributed where conditions items
+            Input       :   ObRawExpr* sql_expr
+            Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
+            return      :   
+             **************************************************/
+            int decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array);
+
+            /**************************************************
+            Funtion     :   decompose_join_on_items
+            Author      :   qinbo
+            Date        :   2013.9.24
+            Description :   generate distributed where conditions items
+            Input       :   ObRawExpr* sql_expr
+            Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
+            return      :   
+             **************************************************/
+            int decompose_join_on_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array);
         private:
             // These fields are only used by normal select
             bool is_distinct_;

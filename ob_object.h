@@ -2,8 +2,7 @@
 #define OCEANBASE_COMMON_OB_OBJECT_H_
 
 #include <string>
-#include "ob_define.h"
-//#include "tbsys.h"
+#include "utility.h"
 #include "ob_action_flag.h"
 #include "ob_obj_type.h"
 #include "ob_number.h"
@@ -427,7 +426,7 @@ namespace jdbd
 
         inline int ObObj::get_int(int64_t& value, bool& is_add) const
         {
-            int res = OB_OBJ_TYPE_ERROR;
+            int res = JD_OBJ_TYPE_ERROR;
             if (meta_.type_ == ObIntType)
             {
                 is_add = (ADD == meta_.op_flag_);
@@ -450,7 +449,7 @@ namespace jdbd
 
         inline int ObObj::get_datetime(ObDateTime& value, bool& is_add) const
         {
-            int ret = OB_OBJ_TYPE_ERROR;
+            int ret = JD_OBJ_TYPE_ERROR;
             if (ObDateTimeType == meta_.type_)
             {
                 value = value_.time_val;
@@ -468,7 +467,7 @@ namespace jdbd
 
         inline int ObObj::get_precise_datetime(ObPreciseDateTime& value, bool& is_add) const
         {
-            int ret = OB_OBJ_TYPE_ERROR;
+            int ret = JD_OBJ_TYPE_ERROR;
             if (ObPreciseDateTimeType == meta_.type_)
             {
                 value = value_.precisetime_val;
@@ -486,7 +485,7 @@ namespace jdbd
 
         inline int ObObj::get_varchar(string& value) const
         {
-            int res = OB_OBJ_TYPE_ERROR;
+            int res = JD_OBJ_TYPE_ERROR;
             if (meta_.type_ == ObVarcharType)
             {
                 value.assign(varchar_val);
@@ -497,7 +496,7 @@ namespace jdbd
 
         inline int ObObj::get_modifytime(ObModifyTime& value) const
         {
-            int res = OB_OBJ_TYPE_ERROR;
+            int res = JD_OBJ_TYPE_ERROR;
             if (ObModifyTimeType == meta_.type_)
             {
                 value = value_.modifytime_val;
@@ -508,7 +507,7 @@ namespace jdbd
 
         inline int ObObj::get_createtime(ObCreateTime& value) const
         {
-            int res = OB_OBJ_TYPE_ERROR;
+            int res = JD_OBJ_TYPE_ERROR;
             if (ObCreateTimeType == meta_.type_)
             {
                 value = value_.createtime_val;
@@ -519,7 +518,7 @@ namespace jdbd
 
         inline int ObObj::get_ext(int64_t& value) const
         {
-            int res = OB_OBJ_TYPE_ERROR;
+            int res = JD_OBJ_TYPE_ERROR;
             if (ObExtendType == meta_.type_)
             {
                 value = value_.ext_val;
@@ -555,7 +554,7 @@ namespace jdbd
 
         inline int ObObj::get_float(float& value, bool& is_add) const
         {
-            int res = OB_OBJ_TYPE_ERROR;
+            int res = JD_OBJ_TYPE_ERROR;
             if (meta_.type_ == ObFloatType)
             {
                 value = value_.float_val;
@@ -573,7 +572,7 @@ namespace jdbd
 
         inline int ObObj::get_double(double& value, bool& is_add) const
         {
-            int res = OB_OBJ_TYPE_ERROR;
+            int res = JD_OBJ_TYPE_ERROR;
             if (meta_.type_ == ObDoubleType)
             {
                 value = value_.double_val;
@@ -591,7 +590,7 @@ namespace jdbd
 
         inline int ObObj::get_bool(bool &value) const
         {
-            int res = OB_OBJ_TYPE_ERROR;
+            int res = JD_OBJ_TYPE_ERROR;
             if (get_type() == ObBoolType)
             {
                 value = value_.bool_val;
@@ -648,7 +647,7 @@ namespace jdbd
                     break;
                 default:
                     jlog(ERROR, "unexpected branch");
-                    ret = OB_OBJ_TYPE_ERROR;
+                    ret = JD_OBJ_TYPE_ERROR;
             }
             return ret;
         }

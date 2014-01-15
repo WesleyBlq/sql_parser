@@ -687,7 +687,14 @@ void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func,
     }
     else
     {
-        this->func.push_back(AggrFuncPostReduce(pos, func, field_type));
+        if (T_INVALID == func)
+        {
+
+        }
+        else
+        {
+            this->func.push_back(AggrFuncPostReduce(pos, func, field_type));
+        }
     }
 
     this->having.push_back(HavingPostReduce(pos, func, operate, value,

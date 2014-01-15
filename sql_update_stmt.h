@@ -47,7 +47,7 @@ namespace jdbd
                 }
                 else
                 {
-                    ret = common::OB_INVALID_ARGUMENT;
+                    ret = JD_INVALID_ARGUMENT;
                 }
                 return ret;
             }
@@ -71,7 +71,7 @@ namespace jdbd
                 }
                 else
                 {
-                    ret = common::OB_INVALID_ARGUMENT;
+                    ret = JD_INVALID_ARGUMENT;
                 }
                 return ret;
             }
@@ -87,6 +87,17 @@ namespace jdbd
             int64_t make_update_table_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_update_column_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_update_where_string(ResultPlan& result_plan, string &assembled_sql);
+            
+            /**************************************************
+            Funtion     :   decompose_where_items
+            Author      :   qinbo
+            Date        :   2013.9.24
+            Description :   generate distributed where conditions items
+            Input       :   ObRawExpr* sql_expr
+            Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
+            return      :   
+             **************************************************/
+            int decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array);
 
         private:
             uint64_t table_id_;

@@ -28,7 +28,6 @@
 #include "parse_malloc.h"
 #include "parse_node.h"
 #include "utility.h"
-#include "ob_define.h"
 #include "ob_obj_type.h"
 #include "ob_expr_obj.h"
 
@@ -46,9 +45,6 @@ using namespace jdbd::common;
 using namespace jdbd::sql;
 
 #define MAX_SQL_EXEC_PLAN_SHARD_NUM   200
-
-#define WHERE_IS_OR_AND     0
-#define WHERE_IS_SUBQUERY   1
 
 #define SEND_SQL_TO_CONFIG_SERVER   0
 #define SEND_SQL_TO_DATA_NODE       1
@@ -439,17 +435,6 @@ private:
             multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs,
             vector<vector<schema_shard*> > &all_binding_tables_shards);
 
-
-    /**************************************************
-    Funtion     :   decompose_where_items
-    Author      :   qinbo
-    Date        :   2013.9.24
-    Description :   generate distributed where conditions items
-    Input       :   ObRawExpr* sql_expr
-    Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
-    return      :   
-     **************************************************/
-    int decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array);
 
     /**************************************************
     Funtion     :   search_partition_sql_exprs

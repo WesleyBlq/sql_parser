@@ -64,7 +64,7 @@ int ObSelectStmt::check_alias_name(
             schema_column* schema_column = meta_reader::get_instance().get_column_schema(db_name_tmp, item.table_name_, alias_name);
             if (NULL == schema_column)
             {
-                ret = OB_ERR_COLUMN_DUPLICATE;
+                ret = JD_ERR_COLUMN_DUPLICATE;
                 jlog(WARNING, "alias name %.*s is ambiguous", (int)alias_name.size(), alias_name.data());
                 break;
             }
@@ -78,7 +78,7 @@ int ObSelectStmt::check_alias_name(
                 const SelectItem& select_item = sub_query->get_select_item(j);
                 if (select_item.alias_name_ == alias_name)
                 {
-                    ret = OB_ERR_COLUMN_DUPLICATE;
+                    ret = JD_ERR_COLUMN_DUPLICATE;
                     jlog(WARNING, "alias name %.*s is ambiguous", (int)alias_name.size(), alias_name.data());
                     break;
                 }
@@ -92,7 +92,7 @@ int ObSelectStmt::check_alias_name(
         const SelectItem& select_item = get_select_item(i);
         if (select_item.alias_name_ == alias_name)
         {
-            ret = OB_ERR_COLUMN_DUPLICATE;
+            ret = JD_ERR_COLUMN_DUPLICATE;
             jlog(WARNING, "alias name %.*s is ambiguous", (int)alias_name.size(), alias_name.data());
             break;
         }
@@ -129,7 +129,7 @@ int ObSelectStmt::add_select_item(
     }
     else
     {
-        ret = OB_ERR_ILLEGAL_ID;
+        ret = JD_ERR_ILLEGAL_ID;
     }
     return ret;
 }
@@ -160,13 +160,13 @@ int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& off
                 }
                 else
                 {
-                    ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                    ret = JD_ERR_LOGICAL_PLAN_FAILD;
                     jlog(WARNING, "limit_offset set error!!!");
                 }
             }
             else
             {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
                 jlog(WARNING, "limit_offset set error!!!");
             }
         }
@@ -199,13 +199,13 @@ int ObSelectStmt::set_limit_offset(ResultPlan * result_plan, const uint64_t& off
                 }
                 else
                 {
-                    ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                    ret = JD_ERR_LOGICAL_PLAN_FAILD;
                     jlog(WARNING, "limit_count set error!!!");
                 }
             }
             else
             {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
                 jlog(WARNING, "limit_count set error!!!");
             }
         }
@@ -252,31 +252,37 @@ JoinedTable* ObSelectStmt::get_joined_table(uint64_t table_id)
 }
 
 /**************************************************
-Funtion     :   current_join_is_supported
+Funtion     :   is_join_tables_binded
 Author      :   qinbo
 Date        :   2014.1.7
 Description :   check whether current JOIN OP is supported
-Input       :   string &first_join_table
+Input       :   ResultPlan& result_plan, 
+                ObSelectStmt *select_stmt
+                string first_join_table
 Output      :   
  **************************************************/
-bool ObSelectStmt::current_join_is_supported(ResultPlan& result_plan, string &first_join_table )
+bool ObSelectStmt::is_join_tables_binded(ResultPlan& result_plan, ObSelectStmt *select_stmt, string& first_join_table)
 {
     JoinedTable *joined_table = NULL;
     uint32_t num = get_joined_table_size();
     vector<string> binding_join_tables;
+    ObSqlRawExpr*  sql_expr = NULL;
+    vector<vector<ObRawExpr*> > atomic_exprs_array;
+    ObRawExpr*     join_on_condition = NULL;
+    
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    OB_ASSERT(NULL != logical_plan);
     
     if (0 == num)
     {
         return true;
     }
-
-    if (num > 2)
+    else if (num > 1)
     {
-        jlog(WARNING, "Now we DO NOT support JOIN which tables num > 2");
+        jlog(WARNING, "Now we DO NOT support JOIN which tables num > 1, current num is%d", num);
         return false;
     }
 
-    
     joined_table = get_joined_table(from_items_[0].table_id_);
     first_join_table = ObStmt::get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_;
     schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
@@ -292,12 +298,52 @@ bool ObSelectStmt::current_join_is_supported(ResultPlan& result_plan, string &fi
         jlog(WARNING, "Table %s should not be empty in table schema", first_join_table.data());
         return false;
     }
-    
+
     binding_join_tables = table_schema->get_relation_table();
-    if (binding_join_tables.at(0) == ObStmt::get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_)
+
+    if (binding_join_tables.size() > 1)
     {
-        return true;
+        jlog(WARNING, "Binding tables num should not be exceed 1");
+        return false;
     }
+        
+    sql_expr = logical_plan->get_expr_by_id(joined_table->expr_ids_.at(0));
+    if (NULL == sql_expr)
+    {
+        jlog(WARNING, "join table expr name error!!!");
+        return false;
+    }
+    
+    if ((OB_SUCCESS != decompose_join_on_items(sql_expr->get_expr(), atomic_exprs_array))
+        ||((atomic_exprs_array.size() > 1)||(atomic_exprs_array.at(0).size() > 1)))
+    {
+        jlog(WARNING, "Now we DO NOT support multi ON conditions");
+        return false;
+    }
+
+    join_on_condition = atomic_exprs_array.at(0).at(0);
+    if (join_on_condition->is_join_cond())
+    {
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (join_on_condition));
+        if (binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan)
+                && binary_expr->get_second_op_expr()->is_column_and_sharding_key(result_plan))
+        {
+            if (binding_join_tables.at(0) == ObStmt::get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_)
+            {
+                return true;
+            }
+            else
+            {
+                jlog(WARNING, "Now we DO NOT support unbinded join query");
+            }
+        }
+        else
+        {
+            jlog(WARNING, "Now we DO NOT support ON condition which is NOT sharding key");
+        }
+    }
+    
+    
     return false;
 }
 
@@ -336,7 +382,7 @@ int ObSelectStmt::check_having_ident(
                             ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
                             if (b_expr == NULL)
                             {
-                                ret = OB_ERR_PARSER_MALLOC_FAILED;
+                                ret = JD_ERR_PARSER_MALLOC_FAILED;
                                 jlog(WARNING, "Can not malloc space for ObBinaryRefRawExpr!!!");
                                 return ret;
                             }
@@ -359,7 +405,7 @@ int ObSelectStmt::check_having_ident(
             {
                 if (ret_expr)
                 {
-                    ret = OB_ERR_COLUMN_AMBIGOUS;
+                    ret = JD_ERR_COLUMN_AMBIGOUS;
                     jlog(WARNING, "column %.*s of having clause is ambiguous", (int)column_name.size(), column_name.data());
                     //parse_free(ret_expr);
                     ret_expr = NULL;
@@ -374,7 +420,7 @@ int ObSelectStmt::check_having_ident(
                     ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
                     if (b_expr == NULL)
                     {
-                        ret = OB_ERR_PARSER_MALLOC_FAILED;
+                        ret = JD_ERR_PARSER_MALLOC_FAILED;
                         jlog(WARNING, "Can not malloc space for ObBinaryRefRawExpr");
                         return ret;
                     }
@@ -403,7 +449,7 @@ int ObSelectStmt::check_having_ident(
                     ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
                     if (b_expr == NULL)
                     {
-                        ret = OB_ERR_PARSER_MALLOC_FAILED;
+                        ret = JD_ERR_PARSER_MALLOC_FAILED;
                         jlog(WARNING, "Can not malloc space for ObBinaryRefRawExpr");
                         return ret;
                     }
@@ -444,7 +490,7 @@ int ObSelectStmt::check_having_ident(
                     ObBinaryRefRawExpr *b_expr = (ObBinaryRefRawExpr*) parse_malloc(sizeof (ObBinaryRefRawExpr), NULL);
                     if (b_expr == NULL)
                     {
-                        ret = OB_ERR_PARSER_MALLOC_FAILED;
+                        ret = JD_ERR_PARSER_MALLOC_FAILED;
                         jlog(WARNING, "Can not malloc space for ObBinaryRefRawExpr");
                         return ret;
                     }
@@ -465,7 +511,7 @@ int ObSelectStmt::check_having_ident(
 
     if (ret == OB_SUCCESS && ret_expr == NULL)
     {
-        ret = OB_ERR_COLUMN_UNKNOWN;
+        ret = JD_ERR_COLUMN_UNKNOWN;
         jlog(WARNING, "Unknown %.*s in having clause", (int)column_name.size(), column_name.data());
     }
     return ret;
@@ -728,7 +774,13 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
                                                 vector<schema_shard*> binding_shard_info,
                                                 string &assembled_sql)
 {
+    int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    OB_ASSERT(NULL != logical_plan);
+    
+    ObSqlRawExpr* sql_expr = NULL;
     make_select_item_string(result_plan, assembled_sql);
+    schema_shard* binding_shard = NULL;
     
     //when post process need column while this column is not in select_itmes, append them
     append_select_items_reduce_used(result_plan, assembled_sql);
@@ -736,7 +788,7 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
     if (from_items_.size() != binding_shard_info.size())
     {
         jlog(ERROR, "sql parser error!!!");
-        return OB_ERR_PARSE_SQL;
+        return JD_ERR_PARSE_SQL;
     }
    
     for (uint32_t i = 0; i < from_items_.size(); i++)
@@ -747,9 +799,63 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
         }
 
         FromItem& item = from_items_[i];
-        string table_name = ObStmt::get_table_item_by_id(item.table_id_)->table_name_;
-        if (table_name != binding_shard_info.at(i)->get_table_name())
+        
+        if (item.is_joined_)
         {
+            OB_ASSERT(1 == from_items_.size());
+            JoinedTable* joined_table = get_joined_table(item.table_id_);
+            assembled_sql.append(binding_shard_info.at(i)->get_shard_name());
+            assembled_sql.append(" AS ");
+            assembled_sql.append(ObStmt::get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_);
+            assembled_sql.append(" ");
+            switch (joined_table->join_types_.at(0))
+            {
+                case JoinedTable::T_FULL:
+                    assembled_sql.append(" FULL JOIN ");
+                    break;
+                case JoinedTable::T_LEFT:
+                    assembled_sql.append(" LEFT JOIN ");
+                    break;
+                case JoinedTable::T_RIGHT:
+                    assembled_sql.append(" RIGHT JOIN ");
+                    break;
+                case JoinedTable::T_INNER:
+                    assembled_sql.append(" JOIN ");
+                    break;
+                default:
+                    break;
+            }
+
+            if (NULL == (binding_shard = meta_reader::get_instance().get_relation_shard(result_plan.db_name, 
+                                                            ObStmt::get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_, 
+                                                            binding_shard_info.at(i)->get_shard_name(), 
+                                                            ObStmt::get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_)))
+            {
+                jlog(ERROR, "Join table binding error!!!");
+                return JD_ERR_PARSE_SQL;
+            }
+                
+            assembled_sql.append(binding_shard->get_shard_name());
+            assembled_sql.append(" AS ");
+            assembled_sql.append(ObStmt::get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_);
+            assembled_sql.append(" ");
+            assembled_sql.append(" ON ");
+            
+            sql_expr = logical_plan->get_expr_by_id(joined_table->expr_ids_.at(0));
+            if (NULL == sql_expr)
+            {
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                jlog(WARNING, "join table expr name error!!!");
+                return ret;
+            }
+            string tmp;
+            sql_expr->to_string(result_plan, tmp);
+            assembled_sql.append(tmp);
+            assembled_sql.append(" ");
+        }
+        else
+        {
+            string table_name = ObStmt::get_table_item_by_id(item.table_id_)->table_name_;
             assembled_sql.append(binding_shard_info.at(i)->get_shard_name());
             //from multi table
             if (from_items_.size() >1)
@@ -758,10 +864,6 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
                 assembled_sql.append(table_name);
                 assembled_sql.append(" ");
             }
-        }
-        else
-        {
-            assembled_sql.append(table_name);
         }
         
         if (i == from_items_.size() - 1)
@@ -830,7 +932,7 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
             sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
             if (NULL == sql_expr)
             {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
                 jlog(WARNING, "join table expr name error!!!");
                 return ret;
             }
@@ -855,7 +957,7 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
             sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
             if (NULL == sql_expr)
             {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
                 jlog(WARNING, "select expr error!!!");
                 return ret;
             }
@@ -1060,7 +1162,7 @@ int64_t ObSelectStmt::make_from_string(ResultPlan& result_plan, string &assemble
                 sql_expr = logical_plan->get_expr_by_id(joined_table->expr_ids_.at(j - 1));
                 if (NULL == sql_expr)
                 {
-                    ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                    ret = JD_ERR_LOGICAL_PLAN_FAILD;
                     jlog(WARNING, "join table expr name error!!!");
                     return ret;
                 }
@@ -1189,7 +1291,7 @@ int64_t ObSelectStmt::make_having_string(ResultPlan& result_plan, string &assemb
             sql_expr = logical_plan->get_expr_by_id(having_expr_ids_[i]);
             if (NULL == sql_expr)
             {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
                 jlog(WARNING, "having expr name error!!!");
                 return ret;
             }
@@ -1280,7 +1382,7 @@ int64_t ObSelectStmt::make_where_string(ResultPlan& result_plan, string &assembl
             sql_expr = logical_plan->get_expr_by_id(where_exprs[i]);
             if (NULL == sql_expr)
             {
-                ret = OB_ERR_LOGICAL_PLAN_FAILD;
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
                 jlog(WARNING, "where expr name error!!!");
                 return ret;
             }
@@ -1332,7 +1434,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
     
     if (NULL == sql_expr)
     {
-        ret = OB_ERR_ILLEGAL_ID;
+        ret = JD_ERR_ILLEGAL_ID;
         jlog(WARNING, "select item error!!!");
         return ret;
     }
@@ -1340,8 +1442,8 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
     ObBinaryRefRawExpr *select_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
     if (NULL == select_expr)
     {
-        ret = OB_ERR_ILLEGAL_ID;
-        jlog(WARNING, "We do not support this sql now!!!");
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support this type of sql.");
         return ret;
     }
     
@@ -1350,7 +1452,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
         sql_expr = logical_plan->get_expr_by_id(select_expr->get_related_sql_raw_id());
         if (NULL == sql_expr)
         {
-            ret = OB_ERR_ILLEGAL_ID;
+            ret = JD_ERR_ILLEGAL_ID;
             jlog(WARNING, "ref column error!!!");
             return ret;
         }
@@ -1361,7 +1463,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
             
             if ((!agg_fun_raw_expr->get_param_expr())||(!agg_fun_raw_expr->get_param_expr()->is_column()))
             {
-                ret = OB_ERR_ILLEGAL_ID;
+                ret = JD_ERR_ILLEGAL_ID;
                 jlog(WARNING, "Now we DO NOT support aggr function with parameter which is NOT column type!!!");
                 return ret;
             }
@@ -1386,7 +1488,7 @@ int64_t ObSelectStmt::get_column_info_by_expr_id(
     }
     else
     {
-        ret = OB_ERR_ILLEGAL_ID;
+        ret = JD_ERR_ILLEGAL_ID;
         jlog(WARNING, "select item error!!!");
         return ret;
     }
@@ -1438,7 +1540,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
 
     if (NULL == sql_expr)
     {
-        ret = OB_ERR_ILLEGAL_ID;
+        ret = JD_ERR_ILLEGAL_ID;
         jlog(WARNING, "having item error!!!");
         return ret;
     }
@@ -1447,8 +1549,8 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     ObBinaryOpRawExpr   *select_op      = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
     if (NULL == select_op)
     {
-        ret = OB_ERR_ILLEGAL_ID;
-        jlog(WARNING, "We do not support this sql now!!!");
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support this type of sql.");
         return ret;
     }
     
@@ -1456,7 +1558,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     ObConstRawExpr      *second_expr    = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (select_op->get_second_op_expr()));
     if ((NULL == first_expr)||(NULL == second_expr))
     {
-        ret = OB_ERR_ILLEGAL_ID;
+        ret = JD_ERR_ILLEGAL_ID;
         jlog(WARNING, "We do not support this sql now!!!");
         return ret;
     }
@@ -1466,7 +1568,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
         sql_expr = logical_plan->get_expr_by_id(first_expr->get_related_sql_raw_id());
         if (NULL == sql_expr)
         {
-            ret = OB_ERR_ILLEGAL_ID;
+            ret = JD_ERR_ILLEGAL_ID;
             jlog(WARNING, "ref column error!!!");
             return ret;
         }
@@ -1476,7 +1578,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
 
             if ((!agg_fun_raw_expr->get_param_expr())||(!agg_fun_raw_expr->get_param_expr()->is_column()))
             {
-                ret = OB_ERR_ILLEGAL_ID;
+                ret = JD_ERR_ILLEGAL_ID;
                 jlog(WARNING, "Now we DO NOT support aggr function with parameter which is NOT column type!!!");
                 return ret;
             }
@@ -1503,7 +1605,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     }
     else
     {
-        ret = OB_ERR_ILLEGAL_ID;
+        ret = JD_ERR_ILLEGAL_ID;
         jlog(WARNING, "having item error!!!");
         return ret;
     }
@@ -1522,7 +1624,7 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
         &&(T_FLOAT != second_expr->get_expr_type())
         &&(T_DOUBLE != second_expr->get_expr_type()))
     {
-        ret = OB_ERR_ILLEGAL_ID;
+        ret = JD_ERR_ILLEGAL_ID;
         jlog(WARNING, "Aggr func only support INT/FLOAT/DOUBLE/DECIMAL type value!!!");
         return ret;
     }
@@ -1547,5 +1649,149 @@ int64_t ObSelectStmt::get_having_column_by_expr_id(
     return ret;
 }
 
+/**************************************************
+Funtion     :   decompose_join_on_items
+Author      :   qinbo
+Date        :   2013.9.24
+Description :   generate distributed where conditions items
+Input       :   ObRawExpr* sql_expr
+Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
+return      :   
+ **************************************************/
+int ObSelectStmt::decompose_join_on_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array)
+{
+    return decompose_where_items(sql_expr, atomic_exprs_array);
+}
 
+/**************************************************
+Funtion     :   decompose_where_items
+Author      :   qinbo
+Date        :   2013.9.24
+Description :   generate distributed where conditions items
+Input       :   ObRawExpr* sql_expr
+Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
+return      :   
+ **************************************************/
+int ObSelectStmt::decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array)
+{
+    uint32_t i = 0;
+
+    if (sql_expr->is_or_expr())
+    {
+        vector<vector<ObRawExpr*> > left_atomic_exprs_array;
+
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr));
+        ObRawExpr *left_sql_item = binary_expr->get_first_op_expr();
+
+        if (left_sql_item->is_and_expr() || left_sql_item->is_or_expr())
+        {
+            (void)decompose_where_items(left_sql_item, left_atomic_exprs_array);
+        }
+        else
+        {
+            vector<ObRawExpr*> atomic_exprs1;
+            atomic_exprs1.push_back(left_sql_item);
+            left_atomic_exprs_array.push_back(atomic_exprs1);
+        }
+
+        ObRawExpr *right_sql_item = binary_expr->get_second_op_expr();
+        vector<vector<ObRawExpr*> > right_atomic_exprs_array;
+
+        if (right_sql_item->is_and_expr() || right_sql_item->is_or_expr())
+        {
+            (void)decompose_where_items(right_sql_item, right_atomic_exprs_array);
+        }
+        else
+        {
+            vector<ObRawExpr*> atomic_exprs2;
+            atomic_exprs2.push_back(right_sql_item);
+            right_atomic_exprs_array.push_back(atomic_exprs2);
+        }
+
+        //add with each other
+        for (i = 0; i < left_atomic_exprs_array.size(); i++)
+        {
+            atomic_exprs_array.push_back(left_atomic_exprs_array.at(i));
+        }
+
+        for (i = 0; i < right_atomic_exprs_array.size(); i++)
+        {
+            atomic_exprs_array.push_back(right_atomic_exprs_array.at(i));
+        }
+
+        return WHERE_IS_OR_AND;
+    }
+    else if (sql_expr->is_and_expr())
+    {
+        vector<vector<ObRawExpr*> > left_atomic_exprs_array;
+
+        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr));
+        ObRawExpr *left_sql_item = binary_expr->get_first_op_expr();
+
+        if (left_sql_item->is_and_expr() || left_sql_item->is_or_expr())
+        {
+            (void)decompose_where_items(left_sql_item, left_atomic_exprs_array);
+        }
+        else
+        {
+            vector<ObRawExpr*> atomic_exprs1;
+            atomic_exprs1.push_back(left_sql_item);
+            left_atomic_exprs_array.push_back(atomic_exprs1);
+        }
+
+        ObRawExpr *right_sql_item = binary_expr->get_second_op_expr();
+        vector<vector<ObRawExpr*> > right_atomic_exprs_array;
+
+        if (right_sql_item->is_and_expr() || right_sql_item->is_or_expr())
+        {
+            (void)decompose_where_items(right_sql_item, right_atomic_exprs_array);
+        }
+        else
+        {
+            vector<ObRawExpr*> atomic_exprs2;
+            atomic_exprs2.push_back(right_sql_item);
+            right_atomic_exprs_array.push_back(atomic_exprs2);
+        }
+
+        //X with each other
+        for (i = 0; i < left_atomic_exprs_array.size(); i++)
+        {
+            uint32_t j;
+            for (j = 0; j < right_atomic_exprs_array.size(); j++)
+            {
+                vector<ObRawExpr*> atomic_exprs;
+
+                uint32_t k;
+                vector<ObRawExpr*> left_atomic_exprs = left_atomic_exprs_array.at(i);
+                for (k = 0; k < left_atomic_exprs.size(); k++)
+                {
+                    atomic_exprs.push_back(left_atomic_exprs.at(k));
+                }
+                vector<ObRawExpr*> right_atomic_exprs = right_atomic_exprs_array.at(j);
+                for (k = 0; k < right_atomic_exprs.size(); k++)
+                {
+                    atomic_exprs.push_back(right_atomic_exprs.at(k));
+                }
+
+                atomic_exprs_array.push_back(atomic_exprs);
+            }
+        }
+
+        return WHERE_IS_OR_AND;
+    }
+    #if 1
+    else
+    {
+        vector<ObRawExpr*> one_expr;
+        one_expr.push_back(sql_expr);
+        atomic_exprs_array.push_back(one_expr);
+        return WHERE_IS_OR_AND;
+    }
+    #else //do not support sub query now
+    else
+    {
+        return WHERE_IS_SUBQUERY;
+    }
+    #endif
+}
 

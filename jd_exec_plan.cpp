@@ -199,6 +199,7 @@ FinalExecPlan::~FinalExecPlan()
     {
         same_level_exec_plans[i]->~SameLevelExecPlan();
         parse_free(same_level_exec_plans.at(i));
+        same_level_exec_plans.at(i) = NULL;
     }
     same_level_exec_plans.clear();
 }
@@ -287,7 +288,7 @@ int QueryActuator::get_stmt(
         stmt = dynamic_cast<T*> (logical_plan->get_query(query_id));
     if (stmt == NULL)
     {
-        err_stat.err_code_ = OB_ERR_PARSER_SYNTAX;
+        err_stat.err_code_ = JD_ERR_PARSER_SYNTAX;
     }
     return ret;
 }
@@ -543,10 +544,10 @@ int QueryActuator::generate_exec_plan(
     }
     else
     {
-#if 0
+#if 1
     jlog(INFO, "<<Part 2 : PARSE TREE>>");
     print_tree(result.result_tree_, 0);
-#endif        
+#endif
     }
 
     if (result.result_tree_ != NULL)
@@ -596,6 +597,7 @@ int QueryActuator::generate_exec_plan(
                 break;
             }
             default:
+                ret = JD_ERR_SQL_NOT_SUPPORT;
                 break;
         }
     }
@@ -610,6 +612,7 @@ int QueryActuator::generate_exec_plan(
 
     if (OB_SUCCESS != ret)
     {
+        jlog(INFO, "sql process error!");
         return ret;
     }
     
@@ -617,7 +620,7 @@ int QueryActuator::generate_exec_plan(
         
     if (logic_plan)
     {
-#if 0
+#if 1
         jlog(INFO, "\n=======================================\n");
         jlog(INFO, "\n<<Part 2 : LOGICAL PLAN>>\n");
         logic_plan->print();
@@ -632,7 +635,7 @@ int QueryActuator::generate_exec_plan(
         {
             if ((final_exec_plan = (FinalExecPlan*) parse_malloc(sizeof (FinalExecPlan), NULL)) == NULL)
             {
-                ret = OB_ERR_PARSER_MALLOC_FAILED;
+                ret = JD_ERR_PARSER_MALLOC_FAILED;
                 jlog(WARNING, "Can not malloc space for FinalExecPlan");
             }
             else
@@ -650,7 +653,7 @@ int QueryActuator::generate_exec_plan(
             stmt = logic_plan->get_main_stmt();
             if (stmt == NULL)
             {
-                ret = OB_ERR_ILLEGAL_ID;
+                ret = JD_ERR_ILLEGAL_ID;
                 jlog(WARNING, "Wrong query id to find query statement");
             }
         }
@@ -691,18 +694,27 @@ int QueryActuator::generate_exec_plan(
                     //ret = send_sql_to_config_server(result_plan, final_exec_plan, sql);
                     break;
                 default:
-                    ret = OB_NOT_SUPPORTED;
+                    ret = JD_ERR_SQL_NOT_SUPPORT;
                     jlog(INFO, "Unknown logical plan, stmt_type=%d", stmt->get_stmt_type());
                     break;
             }
         }
-
+#if 0
         if (ret != OB_SUCCESS && new_generated && final_exec_plan != NULL)
         {
             final_exec_plan->~FinalExecPlan();
             parse_free(final_exec_plan);
             final_exec_plan = NULL;
         }
+#endif        
+    }
+    if (OB_SUCCESS != ret)
+    {
+        jlog(INFO, "sql process error!");
+    }
+    else
+    {
+        jlog(INFO, "sql process OK!");
     }
     return ret;
 }
@@ -756,7 +768,7 @@ int QueryActuator::gen_exec_plan_select(
     //get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
-        ret = OB_ERR_GEN_PLAN;
+        ret = JD_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         return ret;
     }
@@ -786,11 +798,11 @@ int QueryActuator::gen_exec_plan_select(
     #if 0
         if (select_stmt->is_from_item_with_join())
         {
-            ret = OB_ERR_GEN_PLAN;
+            ret = JD_ERR_GEN_PLAN;
             jlog(WARNING, "Can not support stmt with JOIN now");
         }
         else
-    #endif        
+    #endif
         {
             //related to 1 table
             if (1 == select_stmt->get_from_item_size())
@@ -861,7 +873,7 @@ int QueryActuator::gen_exec_plan_update(
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, update_stmt)))
     {
-        ret = OB_ERR_GEN_PLAN;
+        ret = JD_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         return ret;
     }
@@ -886,7 +898,7 @@ int QueryActuator::gen_exec_plan_update(
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Can not malloc space for SameLevelExecPlan");
         return ret;
     }
@@ -936,7 +948,7 @@ int QueryActuator::gen_exec_plan_update(
 
         for (i = 0; i < update_stmt->get_update_column_count(); i++)
         {            
-            if(OB_INVALID_ARGUMENT != update_stmt->get_update_column_id(i, column_id))
+            if(JD_INVALID_ARGUMENT != update_stmt->get_update_column_id(i, column_id))
             {
                 column_info = table_schema->get_column_from_table_by_id(column_id);
                 if (column_info->is_sharding_key())
@@ -962,7 +974,7 @@ int QueryActuator::gen_exec_plan_update(
             sql_expr = logical_plan->get_expr_by_id(expr_ids.at(0));
             vector<vector<ObRawExpr*> > atomic_exprs_array;
             
-            where_ret = decompose_where_items(sql_expr->get_expr(), atomic_exprs_array);
+            where_ret = update_stmt->decompose_where_items(sql_expr->get_expr(), atomic_exprs_array);
 
             if (WHERE_IS_OR_AND == where_ret)
             {
@@ -1010,7 +1022,7 @@ int QueryActuator::gen_exec_plan_update(
                     ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                     if (exec_plan_unit == NULL)
                     {
-                        ret = OB_ERR_PARSER_MALLOC_FAILED;
+                        ret = JD_ERR_PARSER_MALLOC_FAILED;
                         jlog(WARNING, "Can not malloc space for ExecPlanUnit");
                         return ret;
                     }
@@ -1099,7 +1111,7 @@ int QueryActuator::gen_exec_plan_delete(
     //get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, delete_stmt)))
     {
-        ret = OB_ERR_GEN_PLAN;
+        ret = JD_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         return ret;
     }
@@ -1124,7 +1136,7 @@ int QueryActuator::gen_exec_plan_delete(
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Can not malloc space for SameLevelExecPlan");
         return ret;
     }
@@ -1172,7 +1184,7 @@ int QueryActuator::gen_exec_plan_delete(
             sql_expr = logical_plan->get_expr_by_id(expr_ids.at(0));
             vector<vector<ObRawExpr*> > atomic_exprs_array;
             
-            where_ret = decompose_where_items(sql_expr->get_expr(), atomic_exprs_array);
+            where_ret = delete_stmt->decompose_where_items(sql_expr->get_expr(), atomic_exprs_array);
 
             if (WHERE_IS_OR_AND == where_ret)
             {
@@ -1218,7 +1230,7 @@ int QueryActuator::gen_exec_plan_delete(
                     ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                     if (exec_plan_unit == NULL)
                     {
-                        ret = OB_ERR_PARSER_MALLOC_FAILED;
+                        ret = JD_ERR_PARSER_MALLOC_FAILED;
                         jlog(WARNING, "Can not malloc space for ExecPlanUnit");
                         return ret;
                     }
@@ -1280,7 +1292,7 @@ int QueryActuator::gen_exec_plan_insert(
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, insert_stmt)))
     {
-        ret = OB_ERR_GEN_PLAN;
+        ret = JD_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         return ret;
     }
@@ -1304,7 +1316,7 @@ int QueryActuator::gen_exec_plan_insert(
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Can not malloc space for SameLevelExecPlan");
         return ret;
     }
@@ -1313,7 +1325,6 @@ int QueryActuator::gen_exec_plan_insert(
         exec_plan = new(exec_plan) SameLevelExecPlan();
         physical_plan->add_same_level_exec_plan(exec_plan);
     }
-
 
     if (result_plan.has_sub_query)
     {
@@ -1343,7 +1354,7 @@ int QueryActuator::gen_exec_plan_insert(
         ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
         if (exec_plan == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc space for ExecPlanUnit");
             return ret;
         }
@@ -1403,7 +1414,7 @@ int QueryActuator::gen_exec_plan_insert(
                 ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                 if (exec_plan_unit == NULL)
                 {
-                    ret = OB_ERR_PARSER_MALLOC_FAILED;
+                    ret = JD_ERR_PARSER_MALLOC_FAILED;
                     jlog(WARNING, "Can not malloc space for ExecPlanUnit");
                     return ret;
                 }
@@ -1421,7 +1432,6 @@ int QueryActuator::gen_exec_plan_insert(
                 exec_plan->add_exec_plan_unit(exec_plan_unit);
             }
         }
-        
     }
     
     return ret;
@@ -1459,7 +1469,7 @@ int QueryActuator::generate_select_plan_single_table(
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
-        ret = OB_ERR_GEN_PLAN;
+        ret = JD_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         return ret;
     }
@@ -1476,10 +1486,9 @@ int QueryActuator::generate_select_plan_single_table(
     {
         table_name = from_items.at(0).table_name_;
     }
-    else  if (!select_stmt->current_join_is_supported(result_plan,table_name))
+    else  if (!select_stmt->is_join_tables_binded(result_plan,select_stmt, table_name))
     {
         ret = JD_ERR_SQL_NOT_SUPPORT;
-        jlog(WARNING, "Now we DO NOT support unbinded join query");
         return ret;
     }
     
@@ -1490,7 +1499,7 @@ int QueryActuator::generate_select_plan_single_table(
         jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
         return ret;
     }
-    
+
     schema_table* table_schema = db_schema->get_table_from_db(table_name);
     if (NULL == table_schema)
     {
@@ -1502,7 +1511,7 @@ int QueryActuator::generate_select_plan_single_table(
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Can not malloc space for SameLevelExecPlan");
         return ret;
     }
@@ -1516,7 +1525,7 @@ int QueryActuator::generate_select_plan_single_table(
     QueryPostReduce* query_post_reduce_info = (QueryPostReduce*) parse_malloc(sizeof (QueryPostReduce), NULL);
     if (query_post_reduce_info == NULL)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Can not malloc space for QueryPostReduce");
         return ret;
     }
@@ -1559,7 +1568,7 @@ int QueryActuator::generate_select_plan_single_table(
             sql_expr = logical_plan->get_expr_by_id(expr_ids.at(0));
             vector<vector<ObRawExpr*> > atomic_exprs_array;
 
-            where_ret = decompose_where_items(sql_expr->get_expr(), atomic_exprs_array);
+            where_ret = select_stmt->decompose_where_items(sql_expr->get_expr(), atomic_exprs_array);
             
             if (WHERE_IS_OR_AND == where_ret)
             {
@@ -1608,7 +1617,7 @@ int QueryActuator::generate_select_plan_single_table(
                     ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                     if (exec_plan_unit == NULL)
                     {
-                        ret = OB_ERR_PARSER_MALLOC_FAILED;
+                        ret = JD_ERR_PARSER_MALLOC_FAILED;
                         jlog(WARNING, "Can not malloc space for ExecPlanUnit");
                         return ret;
                     }
@@ -1668,7 +1677,7 @@ int QueryActuator::generate_select_plan_multi_table(
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
     {
-        ret = OB_ERR_GEN_PLAN;
+        ret = JD_ERR_GEN_PLAN;
         jlog(WARNING, "Can not get stmt");
         return ret;
     }
@@ -1684,7 +1693,7 @@ int QueryActuator::generate_select_plan_multi_table(
     if (select_stmt->get_joined_table_size() > 0)
     {
         ret = JD_ERR_SQL_NOT_SUPPORT;
-        jlog(WARNING, "Now we DO NOT support unbinded join query");
+        jlog(WARNING, "Now we DO NOT support multi-table join query");
         return ret;
     }
     
@@ -1699,7 +1708,7 @@ int QueryActuator::generate_select_plan_multi_table(
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Can not malloc space for SameLevelExecPlan");
         return ret;
     }
@@ -1713,7 +1722,7 @@ int QueryActuator::generate_select_plan_multi_table(
     QueryPostReduce* query_post_reduce_info = (QueryPostReduce*) parse_malloc(sizeof (QueryPostReduce), NULL);
     if (query_post_reduce_info == NULL)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Can not malloc space for QueryPostReduce");
         return ret;
     }
@@ -1723,7 +1732,6 @@ int QueryActuator::generate_select_plan_multi_table(
         query_post_reduce_info->set_post_reduce_info(result_plan,select_stmt);
         exec_plan->set_query_post_reduce_info(query_post_reduce_info);
     }
-
 
     vector<uint64_t> expr_ids = select_stmt->get_where_exprs();
 
@@ -1756,7 +1764,7 @@ int QueryActuator::generate_select_plan_multi_table(
             ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
             if (exec_plan_unit == NULL)
             {
-                ret = OB_ERR_PARSER_MALLOC_FAILED;
+                ret = JD_ERR_PARSER_MALLOC_FAILED;
                 jlog(WARNING, "Can not malloc space for ExecPlanUnit");
                 return ret;
             }
@@ -1784,7 +1792,7 @@ int QueryActuator::generate_select_plan_multi_table(
         sql_expr = logical_plan->get_expr_by_id(expr_ids.at(0));
 
         vector<vector<ObRawExpr*> > atomic_exprs_array;
-        where_ret = decompose_where_items(sql_expr->get_expr(), atomic_exprs_array);
+        where_ret = select_stmt->decompose_where_items(sql_expr->get_expr(), atomic_exprs_array);
 
         if (WHERE_IS_OR_AND == where_ret)
         {
@@ -1824,7 +1832,7 @@ int QueryActuator::generate_select_plan_multi_table(
                 ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                 if (exec_plan_unit == NULL)
                 {
-                    ret = OB_ERR_PARSER_MALLOC_FAILED;
+                    ret = JD_ERR_PARSER_MALLOC_FAILED;
                     jlog(WARNING, "Can not malloc space for ExecPlanUnit");
                     return ret;
                 }
@@ -2488,138 +2496,6 @@ int QueryActuator::search_shard_from_multi_tables_shards( vector<vector<schema_s
 
 }
 
-/**************************************************
-Funtion     :   decompose_where_items
-Author      :   qinbo
-Date        :   2013.9.24
-Description :   generate distributed where conditions items
-Input       :   ObRawExpr* sql_expr
-Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
-return      :   
- **************************************************/
-int QueryActuator::decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array)
-{
-    uint32_t i = 0;
-
-    if (sql_expr->is_or_expr())
-    {
-        vector<vector<ObRawExpr*> > left_atomic_exprs_array;
-
-        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr));
-        ObRawExpr *left_sql_item = binary_expr->get_first_op_expr();
-
-        if (left_sql_item->is_and_expr() || left_sql_item->is_or_expr())
-        {
-            (void)decompose_where_items(left_sql_item, left_atomic_exprs_array);
-        }
-        else
-        {
-            vector<ObRawExpr*> atomic_exprs1;
-            atomic_exprs1.push_back(left_sql_item);
-            left_atomic_exprs_array.push_back(atomic_exprs1);
-        }
-
-        ObRawExpr *right_sql_item = binary_expr->get_second_op_expr();
-        vector<vector<ObRawExpr*> > right_atomic_exprs_array;
-
-        if (right_sql_item->is_and_expr() || right_sql_item->is_or_expr())
-        {
-            (void)decompose_where_items(right_sql_item, right_atomic_exprs_array);
-        }
-        else
-        {
-            vector<ObRawExpr*> atomic_exprs2;
-            atomic_exprs2.push_back(right_sql_item);
-            right_atomic_exprs_array.push_back(atomic_exprs2);
-        }
-
-        //add with each other
-        for (i = 0; i < left_atomic_exprs_array.size(); i++)
-        {
-            atomic_exprs_array.push_back(left_atomic_exprs_array.at(i));
-        }
-
-        for (i = 0; i < right_atomic_exprs_array.size(); i++)
-        {
-            atomic_exprs_array.push_back(right_atomic_exprs_array.at(i));
-        }
-
-        return WHERE_IS_OR_AND;
-    }
-    else if (sql_expr->is_and_expr())
-    {
-        vector<vector<ObRawExpr*> > left_atomic_exprs_array;
-
-        ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (sql_expr));
-        ObRawExpr *left_sql_item = binary_expr->get_first_op_expr();
-
-        if (left_sql_item->is_and_expr() || left_sql_item->is_or_expr())
-        {
-            (void)decompose_where_items(left_sql_item, left_atomic_exprs_array);
-        }
-        else
-        {
-            vector<ObRawExpr*> atomic_exprs1;
-            atomic_exprs1.push_back(left_sql_item);
-            left_atomic_exprs_array.push_back(atomic_exprs1);
-        }
-
-        ObRawExpr *right_sql_item = binary_expr->get_second_op_expr();
-        vector<vector<ObRawExpr*> > right_atomic_exprs_array;
-
-        if (right_sql_item->is_and_expr() || right_sql_item->is_or_expr())
-        {
-            (void)decompose_where_items(right_sql_item, right_atomic_exprs_array);
-        }
-        else
-        {
-            vector<ObRawExpr*> atomic_exprs2;
-            atomic_exprs2.push_back(right_sql_item);
-            right_atomic_exprs_array.push_back(atomic_exprs2);
-        }
-
-        //X with each other
-        for (i = 0; i < left_atomic_exprs_array.size(); i++)
-        {
-            uint32_t j;
-            for (j = 0; j < right_atomic_exprs_array.size(); j++)
-            {
-                vector<ObRawExpr*> atomic_exprs;
-
-                uint32_t k;
-                vector<ObRawExpr*> left_atomic_exprs = left_atomic_exprs_array.at(i);
-                for (k = 0; k < left_atomic_exprs.size(); k++)
-                {
-                    atomic_exprs.push_back(left_atomic_exprs.at(k));
-                }
-                vector<ObRawExpr*> right_atomic_exprs = right_atomic_exprs_array.at(j);
-                for (k = 0; k < right_atomic_exprs.size(); k++)
-                {
-                    atomic_exprs.push_back(right_atomic_exprs.at(k));
-                }
-
-                atomic_exprs_array.push_back(atomic_exprs);
-            }
-        }
-
-        return WHERE_IS_OR_AND;
-    }
-    #if 1
-    else
-    {
-        vector<ObRawExpr*> one_expr;
-        one_expr.push_back(sql_expr);
-        atomic_exprs_array.push_back(one_expr);
-        return WHERE_IS_OR_AND;
-    }
-    #else //do not support sub query now
-    else
-    {
-        return WHERE_IS_SUBQUERY;
-    }
-    #endif
-}
-
 
 /**************************************************
 Funtion     :   search_partition_sql_exprs
@@ -2740,7 +2616,7 @@ int QueryActuator::distribute_sql_to_all_shards(
         ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
         if (exec_plan_unit == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc space for ExecPlanUnit");
             return ret;
         }
@@ -2785,7 +2661,7 @@ int QueryActuator::send_sql_to_config_server(
     SameLevelExecPlan* exec_plan = (SameLevelExecPlan*) parse_malloc(sizeof (SameLevelExecPlan), NULL);
     if (exec_plan == NULL)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Can not malloc space for SameLevelExecPlan");
         return ret;
     }
@@ -2800,7 +2676,7 @@ int QueryActuator::send_sql_to_config_server(
     ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
     if (exec_plan_unit == NULL)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Can not malloc space for ExecPlanUnit");
         return ret;
     }

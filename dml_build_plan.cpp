@@ -22,7 +22,6 @@
 #include "sql_logical_plan.h"
 #include "parse_malloc.h"
 #include <vector>
-#include "ob_define.h"
 #include "utility.h"
 #include <stdint.h>
 #include "ob_obj_type.h"
@@ -120,7 +119,7 @@ int resolve_independ_expr(
         ObSqlRawExpr* sql_expr = (ObSqlRawExpr*) parse_malloc(sizeof (ObSqlRawExpr), NULL);
         if (sql_expr == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc space for ObSqlRawExpr");
         }
         if (ret == OB_SUCCESS)
@@ -204,7 +203,7 @@ int resolve_and_exprs(
   } \
   if (expr == NULL)  \
   { \
-    result_plan->err_stat_.err_code_ = OB_ERR_PARSER_MALLOC_FAILED; \
+    result_plan->err_stat_.err_code_ = JD_ERR_PARSER_MALLOC_FAILED; \
     jlog(WARNING, "Fail to malloc new raw expression"); \
   } \
   expr; \
@@ -386,7 +385,7 @@ int resolve_expr(
             // T_IDENT.* can't has alias name here, which is illeagal
             if (node->children_[1]->type_ != T_IDENT)
             {
-                ret = OB_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_PARSER_SYNTAX;
                 jlog(WARNING, "%s.* is illeagal", node->children_[0]->str_value_);
                 break;
             }
@@ -395,7 +394,7 @@ int resolve_expr(
             const char* column_str = node->children_[1]->str_value_;
             if (expr_scope_type == T_INSERT_LIMIT)
             {
-                ret = OB_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_PARSER_SYNTAX;
                 jlog(WARNING, "Illegal usage %s.%s", table_str, column_str);
                 break;
             }
@@ -413,7 +412,7 @@ int resolve_expr(
                 TableItem* table_item;
                 if ((select_stmt->get_table_item(table_name, &table_item)) == OB_INVALID_ID)
                 {
-                    ret = OB_ERR_TABLE_UNKNOWN;
+                    ret = JD_ERR_TABLE_UNKNOWN;
                     jlog(WARNING, "Unknown table %s in having clause");
                     break;
                 }
@@ -450,14 +449,14 @@ int resolve_expr(
         {
             if (expr_scope_type == T_INSERT_LIMIT)
             {
-                ret = OB_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_PARSER_SYNTAX;
                 jlog(WARNING, "Unknown value %s", node->str_value_);
                 break;
             }
             else if (expr_scope_type == T_VARIABLE_VALUE_LIMIT)
             {
                 /* TBD */
-                ret = OB_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_PARSER_SYNTAX;
                 jlog(WARNING, "Unknown value %s", node->str_value_);
                 break;
             }
@@ -518,7 +517,7 @@ int resolve_expr(
                         expr = b_expr;
                         //sql_expr->get_tables_set().add_member(stmt->get_table_bit_index(column_item->table_id_));
                     }
-                    else if (ret == OB_ERR_COLUMN_UNKNOWN)
+                    else if (ret == JD_ERR_COLUMN_UNKNOWN)
                     {
                         ret = OB_SUCCESS;
                     }
@@ -537,7 +536,7 @@ int resolve_expr(
                         ObSqlRawExpr* alias_expr = logical_plan->get_expr(expr_id);
                         if (alias_expr == NULL)
                         {
-                            ret = OB_ERR_ILLEGAL_ID;
+                            ret = JD_ERR_ILLEGAL_ID;
                             jlog(WARNING, "Wrong expr_id %lu", expr_id);
                             break;
                         }
@@ -548,7 +547,7 @@ int resolve_expr(
                                 || expr_scope_type == T_WHERE_LIMIT
                                 || expr_scope_type == T_GROUP_LIMIT))
                         {
-                            ret = OB_ERR_PARSER_SYNTAX;
+                            ret = JD_ERR_PARSER_SYNTAX;
                             jlog(WARNING, "Invalid use of alias which contains group function");
                             break;
                         }
@@ -558,29 +557,17 @@ int resolve_expr(
                             if (CREATE_RAW_EXPR(b_expr, ObBinaryRefRawExpr, result_plan) == NULL)
                                 break;
                             b_expr->set_expr_type(T_REF_COLUMN);
-                            
-                            ObBinaryRefRawExpr *column_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (alias_expr->get_expr()));
-                            
                             b_expr->set_result_type(alias_expr->get_result_type());
-                            //BEGIN:    Modified by qinbo
-                            #if 0
                             b_expr->set_first_ref_id(alias_expr->get_table_id());
                             b_expr->set_second_ref_id(alias_expr->get_column_id());
-                            cout << "alias_expr->get_result_type()"<<alias_expr->get_result_type() <<endl;
-                            cout << "alias_expr->get_column_id()"<<column_expr->get_second_ref_id() <<endl;
-                            #endif
-                            b_expr->set_first_ref_id(column_expr->get_first_ref_id());
-                            b_expr->set_second_ref_id(column_expr->get_second_ref_id());
                             expr = b_expr;
-                            //END:      Modified by qinbo
-                            //sql_expr->get_tables_set().add_members(alias_expr->get_tables_set());
                             sql_expr->set_contain_alias(true);
                         }
                     }
                 }
                 if (expr == NULL)
                 {
-                    ret = OB_ERR_COLUMN_UNKNOWN;
+                    ret = JD_ERR_COLUMN_UNKNOWN;
                     jlog(WARNING, "Unkown column name %.*s", (int)column_name.size(), column_name.data());
                 }
             }
@@ -589,7 +576,7 @@ int resolve_expr(
         case T_OP_EXISTS:
             if (expr_scope_type == T_INSERT_LIMIT || expr_scope_type == T_UPDATE)
             {
-                ret = OB_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_PARSER_SYNTAX;
                 jlog(WARNING, "EXISTS expression can not appear in INSERT/UPDATE statement");
                 break;
             }
@@ -610,7 +597,7 @@ int resolve_expr(
                 ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr*> (sub_expr);
                 if (const_expr == NULL)
                 {
-                    ret = OB_ERR_PARSER_SYNTAX;
+                    ret = JD_ERR_PARSER_SYNTAX;
                     jlog(WARNING, "Wrong internal status of const expression");
                     break;
                 }
@@ -652,7 +639,7 @@ int resolve_expr(
                     default:
                     {
                         /* won't be here */
-                        ret = OB_ERR_PARSER_SYNTAX;
+                        ret = JD_ERR_PARSER_SYNTAX;
                     }
                 }
                 if (ret == OB_SUCCESS)
@@ -866,7 +853,7 @@ int resolve_expr(
                     ObSelectStmt *sub_select = dynamic_cast<ObSelectStmt *> (logical_plan->get_query(left_expr->get_ref_id()));
                     if (!sub_select)
                     {
-                        ret = OB_ERR_PARSER_SYNTAX;
+                        ret = JD_ERR_PARSER_SYNTAX;
                         jlog(WARNING, "Sub-query of In operator is not select statment");
                         break;
                     }
@@ -939,7 +926,7 @@ int resolve_expr(
             /* 3. to check if the nums of two sides are equal */
             if (num_left_param != num_right_param)
             {
-                ret = OB_ERR_COLUMN_SIZE;
+                ret = JD_ERR_COLUMN_SIZE;
                 jlog(WARNING, "In operands contain different column(s)");
                 break;
             }
@@ -1009,7 +996,7 @@ int resolve_expr(
                 }
                 else
                 {
-                    ret = OB_ERR_ILLEGAL_TYPE;
+                    ret = JD_ERR_ILLEGAL_TYPE;
                     jlog(WARNING, 
                             "Return types of then clause are not compatible");
                     break;
@@ -1025,7 +1012,7 @@ int resolve_expr(
             case_expr->set_result_type(tmp_type);
             if (case_expr->get_when_expr_size() != case_expr->get_then_expr_size())
             {
-                ret = OB_ERR_COLUMN_SIZE;
+                ret = JD_ERR_COLUMN_SIZE;
                 jlog(WARNING, 
                         "Error size of when expressions");
                 break;
@@ -1092,7 +1079,7 @@ int resolve_expr(
                     || expr_scope_type == T_UPDATE_LIMIT
                     || expr_scope_type == T_AGG_LIMIT)
             {
-                ret = OB_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_PARSER_SYNTAX;
                 jlog(WARNING, "Sub-query is illeagal in INSERT/UPDATE statement or AGGREGATION function");
                 break;
             }
@@ -1106,7 +1093,7 @@ int resolve_expr(
                 ObSelectStmt *sub_select = dynamic_cast<ObSelectStmt*> (sub_stmt);
                 if (sub_select->get_select_item_size() != 1)
                 {
-                    ret = OB_ERR_COLUMN_SIZE;
+                    ret = JD_ERR_COLUMN_SIZE;
                     jlog(WARNING, "Operand should contain 1 column(s)");
                     break;
                 }
@@ -1135,7 +1122,7 @@ int resolve_expr(
                     || expr_scope_type == T_WHERE_LIMIT
                     || expr_scope_type == T_GROUP_LIMIT)
             {
-                ret = OB_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_PARSER_SYNTAX;
                 jlog(WARNING, "Invalid use of group function");
                 break;
             }
@@ -1170,7 +1157,7 @@ int resolve_expr(
             ret = ob_write_string(make_string(node->children_[0]->str_value_), func_name);
             if (ret != OB_SUCCESS)
             {
-                ret = OB_ERR_PARSER_MALLOC_FAILED;
+                ret = JD_ERR_PARSER_MALLOC_FAILED;
                 jlog(WARNING, "out of memory");
                 break;
             }
@@ -1209,7 +1196,7 @@ int resolve_expr(
                         {
                             if (func_expr->get_param_size() < 2 || func_expr->get_param_size() > 3)
                             {
-                                ret = OB_ERR_PARAM_SIZE;
+                                ret = JD_ERR_PARAM_SIZE;
                                 jlog(WARNING, "Param num of function '%.*s' can not be less than 2 or more than 3, ret=%d",
                                         func_name.size(), func_name.data(), ret);
                             }
@@ -1219,7 +1206,7 @@ int resolve_expr(
                         {
                             /* Won't be here */
                             /* No function of this type now */
-                            ret = OB_ERR_PARAM_SIZE;
+                            ret = JD_ERR_PARAM_SIZE;
                             jlog(WARNING, "Wrong num of function param(s), function='%.*s', num=%d, ret=%d",
                                     func_name.size(), func_name.data(), OCCUR_AS_PAIR, ret);
                             break;
@@ -1228,7 +1215,7 @@ int resolve_expr(
                         {
                             if (func_expr->get_param_size() <= 0)
                             {
-                                ret = OB_ERR_PARAM_SIZE;
+                                ret = JD_ERR_PARAM_SIZE;
                                 jlog(WARNING, "Param num of function '%.*s' can not be less than 2 or more than 3, ret=%d",
                                         func_name.size(), func_name.data(), ret);
                             }
@@ -1238,7 +1225,7 @@ int resolve_expr(
                         {
                             if (func_expr->get_param_size() != param_num)
                             {
-                                ret = OB_ERR_PARAM_SIZE;
+                                ret = JD_ERR_PARAM_SIZE;
                                 jlog(WARNING, "Param num of function '%.*s' must be %d, ret=%d",
                                         func_name.size(), func_name.data(), ret);
                             }
@@ -1341,7 +1328,7 @@ int resolve_expr(
                 }
                 else
                 {
-                    ret = OB_ERR_UNKNOWN_SYS_FUNC;
+                    ret = JD_ERR_UNKNOWN_SYS_FUNC;
                     jlog(WARNING, "system function `%.*s' not supported", func_name.size(), func_name.data());
                 }
             }
@@ -1353,7 +1340,7 @@ int resolve_expr(
         }
 #endif
         default:
-            ret = OB_ERR_PARSER_SYNTAX;
+            ret = JD_ERR_PARSER_SYNTAX;
             jlog(WARNING, "Wrong type in expression");
             break;
     }
@@ -1376,7 +1363,7 @@ int resolve_agg_func(
         sql_expr = (ObSqlRawExpr*) parse_malloc(sizeof (ObSqlRawExpr), NULL);
         if (sql_expr == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc space for ObSqlRawExpr");
         }
         if (ret == OB_SUCCESS)
@@ -1462,7 +1449,7 @@ int resolve_agg_func(
     }
     else
     {
-        ret = OB_ERR_PARSER_SYNTAX;
+        ret = JD_ERR_PARSER_SYNTAX;
         jlog(WARNING, "Wrong usage of aggregate function");
     }
     if (ret == OB_SUCCESS)
@@ -1501,7 +1488,7 @@ int resolve_joined_table(
                 break;
             default:
                 /* won't be here */
-                ret = OB_ERR_PARSER_MALLOC_FAILED;
+                ret = JD_ERR_PARSER_MALLOC_FAILED;
                 jlog(WARNING, "Unknown table type in outer join");
                 break;
         }
@@ -1526,7 +1513,7 @@ int resolve_joined_table(
                 break;
             default:
                 /* won't be here */
-                ret = OB_ERR_PARSER_MALLOC_FAILED;
+                ret = JD_ERR_PARSER_MALLOC_FAILED;
                 jlog(WARNING, "Unknown outer join type");
                 break;
         }
@@ -1599,7 +1586,7 @@ int resolve_table(
                 ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
                 if (alias_node == NULL)
                 {
-                    ret = OB_ERR_PARSER_SYNTAX;
+                    ret = JD_ERR_PARSER_SYNTAX;
                     jlog(WARNING, "generated table must have alias name");
                     break;
                 }
@@ -1634,7 +1621,7 @@ int resolve_table(
                 JoinedTable* joined_table = (JoinedTable*) parse_malloc(sizeof (JoinedTable), NULL);
                 if (joined_table == NULL)
                 {
-                    ret = OB_ERR_PARSER_MALLOC_FAILED;
+                    ret = JD_ERR_PARSER_MALLOC_FAILED;
                     jlog(WARNING, "Can not malloc space for JoinedTable");
                     break;
                 }
@@ -1657,7 +1644,7 @@ int resolve_table(
                 // T_IDENT.* can't has alias name here, which is illeagal
                 if (node->children_[1]->type_ != T_IDENT)
                 {
-                    ret = OB_ERR_PARSER_SYNTAX;
+                    ret = JD_ERR_PARSER_SYNTAX;
                     jlog(WARNING, "%s.* is illeagal", node->children_[0]->str_value_);
                     break;
                 }
@@ -1675,7 +1662,7 @@ int resolve_table(
                  && (0 != db_name.compare("mysql"))
                  && (0 != db_name.compare("performance_schema")))
                 {
-                    ret = OB_ERR_PARSER_SYNTAX;
+                    ret = JD_ERR_PARSER_SYNTAX;
                     jlog(WARNING, "Unknown db name");
                 }
                 else
@@ -1688,14 +1675,14 @@ int resolve_table(
             //END: Added by qinbo
             default:
                 /* won't be here */
-                ret = OB_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_PARSER_SYNTAX;
                 jlog(WARNING, "Unknown table type");
                 break;
         }
     }
     else
     {
-        ret = OB_ERR_PARSER_SYNTAX;
+        ret = JD_ERR_PARSER_SYNTAX;
         jlog(WARNING, "No table in from clause");
     }
 
@@ -1758,7 +1745,7 @@ int resolve_table_columns(
             ObSelectStmt* sub_select = static_cast<ObSelectStmt*> (logical_plan->get_query(table_item.ref_id_));
             if (sub_select == NULL)
             {
-                ret = OB_ERR_ILLEGAL_ID;
+                ret = JD_ERR_ILLEGAL_ID;
                 jlog(WARNING, "Can not get sub-query whose id = %lu", table_item.ref_id_);
             }
             else
@@ -1774,7 +1761,7 @@ int resolve_table_columns(
                         if ((ret = ob_write_string(select_item.alias_name_,
                                 new_column_item.column_name_)) != OB_SUCCESS)
                         {
-                            ret = OB_ERR_PARSER_MALLOC_FAILED;
+                            ret = JD_ERR_PARSER_MALLOC_FAILED;
                             jlog(WARNING, "Can not malloc space for column name");
                             break;
                         }
@@ -1804,7 +1791,7 @@ int resolve_table_columns(
                         ObSqlRawExpr* sql_expr = (ObSqlRawExpr*) parse_malloc(sizeof (ObSqlRawExpr), NULL);
                         if (sql_expr == NULL)
                         {
-                            ret = OB_ERR_PARSER_MALLOC_FAILED;
+                            ret = JD_ERR_PARSER_MALLOC_FAILED;
                             jlog(WARNING, "Can not malloc space for ObSqlRawExpr");
                             break;
                         }
@@ -1871,7 +1858,7 @@ int resolve_table_columns(
                                 new_column_item.column_name_);
                         if (ret != OB_SUCCESS)
                         {
-                            ret = OB_ERR_PARSER_MALLOC_FAILED;
+                            ret = JD_ERR_PARSER_MALLOC_FAILED;
                             jlog(WARNING, "Can not malloc space for column name");
                             break;
                         }
@@ -1910,7 +1897,7 @@ int resolve_table_columns(
                         ObSqlRawExpr* sql_expr = (ObSqlRawExpr*) parse_malloc(sizeof (ObSqlRawExpr), NULL);
                         if (sql_expr == NULL)
                         {
-                            ret = OB_ERR_PARSER_MALLOC_FAILED;
+                            ret = JD_ERR_PARSER_MALLOC_FAILED;
                             jlog(WARNING, "Can not malloc space for ObSqlRawExpr");
                             break;
                         }
@@ -1983,7 +1970,7 @@ int resolve_star(
                 );
         if ((select_stmt->get_table_item(table_name, &table_item)) == OB_INVALID_ID)
         {
-            ret = OB_ERR_TABLE_UNKNOWN;
+            ret = JD_ERR_TABLE_UNKNOWN;
             jlog(WARNING, "Unknown table %s", table_node->str_value_);
         }
         if (ret == OB_SUCCESS)
@@ -2028,7 +2015,7 @@ int resolve_select_clause(
             {
                 if (is_bald_star)
                 {
-                    ret = OB_ERR_STAR_DUPLICATE;
+                    ret = JD_ERR_STAR_DUPLICATE;
                     jlog(WARNING, "Wrong usage of '*'");
                     break;
                 }
@@ -2090,7 +2077,7 @@ int resolve_select_clause(
 
         if (project_node->type_ == T_EXPR_LIST && project_node->num_child_ != 1)
         {
-            ret = OB_ERR_RESOLVE_SQL;
+            ret = JD_ERR_RESOLVE_SQL;
             jlog(WARNING, "Operand should contain 1 column(s)");
             break;
         }
@@ -2104,7 +2091,7 @@ int resolve_select_clause(
         ObSqlRawExpr *select_expr = NULL;
         if ((select_expr = logical_plan->get_expr(expr_id)) == NULL)
         {
-            ret = OB_ERR_ILLEGAL_ID;
+            ret = JD_ERR_ILLEGAL_ID;
             jlog(WARNING, "Wrong expr_id");
             break;
         }
@@ -2201,7 +2188,7 @@ int resolve_group_clause(
                 uint32_t pos = static_cast<uint32_t> (group_node->value_);
                 if (pos <= 0 || pos > select_stmt->get_select_item_size())
                 {
-                    ret = OB_ERR_WRONG_POS;
+                    ret = JD_ERR_WRONG_POS;
                     jlog(WARNING, "Unknown column '%d' in 'group clause'", pos);
                     break;
                 }
@@ -2209,13 +2196,13 @@ int resolve_group_clause(
                 ObSqlRawExpr *sql_expr = logical_plan->get_expr(expr_id);
                 if (!sql_expr)
                 {
-                    ret = OB_ERR_ILLEGAL_ID;
+                    ret = JD_ERR_ILLEGAL_ID;
                     jlog(WARNING, "Can not find expression, expr_id = %lu", expr_id);
                     break;
                 }
                 if (sql_expr->is_contain_aggr())
                 {
-                    ret = OB_ERR_PARSER_SYNTAX;
+                    ret = JD_ERR_PARSER_SYNTAX;
                     jlog(WARNING, "Invalid use of expression which contains group function");
                     break;
                 }
@@ -2343,7 +2330,7 @@ int resolve_order_clause(
                 uint32_t pos = static_cast<uint32_t> (sort_node->children_[0]->value_);
                 if (pos <= 0 || pos > select_stmt->get_select_item_size())
                 {
-                    ret = OB_ERR_WRONG_POS;
+                    ret = JD_ERR_WRONG_POS;
                     jlog(WARNING, "Unknown column '%d' in 'order clause'");
                     break;
                 }
@@ -2477,7 +2464,7 @@ int resolve_select_stmt(
         logical_plan = (ObLogicalPlan*) parse_malloc(sizeof (ObLogicalPlan), NULL);
         if (logical_plan == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
@@ -2497,7 +2484,7 @@ int resolve_select_stmt(
         select_stmt = (ObSelectStmt*) parse_malloc(sizeof (ObSelectStmt), NULL);
         if (select_stmt == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObSelectStmt");
         }
     }
@@ -2537,7 +2524,7 @@ int resolve_select_stmt(
 
         if (node->children_[12] && node->children_[12]->value_ == 1)
         {
-            ret = OB_ERR_ILLEGAL_ID;
+            ret = JD_ERR_ILLEGAL_ID;
             jlog(WARNING,"Select for update statement can not process set query");
         }
 
@@ -2556,7 +2543,7 @@ int resolve_select_stmt(
                     select_stmt->assign_set_op(ObSelectStmt::EXCEPT);
                     break;
                 default:
-                    ret = OB_ERR_OPERATOR_UNKNOWN;
+                    ret = JD_ERR_OPERATOR_UNKNOWN;
                     jlog(WARNING, "unknown set operator of set clause");
                     break;
             }
@@ -2593,12 +2580,12 @@ int resolve_select_stmt(
             ObSelectStmt* right_select = logical_plan->get_select_query(select_stmt->get_right_query_id());
             if (!left_select || !right_select)
             {
-                ret = OB_ERR_ILLEGAL_ID;
+                ret = JD_ERR_ILLEGAL_ID;
                 jlog(WARNING, "resolve set clause error");
             }
             else if (left_select->get_select_item_size() != right_select->get_select_item_size())
             {
-                ret = OB_ERR_COLUMN_SIZE;
+                ret = JD_ERR_COLUMN_SIZE;
                 jlog(WARNING, "The used SELECT statements have a different number of columns");
             }
             else
@@ -2612,7 +2599,7 @@ int resolve_select_stmt(
 
         if (node->children_[0] == NULL || node->children_[0]->type_ == T_ALL)
         {
-            ret = OB_ERR_ILLEGAL_ID;
+            ret = JD_ERR_ILLEGAL_ID;
             select_stmt->assign_all();
         }
         else
@@ -2628,7 +2615,7 @@ int resolve_select_stmt(
         {
             if (select_stmt->get_table_size() != 1)
             {
-                ret = OB_ERR_ILLEGAL_ID;
+                ret = JD_ERR_ILLEGAL_ID;
                 jlog(WARNING, "Select for update statement can only process one table");
             }
             else
@@ -2714,7 +2701,7 @@ int resolve_hints(
                     query_hint.read_static_ = true;
                     break;
                 default:
-                    ret = OB_ERR_HINT_UNKNOWN;
+                    ret = JD_ERR_HINT_UNKNOWN;
                     jlog(WARNING, "Unknown hint '%s'", get_type_name(hint_node->type_));
                     break;
             }
@@ -2740,7 +2727,7 @@ int resolve_delete_stmt(
         logical_plan = (ObLogicalPlan*) parse_malloc(sizeof (ObLogicalPlan), NULL);
         if (logical_plan == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
@@ -2759,7 +2746,7 @@ int resolve_delete_stmt(
         ObDeleteStmt* delete_stmt = (ObDeleteStmt*) parse_malloc(sizeof (ObDeleteStmt), NULL);
         if (delete_stmt == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObDeleteStmt");
         }
         else
@@ -2777,7 +2764,7 @@ int resolve_delete_stmt(
                 ParseNode* table_node = node->children_[0];
                 if (table_node->type_ != T_IDENT)
                 {
-                    ret = OB_ERR_PARSER_SYNTAX;
+                    ret = JD_ERR_PARSER_SYNTAX;
                     jlog(WARNING,  "Only single base table is supported for delete");
                 }
                 if (ret == OB_SUCCESS)
@@ -2829,7 +2816,7 @@ int resolve_insert_columns(
             }
             else
             {
-                ret = OB_ERR_COLUMN_DUPLICATE;
+                ret = JD_ERR_COLUMN_DUPLICATE;
                 jlog(WARNING, "Column %s are duplicate", column_node->str_value_);
                 break;
             }
@@ -2839,7 +2826,7 @@ int resolve_insert_columns(
     {
         if (insert_stmt->get_table_size() != 1)
         {
-            ret = OB_ERR_PARSER_SYNTAX;
+            ret = JD_ERR_PARSER_SYNTAX;
             jlog(WARNING, "Insert statement only support one table");
         }
         if (ret == OB_SUCCESS)
@@ -2847,7 +2834,7 @@ int resolve_insert_columns(
             TableItem& table_item = insert_stmt->get_table_item(0);
             if (table_item.type_ != TableItem::BASE_TABLE)
             {
-                ret = OB_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_PARSER_SYNTAX;
                 jlog(WARNING, "Only base table can be inserted");
             }
             else
@@ -2866,14 +2853,14 @@ int resolve_insert_columns(
                 DBMetaReader* g_metareader = static_cast<DBMetaReader*> (result_plan->meta_reader_);
                 if (g_metareader == NULL)
                 {
-                    ret = OB_ERR_SCHEMA_UNSET;
+                    ret = JD_ERR_SCHEMA_UNSET;
                     jlog(WARNING,"Schema(s) are not set");
                     break;
                 }
 
                 if (g_metareader->is_join_column(column_item->table_id_, column_item->column_id_))
                 {
-                    ret = OB_ERR_INSERT_INNER_JOIN_COLUMN;
+                    ret = JD_ERR_INSERT_INNER_JOIN_COLUMN;
                     jlog(WARNING, "Cannot insert inner join column: %.*s", column_item->column_name_.size(), column_item->column_name_.data());
                     break;
                 }
@@ -2911,7 +2898,7 @@ int resolve_insert_values(
         if (ret == OB_SUCCESS &&
                 insert_stmt->get_column_size() != value_row.size())
         {
-            ret = OB_ERR_COLUMN_SIZE;
+            ret = JD_ERR_COLUMN_SIZE;
             jlog(WARNING, "Column count doesn't match value count");
         }
         if (ret == OB_SUCCESS)
@@ -2942,7 +2929,7 @@ int resolve_insert_stmt(
         logical_plan = (ObLogicalPlan*) parse_malloc(sizeof (ObLogicalPlan), NULL);
         if (logical_plan == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
@@ -2963,7 +2950,7 @@ int resolve_insert_stmt(
         ObInsertStmt* insert_stmt = (ObInsertStmt*) parse_malloc(sizeof (ObInsertStmt), NULL);
         if (insert_stmt == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObInsertStmt");
         }
         else
@@ -2982,7 +2969,7 @@ int resolve_insert_stmt(
                 ParseNode* table_node = node->children_[0];
                 if (table_node->type_ != T_IDENT)
                 {
-                    ret = OB_ERR_PARSER_SYNTAX;
+                    ret = JD_ERR_PARSER_SYNTAX;
                     jlog(WARNING, "Only single base table is supported for insert");
                 }
                 if (ret == OB_SUCCESS)
@@ -3012,13 +2999,13 @@ int resolve_insert_stmt(
                             ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (logical_plan->get_query(ref_id));
                             if (select_stmt == NULL)
                             {
-                                ret = OB_ERR_ILLEGAL_ID;
+                                ret = JD_ERR_ILLEGAL_ID;
                                 jlog(WARNING, "Invalid query id of sub-query");
                             }
                             if (ret == OB_SUCCESS &&
                                     insert_stmt->get_column_size() != select_stmt->get_select_item_size())
                             {
-                                ret = OB_ERR_COLUMN_SIZE;
+                                ret = JD_ERR_COLUMN_SIZE;
                                 jlog(WARNING, "select values are not match insert columns");
                             }
                         }
@@ -3055,7 +3042,7 @@ int resolve_update_stmt(
         logical_plan = (ObLogicalPlan*) parse_malloc(sizeof (ObLogicalPlan), NULL);
         if (logical_plan == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObLogicalPlan");
         }
         else
@@ -3074,7 +3061,7 @@ int resolve_update_stmt(
         ObUpdateStmt* update_stmt = (ObUpdateStmt*) parse_malloc(sizeof (ObUpdateStmt), NULL);
         if (update_stmt == NULL)
         {
-            ret = OB_ERR_PARSER_MALLOC_FAILED;
+            ret = JD_ERR_PARSER_MALLOC_FAILED;
             jlog(WARNING, "Can not malloc ObUpdateStmt");
         }
         else
@@ -3092,7 +3079,7 @@ int resolve_update_stmt(
                 ParseNode* table_node = node->children_[0];
                 if (table_node->type_ != T_IDENT)
                 {
-                    ret = OB_ERR_PARSER_SYNTAX;
+                    ret = JD_ERR_PARSER_SYNTAX;
                     jlog(WARNING, "Only single base table is supported for Update");
                 }
                 if (ret == OB_SUCCESS)
@@ -3164,7 +3151,7 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
     if (!result_plan)
     {
         jlog(ERROR, "null result_plan");
-        return OB_ERR_RESOLVE_SQL;
+        return JD_ERR_RESOLVE_SQL;
     }
     int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
 
@@ -3201,7 +3188,7 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
             }
             default:
                 jlog(WARNING, "unknown top node type=%d", node->type_);
-                ret = OB_ERR_UNEXPECTED;
+                ret = JD_ERR_UNEXPECTED;
                 break;
         };
     }
@@ -3212,7 +3199,7 @@ int resolve(ResultPlan* result_plan, ParseNode* node)
         ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
         if (logical_plan != NULL && logical_plan->get_question_mark_size() > 0)
         {
-            ret = OB_ERR_PARSE_SQL;
+            ret = JD_ERR_PARSE_SQL;
             jlog(ERROR, "Uknown column '?'");
         }
     }

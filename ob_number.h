@@ -13,8 +13,8 @@
  *   Zhifeng YANG <zhuweng.yzf@taobao.com>
  *
  */
-#ifndef _OB_NUMBER_H
-#define _OB_NUMBER_H 1
+#ifndef _OB_NUMBER_H_
+#define _OB_NUMBER_H_
 #include <stdint.h>
 #include <iostream>
 #include "utility.h"

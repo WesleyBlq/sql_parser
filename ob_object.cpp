@@ -64,7 +64,7 @@ bool ObObj::is_true() const
 
 int ObObj::get_decimal(ObNumber &num, bool &is_add) const
 {
-    int ret = OB_OBJ_TYPE_ERROR;
+    int ret = JD_OBJ_TYPE_ERROR;
     if (ObDecimalType == meta_.type_)
     {
         ret = OB_SUCCESS;
@@ -111,7 +111,7 @@ int ObObj::set_decimal(const ObNumber &num, int8_t precision, int8_t scale, bool
         else
         {
             //@todo, use ob_pool.h to allocate memory
-            ret = OB_NOT_IMPLEMENT;
+            ret = JD_NOT_IMPLEMENT;
         }
     }
     return ret;
@@ -347,7 +347,7 @@ int ObObj::apply(const ObObj &mutation)
             || ObMaxType <= mut_type)
     {
         jlog(WARNING, "unsupported type [type:%d]", mut_type);
-        err = OB_INVALID_ARGUMENT;
+        err = JD_INVALID_ARGUMENT;
     }
     if (OB_SUCCESS == err
             && ObExtendType != org_type
@@ -358,7 +358,7 @@ int ObObj::apply(const ObObj &mutation)
     {
         jlog(WARNING, "type not coincident [this->type:%d,mutation.type:%d]",
                 org_type, mut_type);
-        err = OB_INVALID_ARGUMENT;
+        err = JD_INVALID_ARGUMENT;
     }
     _ObjValue value, mutation_value;
     if (OB_SUCCESS == err)
@@ -511,7 +511,7 @@ int ObObj::apply(const ObObj &mutation)
                         break;
                     default:
                         jlog(ERROR, "unsupported ext value [value:%ld]", mutation.get_ext());
-                        err = OB_INVALID_ARGUMENT;
+                        err = JD_INVALID_ARGUMENT;
                         break;
                 }
 
@@ -595,7 +595,7 @@ int ObObj::apply(const ObObj &mutation)
             default:
                 /* case ObSeqType: */
                 jlog(ERROR, "unsupported type [type:%d]", mut_type);
-                err = OB_INVALID_ARGUMENT;
+                err = JD_INVALID_ARGUMENT;
                 break;
         }
     }

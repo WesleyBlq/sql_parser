@@ -111,7 +111,7 @@ int ObExprObj::to(ObObj &obj) const
             break;
         default:
             jlog(ERROR, "invalid value type=%d", get_type());
-            ret = OB_ERR_UNEXPECTED;
+            ret = JD_ERR_UNEXPECTED;
             break;
     }
     return ret;
@@ -165,7 +165,7 @@ inline int ObExprObj::get_timestamp(int64_t & timestamp) const
             break;
         default:
             jlog(ERROR, "unexpected branch");
-            ret = OB_OBJ_TYPE_ERROR;
+            ret = JD_OBJ_TYPE_ERROR;
     }
     return ret;
 }
@@ -417,12 +417,12 @@ inline int ObExprObj::type_promotion(ObObjType type_promote_map[ObMaxType][ObMax
     ObObjType res_type = type_promote_map[this_type][other_type];
     if (ObNullType == res_type)
     {
-        ret = OB_RESULT_UNKNOWN;
+        ret = JD_RESULT_UNKNOWN;
     }
     else if (ObMaxType == res_type)
     {
         jlog(ERROR, "invalid obj type for type promotion, this=%d other=%d", this_type, other_type);
-        ret = OB_ERR_UNEXPECTED;
+        ret = JD_ERR_UNEXPECTED;
     }
     else
     {
@@ -466,7 +466,7 @@ inline int ObExprObj::compare_type_promotion(const ObExprObj &this_obj, const Ob
     if (OB_SUCCESS != (ret = type_promotion(COMPARE_TYPE_PROMOTION, this_obj, other,
             promoted_obj1, promoted_obj2, p_this, p_other)))
     {
-        if (OB_RESULT_UNKNOWN != ret)
+        if (JD_RESULT_UNKNOWN != ret)
         {
             jlog(WARNING, "invalid type promote for compare, err=%d", ret);
         }
@@ -483,7 +483,7 @@ int ObExprObj::compare(const ObExprObj &other, int &cmp) const
     const ObExprObj *p_other = NULL;
     if (OB_SUCCESS != (ret = compare_type_promotion(*this, other, promoted1, promoted2, p_this, p_other)))
     {
-        ret = OB_RESULT_UNKNOWN;
+        ret = JD_RESULT_UNKNOWN;
     }
     else
     {
@@ -650,7 +650,7 @@ int ObExprObj::is(const ObExprObj &other, ObExprObj &res) const
     }
     else if (ObBoolType != other.get_type())
     {
-        ret = OB_INVALID_ARGUMENT;
+        ret = JD_INVALID_ARGUMENT;
         jlog(WARNING, "invalid type for is operator, type=%d", other.get_type());
         res.set_bool(false); // res cannot be UNKNOWN according to the SQL standard
     }
@@ -678,7 +678,7 @@ int ObExprObj::is_not(const ObExprObj &other, ObExprObj &res) const
     }
     else if (ObBoolType != other.get_type())
     {
-        ret = OB_INVALID_ARGUMENT;
+        ret = JD_INVALID_ARGUMENT;
         jlog(WARNING, "invalid type for is operator, type=%d", other.get_type());
         res.set_bool(false); // res cannot be UNKNOWN according to the SQL standard
     }
@@ -730,7 +730,7 @@ int ObExprObj::get_bool(bool &value) const
             break;
         }
         default:
-            res = OB_OBJ_TYPE_ERROR;
+            res = JD_OBJ_TYPE_ERROR;
             break;
     }
     return res;
@@ -1015,7 +1015,7 @@ inline int ObExprObj::arith_type_promotion(const ObExprObj &this_obj, const ObEx
     if (OB_SUCCESS != (ret = type_promotion(ARITHMETIC_TYPE_PROMOTION, this_obj, other,
             promoted_obj1, promoted_obj2, p_this, p_other)))
     {
-        if (OB_RESULT_UNKNOWN != ret)
+        if (JD_RESULT_UNKNOWN != ret)
         {
             jlog(WARNING, "invalid type promote for arithmetic, err=%d", ret);
         }
@@ -1044,7 +1044,7 @@ inline int ObExprObj::add_same_type(const ObExprObj &other, ObExprObj &res) cons
             ret = this->num_.add(other.num_, res.num_);
             break;
         default:
-            ret = OB_ERR_UNEXPECTED;
+            ret = JD_ERR_UNEXPECTED;
             jlog(ERROR, "unexpected branch");
             break;
     }
@@ -1060,7 +1060,7 @@ int ObExprObj::add(ObExprObj &other, ObExprObj &res)
     const ObExprObj *p_other = NULL;
     if (OB_SUCCESS != (ret = arith_type_promotion(*this, other, promoted1, promoted2, p_this, p_other)))
     {
-        if (OB_RESULT_UNKNOWN == ret)
+        if (JD_RESULT_UNKNOWN == ret)
         {
             ret = OB_SUCCESS;
         }
@@ -1094,7 +1094,7 @@ inline int ObExprObj::sub_same_type(const ObExprObj &other, ObExprObj &res) cons
             ret = this->num_.sub(other.num_, res.num_);
             break;
         default:
-            ret = OB_ERR_UNEXPECTED;
+            ret = JD_ERR_UNEXPECTED;
             jlog(ERROR, "unexpected branch");
             break;
     }
@@ -1110,7 +1110,7 @@ int ObExprObj::sub(ObExprObj &other, ObExprObj &res)
     const ObExprObj *p_other = NULL;
     if (OB_SUCCESS != (ret = arith_type_promotion(*this, other, promoted1, promoted2, p_this, p_other)))
     {
-        if (OB_RESULT_UNKNOWN == ret)
+        if (JD_RESULT_UNKNOWN == ret)
         {
             ret = OB_SUCCESS;
         }
@@ -1144,7 +1144,7 @@ inline int ObExprObj::mul_same_type(const ObExprObj &other, ObExprObj &res) cons
             ret = this->num_.mul(other.num_, res.num_);
             break;
         default:
-            ret = OB_ERR_UNEXPECTED;
+            ret = JD_ERR_UNEXPECTED;
             jlog(ERROR, "unexpected branch");
             break;
     }
@@ -1160,7 +1160,7 @@ int ObExprObj::mul(ObExprObj &other, ObExprObj &res)
     const ObExprObj *p_other = NULL;
     if (OB_SUCCESS != (ret = arith_type_promotion(*this, other, promoted1, promoted2, p_this, p_other)))
     {
-        if (OB_RESULT_UNKNOWN == ret)
+        if (JD_RESULT_UNKNOWN == ret)
         {
             ret = OB_SUCCESS;
         }
@@ -1321,7 +1321,7 @@ inline int ObExprObj::cast_to_int(int64_t &val) const
     if (OB_UNLIKELY(this->get_type() == ObNullType))
     {
         // jlog(WARNING, "should not be null");
-        ret = OB_INVALID_ARGUMENT;
+        ret = JD_INVALID_ARGUMENT;
     }
     else
     {
@@ -1353,7 +1353,7 @@ inline int ObExprObj::cast_to_varchar(string &varchar) const
     if (OB_UNLIKELY(this->get_type() == ObNullType))
     {
         //jlog(WARNING, "should not be null");
-        ret = OB_INVALID_ARGUMENT;
+        ret = JD_INVALID_ARGUMENT;
     }
     else if (OB_LIKELY(this->get_type() != ObVarcharType))
     {
@@ -1416,7 +1416,7 @@ int ObExprObj::cast_to(int32_t dest_type, ObExprObj &result) const
     }
     else
     {
-        err = OB_INVALID_ARGUMENT;
+        err = JD_INVALID_ARGUMENT;
     }
 #endif
     return err;
@@ -1432,7 +1432,7 @@ inline int ObExprObj::div_type_promotion(const ObExprObj &this_obj, const ObExpr
     if (OB_SUCCESS != (ret = type_promotion(DIV_TYPE_PROMOTION, this_obj, other,
             promoted_obj1, promoted_obj2, p_this, p_other)))
     {
-        if (OB_RESULT_UNKNOWN != ret)
+        if (JD_RESULT_UNKNOWN != ret)
         {
             jlog(WARNING, "invalid type promote for compare, err=%d", ret);
         }
@@ -1458,7 +1458,7 @@ inline int ObExprObj::div_same_type(const ObExprObj &other, ObExprObj &res) cons
             ret = this->num_.div(other.num_, res.num_);
             break;
         default:
-            ret = OB_ERR_UNEXPECTED;
+            ret = JD_ERR_UNEXPECTED;
             jlog(ERROR, "unexpected branch, type=%d", get_type());
             break;
     }
@@ -1471,7 +1471,7 @@ int ObExprObj::div(ObExprObj &other, ObExprObj &res, bool int_div_as_double)
     if (OB_UNLIKELY(other.is_zero()))
     {
         res.set_null();
-        ret = OB_DIVISION_BY_ZERO;
+        ret = JD_DIVISION_BY_ZERO;
     }
     else
     {
@@ -1482,7 +1482,7 @@ int ObExprObj::div(ObExprObj &other, ObExprObj &res, bool int_div_as_double)
         if (OB_SUCCESS != (ret = div_type_promotion(*this, other, promoted_value1,
                 promoted_value2, p_this, p_other, int_div_as_double)))
         {
-            if (OB_RESULT_UNKNOWN == ret)
+            if (JD_RESULT_UNKNOWN == ret)
             {
                 ret = OB_SUCCESS;
             }
@@ -1510,7 +1510,7 @@ inline int ObExprObj::mod_type_promotion(const ObExprObj &this_obj, const ObExpr
     if (ObNullType == this_type
             || ObNullType == other_type)
     {
-        ret = OB_RESULT_UNKNOWN;
+        ret = JD_RESULT_UNKNOWN;
     }
     if (OB_SUCCESS == ret && ObIntType != this_type)
     {
@@ -1552,7 +1552,7 @@ int ObExprObj::mod(const ObExprObj &other, ObExprObj &res) const
     if (OB_SUCCESS != (ret = mod_type_promotion(*this, other, promoted_obj1, promoted_obj2,
             p_this, p_other)))
     {
-        if (OB_RESULT_UNKNOWN == ret)
+        if (JD_RESULT_UNKNOWN == ret)
         {
             ret = OB_SUCCESS;
         }
@@ -1565,7 +1565,7 @@ int ObExprObj::mod(const ObExprObj &other, ObExprObj &res) const
         if (p_other->is_zero())
         {
             res.set_null();
-            ret = OB_DIVISION_BY_ZERO;
+            ret = JD_DIVISION_BY_ZERO;
         }
         else
         {
@@ -1596,7 +1596,7 @@ int ObExprObj::negate(ObExprObj &res) const
             break;
         default:
             res.set_null();
-            ret = OB_INVALID_ARGUMENT;
+            ret = JD_INVALID_ARGUMENT;
             break;
     }
     return ret;
@@ -1612,7 +1612,7 @@ int ObExprObj::old_like(const ObExprObj &pattern, ObExprObj &result) const
     }
     else if (ObVarcharType != this->get_type() || ObVarcharType != pattern.get_type())
     {
-        err = OB_INVALID_ARGUMENT;
+        err = JD_INVALID_ARGUMENT;
         result.set_null();
     }
     else if (pattern.varchar_.length() <= 0)
@@ -1851,7 +1851,7 @@ int ObExprObj::trim(const ObExprObj &trimType, const ObExprObj &trimPattern, ObE
     }
     else if (pattern.length() <= 0)
     {
-        err = OB_INVALID_ARGUMENT;
+        err = JD_INVALID_ARGUMENT;
         jlog(WARNING, "trim pattern is empty");
     }
     else if (OB_SUCCESS != (err = this->cast_to_varchar(src)))
@@ -1876,7 +1876,7 @@ int ObExprObj::trim(const ObExprObj &trimType, const ObExprObj &trimPattern, ObE
         }
         else
         {
-            err = OB_INVALID_ARGUMENT;
+            err = JD_INVALID_ARGUMENT;
         }
     }
     if (OB_SUCCESS == err)
@@ -1968,7 +1968,7 @@ int ObExprObj::like(const ObExprObj &pattern, ObExprObj &result) const
     }
     else if (ObVarcharType != this->get_type() || ObVarcharType != pattern.get_type())
     {
-        err = OB_INVALID_ARGUMENT;
+        err = JD_INVALID_ARGUMENT;
         result.set_null();
     }
     else if (pattern.varchar_.length() <= 0 && varchar_.length() <= 0)
@@ -1995,7 +1995,7 @@ int ObExprObj::not_like(const ObExprObj &pattern, ObExprObj &result) const
     }
     else if (ObVarcharType != this->get_type() || ObVarcharType != pattern.get_type())
     {
-        err = OB_INVALID_ARGUMENT;
+        err = JD_INVALID_ARGUMENT;
         result.set_null();
     }
     else if (pattern.varchar_.length() <= 0 && varchar_.length() <= 0)
@@ -2138,7 +2138,7 @@ int ObExprObj::get_decimal(char * buf, const int64_t buf_len) const
     int ret = OB_SUCCESS;
     if (type_ != ObDecimalType)
     {
-        ret = OB_OBJ_TYPE_ERROR;
+        ret = JD_OBJ_TYPE_ERROR;
     }
     else
     {
@@ -2156,13 +2156,13 @@ int ObExprObj::unhex(ObExprObj &res)
     if (get_type() != ObVarcharType)
     {
         res.set_null();
-        ret = OB_ERR_UNEXPECTED;
+        ret = JD_ERR_UNEXPECTED;
         jlog(WARNING, "type not match, ret=%d", ret);
     }
     else if (varchar_.length() % 2 != 0)
     {
         res.set_null();
-        ret = OB_INVALID_ARGUMENT;
+        ret = JD_INVALID_ARGUMENT;
         jlog(WARNING, "length is odd, ret=%d", ret);
     }
     else
@@ -2213,7 +2213,7 @@ int ObExprObj::unhex(ObExprObj &res)
                 }
                 else
                 {
-                    ret = OB_ERR_UNEXPECTED;
+                    ret = JD_ERR_UNEXPECTED;
                     res.set_null();
                     jlog(WARNING, "data invalid, ret=%d", ret);
                     break;
@@ -2239,7 +2239,7 @@ int ObExprObj::ip_to_int(ObExprObj &res)
     if (OB_UNLIKELY(get_type() != ObVarcharType))
     {
         res.set_null();
-        ret = OB_ERR_UNEXPECTED;
+        ret = JD_ERR_UNEXPECTED;
         jlog(WARNING, "type not match, ret=%d", ret);
     }
     else
@@ -2248,7 +2248,7 @@ int ObExprObj::ip_to_int(ObExprObj &res)
         if (varchar_.length() > 15)
         {
             res.set_null();
-            ret = OB_INVALID_ARGUMENT;
+            ret = JD_INVALID_ARGUMENT;
             jlog(WARNING, "ip format invalid, ret=%d", ret);
         }
         else
@@ -2299,7 +2299,7 @@ int ObExprObj::int_to_ip(ObExprObj &res)
     if (OB_UNLIKELY(get_type() != ObIntType))
     {
         res.set_null();
-        ret = OB_ERR_UNEXPECTED;
+        ret = JD_ERR_UNEXPECTED;
         jlog(WARNING, "type not match, ret=%d", ret);
     }
     else
@@ -2379,7 +2379,7 @@ int ObExprObj::hex(ObExprObj &res)
     }
     else
     {
-        ret = OB_INVALID_ARGUMENT;
+        ret = JD_INVALID_ARGUMENT;
         res.set_null();
         jlog(WARNING, "type not match, ret=%d", ret);
     }
@@ -2392,7 +2392,7 @@ int ObExprObj::varchar_length(ObExprObj &res) const
     int ret = OB_SUCCESS;
     if (ObVarcharType != get_type())
     {
-        ret = OB_INVALID_ARGUMENT;
+        ret = JD_INVALID_ARGUMENT;
         res.set_null();
     }
     else

@@ -1,20 +1,20 @@
 #ifndef OCEANBASE_SQL_STMT_H_
 #define OCEANBASE_SQL_STMT_H_
-//#include "ob_row_desc.h"
 #include <string>
 #include <stdlib.h>
-//#include "common/ob_string_buf.h"
-//#include "common/ob_vector.h"
 #include <vector>
 #include "ob_obj_type.h"
 #include "ob_basic_stmt.h"
 #include "parse_node.h"
+#include "sql_raw_expr.h"
 
 using std::vector;
 using std::string;
 
 #define JD_DEBUG   jlog(INFO, "DEBUG");
 
+#define WHERE_IS_OR_AND     0
+#define WHERE_IS_SUBQUERY   1
 
 namespace jdbd
 {
@@ -213,6 +213,7 @@ namespace jdbd
             virtual void print(FILE* fp, int32_t level, int32_t index = 0);
             virtual int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
             virtual int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql);
+            virtual int decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array);
 
         protected:
             //stringBuf* name_pool_;

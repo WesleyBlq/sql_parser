@@ -14,7 +14,7 @@
  *
  */
 
-#include "ob_define.h"
+#include "utility.h"
 #include "ob_obj_type.h"
 
 namespace jdbd
@@ -113,16 +113,29 @@ namespace jdbd
             {
                 case T_UNKNOWN:
                     return ObMinType;
+                case T_NULL:    
+                    return ObNullType;
                 case T_INT:
+                case T_QUESTIONMARK:
                     return ObIntType;
+                case T_BINARY:
                 case T_STRING:
+                case T_SYSTEM_VARIABLE:
+                case T_TEMP_VARIABLE:
                     return ObVarcharType;
                 case T_FLOAT:
                     return ObFloatType;
+                case T_DOUBLE:
+                    return ObDoubleType;
+                case T_DATE:
+                    return ObPreciseDateTimeType;
+                case T_BOOL:
+                    return ObBoolType;
+                case T_DECIMAL:
+                    return ObDecimalType;
                 default:
                     return ObMinType;
             }
-
         }
     } // common
 } // oceanbase

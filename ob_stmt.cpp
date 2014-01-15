@@ -43,7 +43,7 @@ int ObStmt::add_table_item(
         case TableItem::ALIAS_TABLE:
             if (table_name == alias_name)
             {
-                ret = OB_ERR_ILLEGAL_NAME;
+                ret = JD_ERR_ILLEGAL_NAME;
                 jlog(WARNING, "table '%.*s' must not alias the same name", (int32_t)table_name.size(), table_name.data());
                 break;
             }
@@ -56,7 +56,7 @@ int ObStmt::add_table_item(
 
             if (NULL == schema_table)
             {
-                ret = OB_ERR_TABLE_UNKNOWN;
+                ret = JD_ERR_TABLE_UNKNOWN;
                 jlog(WARNING, "table '%.*s' does not exist", (int32_t)table_name.size(), table_name.data());
                 break;
             }
@@ -64,7 +64,7 @@ int ObStmt::add_table_item(
 
             if (item.ref_id_ == OB_INVALID_ID)
             {
-                ret = OB_ERR_TABLE_UNKNOWN;
+                ret = JD_ERR_TABLE_UNKNOWN;
                 jlog(WARNING, "table '%.*s' does not exist", (int32_t)table_name.size(), table_name.data());
                 break;
             }
@@ -78,7 +78,7 @@ int ObStmt::add_table_item(
         case TableItem::GENERATED_TABLE:
             if (ref_id == OB_INVALID_ID)
             {
-                ret = OB_ERR_ILLEGAL_ID;
+                ret = JD_ERR_ILLEGAL_ID;
                 jlog(WARNING, "illegal ref_id %lu", ref_id);
                 break;
             }
@@ -87,7 +87,7 @@ int ObStmt::add_table_item(
             break;
         default:
             /* won't be here */
-            ret = OB_ERR_PARSER_SYNTAX;
+            ret = JD_ERR_PARSER_SYNTAX;
             jlog(WARNING, "Unknown table type when add_table_item");
             break;
         }
@@ -106,7 +106,7 @@ int ObStmt::add_table_item(
                 if (table_name == old_item.table_name_
                         || table_name == old_item.alias_name_)
                 {
-                    ret = OB_ERR_TABLE_DUPLICATE;
+                    ret = JD_ERR_TABLE_DUPLICATE;
                     jlog(WARNING, "table %.*s is ambiguous", (int32_t)table_name.size(), table_name.data());
                     break;
                 }
@@ -116,7 +116,7 @@ int ObStmt::add_table_item(
                 if (table_name == old_item.table_name_
                         || alias_name == old_item.table_name_)
                 {
-                    ret = OB_ERR_TABLE_DUPLICATE;
+                    ret = JD_ERR_TABLE_DUPLICATE;
                     jlog(WARNING, "table %.*s is ambiguous", (int32_t)old_item.table_name_.size(), old_item.table_name_.data());
                     break;
                 }
@@ -125,14 +125,14 @@ int ObStmt::add_table_item(
             {
                 if (table_name == old_item.alias_name_)
                 {
-                    ret = OB_ERR_TABLE_DUPLICATE;
+                    ret = JD_ERR_TABLE_DUPLICATE;
                     jlog(WARNING, "table %.*s is ambiguous", (int32_t)table_name.size(), table_name.data());
                     break;
                 }
                 if (alias_name == old_item.table_name_
                         || alias_name == old_item.alias_name_)
                 {
-                    ret = OB_ERR_TABLE_DUPLICATE;
+                    ret = JD_ERR_TABLE_DUPLICATE;
                     jlog(WARNING, "table %.*s is ambiguous", (int32_t)alias_name.size(), alias_name.data());
                     break;
                 }
@@ -284,7 +284,7 @@ int ObStmt::add_column_item(
         column_item.table_id_ = get_table_item(*table_name, &table_item);
         if (column_item.table_id_ == OB_INVALID_ID)
         {
-            ret = OB_ERR_TABLE_UNKNOWN;
+            ret = JD_ERR_TABLE_UNKNOWN;
             jlog(WARNING, "Unknown table name %.*s", (int32_t)table_name->size(), table_name->data());
             return ret;
         }
@@ -309,7 +309,7 @@ int ObStmt::add_column_item(
         }
         else if (column_item.column_id_ == OB_INVALID_ID)
         {
-            ret = OB_ERR_COLUMN_UNKNOWN;
+            ret = JD_ERR_COLUMN_UNKNOWN;
             jlog(WARNING, "Unknown column name %.*s", (int32_t)column_name.size(), column_name.data());
             return ret;
         }
@@ -328,7 +328,7 @@ int ObStmt::add_column_item(
             {
                 if (column_item.table_id_ != OB_INVALID_ID)
                 {
-                    ret = OB_ERR_COLUMN_DUPLICATE;
+                    ret = JD_ERR_COLUMN_DUPLICATE;
                     jlog(WARNING, "Column name %.*s is ambiguous", (int32_t)column_name.size(), column_name.data());
                     return ret;
                 }
@@ -337,14 +337,14 @@ int ObStmt::add_column_item(
                 column_item.data_type_ = column_type;
                 table_item.has_scan_columns_ = true;
             }
-            else if (ret != OB_ERR_COLUMN_UNKNOWN)
+            else if (ret != JD_ERR_COLUMN_UNKNOWN)
             {
                 return ret;
             }
         }
         if (column_item.column_id_ == OB_INVALID_ID)
         {
-            ret = OB_ERR_COLUMN_UNKNOWN;
+            ret = JD_ERR_COLUMN_UNKNOWN;
             jlog(WARNING, "Unknown column name %.*s", (int32_t)column_name.size(), column_name.data());
             return ret;
         }
@@ -353,7 +353,7 @@ int ObStmt::add_column_item(
     ret = ob_write_string(column_name, column_item.column_name_);
     if (ret != OB_SUCCESS)
     {
-        ret = OB_ERR_PARSER_MALLOC_FAILED;
+        ret = JD_ERR_PARSER_MALLOC_FAILED;
         jlog(WARNING, "Malloc column name %.*s failed", (int32_t)column_name.size(), column_name.data());
         return ret;
     }
@@ -433,6 +433,12 @@ int ObStmt::check_table_column(
             {
                 column_id = schema_column->get_column_id();
                 column_type = trans_int_type2obj_type(schema_column->get_column_type());
+                if ((column_type <= ObMinType)||(column_type >= ObMaxType))
+                {
+                    ret = JD_ERR_PARSER_SYNTAX;
+                    jlog(WARNING, "Unknown table type when check_table_column1");
+                    break;
+                }
             }
             break;
         }
@@ -441,7 +447,7 @@ int ObStmt::check_table_column(
             ObBasicStmt* stmt = logical_plan->get_query(table_item.ref_id_);
             if (stmt == NULL)
             {
-                ret = OB_ERR_ILLEGAL_ID;
+                ret = JD_ERR_ILLEGAL_ID;
                 jlog(WARNING, "Wrong query id %lu", table_item.ref_id_);
             }
             ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
@@ -458,7 +464,7 @@ int ObStmt::check_table_column(
                     }
                     else
                     {
-                        ret = OB_ERR_COLUMN_DUPLICATE;
+                        ret = JD_ERR_COLUMN_DUPLICATE;
                         jlog(WARNING, "column %.*s is ambiguous", (int32_t)column_name.size(), column_name.data());
                         break;
                     }
@@ -468,14 +474,14 @@ int ObStmt::check_table_column(
         }
         default:
             // won't be here
-            ret = OB_ERR_PARSER_SYNTAX;
+            ret = JD_ERR_PARSER_SYNTAX;
             jlog(WARNING, "Unknown table type when check_table_column1");
             break;
     }
     
     if (ret == OB_SUCCESS && column_id == OB_INVALID_ID)
     {
-        ret = OB_ERR_COLUMN_UNKNOWN;
+        ret = JD_ERR_COLUMN_UNKNOWN;
         jlog(WARNING, "Unknown table type when check_table_column2");
     }
     return ret;
@@ -556,4 +562,21 @@ int64_t ObStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where
 {
     return OB_SUCCESS;
 }
+
+
+/**************************************************
+Funtion     :   decompose_where_items
+Author      :   qinbo
+Date        :   2013.9.24
+Description :   generate distributed where conditions items
+Input       :   ObRawExpr* sql_expr
+Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
+return      :   
+ **************************************************/
+int ObStmt::decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array)
+{
+    return OB_SUCCESS;
+}
+
+
 

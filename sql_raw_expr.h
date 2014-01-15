@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include "ob_obj_type.h"
-#include "ob_define.h"
+#include "utility.h"
 #include "sql_item_type.h"
 #include "ob_object.h"
 #include "utility.h"
