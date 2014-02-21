@@ -11,6 +11,7 @@ extern "C" {
 extern void *parse_malloc(const size_t nbyte, void *malloc_pool);
 extern void *parse_realloc(void *ptr, size_t nbyte, void *malloc_pool);
 extern void parse_free(void *ptr);
+extern char *parse_strndup(const char *str, size_t nbyte, void *malloc_pool);
 extern char *parse_strdup(const char *str, void *malloc_pool);
 
 #ifdef __cplusplus

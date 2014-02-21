@@ -755,6 +755,10 @@ int64_t ObSelectStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
     make_order_by_string(result_plan, assembled_sql);
     make_limit_string(result_plan, assembled_sql);
 
+    if (is_for_update())
+    {
+        assembled_sql.append(" FOR UPDATE");
+    }
     return ret;
 }
 
@@ -802,11 +806,22 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
         
         if (item.is_joined_)
         {
+            TableItem *table_item = NULL;
             OB_ASSERT(1 == from_items_.size());
             JoinedTable* joined_table = get_joined_table(item.table_id_);
             assembled_sql.append(binding_shard_info.at(i)->get_shard_name());
             assembled_sql.append(" AS ");
-            assembled_sql.append(ObStmt::get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_);
+
+            table_item = ObStmt::get_table_item_by_id(joined_table->table_ids_.at(0));
+            if ((NULL != table_item)&&(!table_item->alias_name_.empty()))
+            {
+                assembled_sql.append(table_item->alias_name_);
+            }
+            else
+            {
+                assembled_sql.append(table_item->table_name_);
+            }
+            
             assembled_sql.append(" ");
             switch (joined_table->join_types_.at(0))
             {
@@ -837,7 +852,17 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
                 
             assembled_sql.append(binding_shard->get_shard_name());
             assembled_sql.append(" AS ");
-            assembled_sql.append(ObStmt::get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_);
+
+            table_item = ObStmt::get_table_item_by_id(joined_table->table_ids_.at(1));
+            if ((NULL != table_item)&&(!table_item->alias_name_.empty()))
+            {
+                assembled_sql.append(table_item->alias_name_);
+            }
+            else
+            {
+                assembled_sql.append(table_item->table_name_);
+            }
+            
             assembled_sql.append(" ");
             assembled_sql.append(" ON ");
             
@@ -858,11 +883,40 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
             string table_name = ObStmt::get_table_item_by_id(item.table_id_)->table_name_;
             assembled_sql.append(binding_shard_info.at(i)->get_shard_name());
             //from multi table
-            if (from_items_.size() >1)
+            TableItem *table_item = NULL;
+            if (from_items_.size() > 1)
             {
-                assembled_sql.append(" AS ");
-                assembled_sql.append(table_name);
-                assembled_sql.append(" ");
+                if ((OB_INVALID_ID != get_table_item(table_name, &table_item))
+                    &&(!table_item->alias_name_.empty()))
+                {
+                    assembled_sql.append(" AS ");
+                    assembled_sql.append(table_item->alias_name_);
+                    assembled_sql.append(" ");
+                }
+                else
+                {
+                    assembled_sql.append(" AS ");
+                    assembled_sql.append(table_name);
+                    assembled_sql.append(" ");
+                }
+            }
+            //from singal table and table has alias name
+            else 
+            {
+                if ((OB_INVALID_ID != get_table_item(table_name, &table_item))
+                &&(!table_item->alias_name_.empty()))
+                {
+                    assembled_sql.append(" AS ");
+                    assembled_sql.append(table_item->alias_name_);
+                    assembled_sql.append(" ");
+                }
+                else if(table_item->need_display_table_name)
+                {
+                    
+                    assembled_sql.append(" AS ");
+                    assembled_sql.append(table_name);
+                    assembled_sql.append(" ");
+                }
             }
         }
         
@@ -894,6 +948,12 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
         make_order_by_string(result_plan, assembled_sql);
     }
     make_limit_string(result_plan, assembled_sql);    
+
+    if (is_for_update())
+    {
+        assembled_sql.append(" FOR UPDATE");
+    }
+    
     return OB_SUCCESS;
 }
 
@@ -1210,6 +1270,8 @@ int64_t ObSelectStmt::make_group_by_string(ResultPlan& result_plan, string &asse
         for (i = 0; i < group_items_.size(); i++)
         {
             assembled_sql.append(group_items_.at(i).group_column_);
+            assembled_sql.append(" ");
+            assembled_sql.append(group_items_.at(i).group_type_ == T_SORT_ASC ? "ASC" : "DESC");
             if (i != group_items_.size()- 1)
             {
                 assembled_sql.append(", ");
@@ -1250,7 +1312,7 @@ int64_t ObSelectStmt::make_order_by_string(ResultPlan& result_plan, string &asse
 
         assembled_sql.append(item.order_column_);        
         assembled_sql.append(" ");
-        assembled_sql.append(item.order_type_ == T_SORT_ASC ? "ASC " : "DESC ");
+        assembled_sql.append(item.order_type_ == T_SORT_ASC ? "ASC" : "DESC");
         if (i != order_items_.size()- 1)
         {
             assembled_sql.append(", ");        

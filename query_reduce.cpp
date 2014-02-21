@@ -369,12 +369,30 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
         return;
     }
 
-    vector<SelectItem> select_items = select_stmt->get_all_select_items();
-    vector<GroupItem> group_items = select_stmt->get_all_group_items();
-    vector<OrderItem> order_items = select_stmt->get_all_order_items();
-    vector<HavingItem> having_items = select_stmt->get_all_having_items();
-    LimitItem limit_item = select_stmt->get_limit_item();
-    uint32_t raw_select_num = select_items.size();
+    vector<SelectItem>  select_items    = select_stmt->get_all_select_items();
+    vector<GroupItem>   group_items     = select_stmt->get_all_group_items();
+    vector<OrderItem>   order_items     = select_stmt->get_all_order_items();
+    vector<HavingItem>  having_items    = select_stmt->get_all_having_items();
+    LimitItem           limit_item      = select_stmt->get_limit_item();
+    uint32_t            raw_select_num  = select_items.size();
+    vector<FromItem>    from_items      = select_stmt->get_all_from_items();
+    vector<string>      from_tables;
+
+    for (i = 0; i < from_items.size(); i++)
+    {
+        FromItem from_item = from_items.at(i);
+        if (!from_item.is_joined_)
+        {
+            from_tables.push_back(from_item.table_name_);
+        }
+        else
+        {
+            JoinedTable* joined_table = select_stmt->get_joined_table(from_item.table_id_);
+            from_tables.push_back(select_stmt->get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_);
+            from_tables.push_back(select_stmt->get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_);
+        }
+    }
+    set_all_from_tables(from_tables);
 
     //set limit 
     set_limit_reduce_info(limit_item.start, limit_item.end);
@@ -390,7 +408,6 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
                     trans_ob_sql2_mysql(select_item.type_));
         }
     }
-
 
     if (group_items.size() > 0)
     {
@@ -581,6 +598,35 @@ return      :
 vector<SelectItem> &QueryPostReduce::get_original_field_item()
 {
     return select_items;
+}
+
+/**************************************************
+Funtion     :   set_all_from_tables
+Author      :   qinbo
+Date        :   2014.1.20
+Description :   set all from tables
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
+void QueryPostReduce::set_all_from_tables(vector<string> from_tables)
+{
+    this->from_tables = from_tables;
+}
+
+
+/**************************************************
+Funtion     :   get_all_from_tables
+Author      :   qinbo
+Date        :   2014.1.20
+Description :   get all from tables
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
+vector<string> QueryPostReduce::get_all_from_tables()
+{
+    return this->from_tables;
 }
 
 /**************************************************
@@ -952,7 +998,6 @@ return      :
  **************************************************/
 int32_t QueryPostReduce::get_execute_code()
 {
-    jlog(INFO, "get_execute_code:%d", execute_code);
     return execute_code;
 }
 

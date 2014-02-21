@@ -36,6 +36,7 @@ public:
     virtual bool execute_command(Connection *conn) = 0;
     virtual bool dispatch(Connection *conn, unsigned char* buf) = 0;
     virtual int get_error() = 0;
+    virtual bool check_acl(Connection *conn) = 0;
 };
 
 class dispatch_command : public dispatchCommand
@@ -50,6 +51,7 @@ public:
     bool dispatch(Connection *conn, unsigned char* buf);
     int get_error();
     int read_or_write();
+    bool check_acl(Connection *conn);
     void debug(int command);
 
 private:
@@ -57,7 +59,7 @@ private:
     void flush_all_privileges();
 
     int error;
-    int r_or_w;
+    bool r_or_w;
     vector<string> dictDatabase;
 };
 

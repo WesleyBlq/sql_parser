@@ -36,6 +36,12 @@ using namespace std;
 #define T_AGG_LIMIT       6
 #define T_VARIABLE_VALUE_LIMIT 7
 
+#define SIGNED_UINT64_STR       "-9223372036854775808"
+#define SIGNED_UINT64_LEN       19
+#define UNSIGNED_UINT64_STR     "18446744073709551615"
+#define UNSIGNED_UINT64_LEN     20
+#define SIGNED_UINT64_VALUE     -9223372036854775808
+
 extern int resolve(
         ResultPlan* result_plan,
         ParseNode* node);

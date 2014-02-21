@@ -77,3 +77,8 @@ parser_test: parser_test.cpp
 clean: 
 	rm -f *.o parser_test libsql.a
 	
+
+.KEEP_STATE:
+.KEEP_STATE_FILE:.make.state.GNU-amd64-Linux
+	
+	

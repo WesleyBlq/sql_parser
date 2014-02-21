@@ -31,13 +31,15 @@ typedef struct _ParseResult
   void*   yyscan_info_;
   ParseNode* result_tree_;
   const char*   input_sql_;
-  void*   malloc_pool_; 
+  int     input_sql_len_;
+  void*   malloc_pool_;
   char    error_msg_[MAX_ERROR_MSG];
   int     start_col_;
   int     end_col_;
   int     line_;
   int     yycolumn_;
   int     yylineno_;
+  char*   tmp_literal_;
 } ParseResult;
 
 

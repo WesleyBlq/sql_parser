@@ -516,6 +516,24 @@ int QueryActuator::generate_exec_plan(
     result_plan.meta_db_name.clear();
     result_plan.is_show_sys_var = false;
 
+    string sql_tmp = sql;
+    std::transform(sql.begin(), sql.end(), sql.begin(), ::tolower);
+    
+    if (0 == sql.compare(0, 3, "set"))
+    {
+        query_type = ObBasicStmt::T_VARIABLE_SET;
+        jlog(INFO, "set command");
+        return ret;
+    }
+    else if (0 == sql.compare(0, 4, "show"))
+    {
+        query_type = ObBasicStmt::T_SHOW_DATABASES;
+        jlog(INFO, "show command");
+        return ret;
+    }
+
+    sql = sql_tmp;
+    
     if (parse_init(&result))
     {
         ret = JD_ERR_SQL_PARSER_WRONG;
@@ -544,7 +562,7 @@ int QueryActuator::generate_exec_plan(
     }
     else
     {
-#if 1
+#if 0
     jlog(INFO, "<<Part 2 : PARSE TREE>>");
     print_tree(result.result_tree_, 0);
 #endif
@@ -620,7 +638,7 @@ int QueryActuator::generate_exec_plan(
         
     if (logic_plan)
     {
-#if 1
+#if 0
         jlog(INFO, "\n=======================================\n");
         jlog(INFO, "\n<<Part 2 : LOGICAL PLAN>>\n");
         logic_plan->print();
@@ -628,6 +646,7 @@ int QueryActuator::generate_exec_plan(
 #endif
         if (result_plan.is_show_sys_var)
         {
+            query_type = ObBasicStmt::T_SELECT;
             return ret;
         }
         
@@ -775,7 +794,7 @@ int QueryActuator::gen_exec_plan_select(
 
     if (result_plan.has_sub_query)
     {
-        ret = JD_ERR_SQL_NOT_SUPPORT;
+        ret = JD_ERR_SQL_NO_SUBQUERY;
         jlog(WARNING, "Now we DO NOT support sub-query");
         return ret;
     }
@@ -784,7 +803,10 @@ int QueryActuator::gen_exec_plan_select(
     {
         if (select_stmt->is_set_distinct())
         {
-            physical_plan->set_union_is_distinct(true);
+            ret = JD_ERR_SQL_NOT_SUPPORT;
+            jlog(WARNING, "Now we DO NOT support 'UNION DISTINCT'");
+            return ret;
+            //physical_plan->set_union_is_distinct(true);
         }
         
         ret = gen_exec_plan_select(result_plan, physical_plan, err_stat, select_stmt->get_left_query_id(), index);
@@ -877,6 +899,13 @@ int QueryActuator::gen_exec_plan_update(
         jlog(WARNING, "Can not get stmt");
         return ret;
     }
+    
+    if (result_plan.has_sub_query)
+    {
+        ret = JD_ERR_SQL_NO_SUBQUERY;
+        jlog(WARNING, "Now we DO NOT support sub-query");
+        return ret;
+    }
 
     db_name.assign(result_plan.db_name);
     schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
@@ -911,7 +940,7 @@ int QueryActuator::gen_exec_plan_update(
 
     if (result_plan.has_sub_query)
     {
-        ret = JD_ERR_SQL_NOT_SUPPORT;
+        ret = JD_ERR_SQL_NO_SUBQUERY;
         jlog(WARNING, "Now we DO NOT support sub-query");
         return ret;
     }
@@ -965,7 +994,9 @@ int QueryActuator::gen_exec_plan_update(
         //if there is no where conditions
         if (0 == expr_ids.size())
         {
-            ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+            //ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+            ret = JD_ERR_NOT_SUPPORT_MULTI_SHARD_WRITE;
+            jlog(WARNING, "Now we DO NOT support multi shard write operation");
             return ret;
         }
         else
@@ -1009,11 +1040,17 @@ int QueryActuator::gen_exec_plan_update(
                         final_exprs_array.push_back((*p_map2).second);
                     }
             
+                    if (opted_raw_exprs.size() > opted_raw_exprs.count(p_map1->first))
+                    {
+                        ret = JD_ERR_NOT_SUPPORT_MULTI_SHARD_WRITE;
+                        jlog(WARNING, "Now we DO NOT support multi shard write operation");
+                        return ret;
+                    }
+                    
                     for (i = 0; i < opted_raw_exprs.count(p_map1->first); i++)
                     {
                         p_map1++;
                     }
-
                     
                     string where_conditions;
                     append_distributed_where_items(result_plan, where_conditions, final_exprs_array);
@@ -1116,6 +1153,13 @@ int QueryActuator::gen_exec_plan_delete(
         return ret;
     }
 
+    if (result_plan.has_sub_query)
+    {
+        ret = JD_ERR_SQL_NO_SUBQUERY;
+        jlog(WARNING, "Now we DO NOT support sub-query");
+        return ret;
+    }
+
     db_name.assign(result_plan.db_name);
     schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
     if (NULL == db_schema)
@@ -1149,7 +1193,7 @@ int QueryActuator::gen_exec_plan_delete(
 
     if (result_plan.has_sub_query)
     {
-        ret = JD_ERR_SQL_NOT_SUPPORT;
+        ret = JD_ERR_SQL_NO_SUBQUERY;
         jlog(WARNING, "Now we DO NOT support sub-query");
         return ret;
     }
@@ -1175,7 +1219,9 @@ int QueryActuator::gen_exec_plan_delete(
         //if there is no where conditions
         if (0 == expr_ids.size())
         {
-            ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+            //ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
+            ret = JD_ERR_NOT_SUPPORT_MULTI_SHARD_WRITE;
+            jlog(WARNING, "Now we DO NOT support multi shard write operation");
             return ret;
         }
         else
@@ -1216,6 +1262,13 @@ int QueryActuator::gen_exec_plan_delete(
                     for (p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
                     {
                         final_exprs_array.push_back((*p_map2).second);
+                    }
+
+                    if (opted_raw_exprs.size() > opted_raw_exprs.count(p_map1->first))
+                    {
+                        ret = JD_ERR_NOT_SUPPORT_MULTI_SHARD_WRITE;
+                        jlog(WARNING, "Now we DO NOT support multi shard write operation");
+                        return ret;
                     }
 
                     for (i = 0; i < opted_raw_exprs.count(p_map1->first); i++)
@@ -1297,6 +1350,13 @@ int QueryActuator::gen_exec_plan_insert(
         return ret;
     }
 
+    if (result_plan.has_sub_query)
+    {
+        ret = JD_ERR_SQL_NO_SUBQUERY;
+        jlog(WARNING, "Now we DO NOT support sub-query");
+        return ret;
+    }
+
     schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
     if (NULL == db_schema)
     {
@@ -1328,7 +1388,7 @@ int QueryActuator::gen_exec_plan_insert(
 
     if (result_plan.has_sub_query)
     {
-        ret = JD_ERR_SQL_NOT_SUPPORT;
+        ret = JD_ERR_SQL_NO_SUBQUERY;
         jlog(WARNING, "Now we DO NOT support sub-query");
         return ret;
     }
@@ -1370,7 +1430,6 @@ int QueryActuator::gen_exec_plan_insert(
     //this table is distributed table
     else
     {
-
         if (0 == insert_stmt->get_column_size())
         {
             ret = JD_ERR_SQL_NOT_SUPPORT;
@@ -1379,9 +1438,11 @@ int QueryActuator::gen_exec_plan_insert(
         }
 
         multimap<uint32_t, uint32_t > sorted_insert_rows_value;
+        bool     has_auto_incr_sharding_key = false;
         ret = reparse_insert_stmt_rows_value(result_plan, insert_stmt, table_schema,
                                             sorted_insert_rows_value, //first: shard index;  second: row index
-                                            all_table_shards);
+                                            all_table_shards,
+                                            has_auto_incr_sharding_key);
 
         if (OB_SUCCESS == ret)
         {
@@ -1403,13 +1464,33 @@ int QueryActuator::gen_exec_plan_insert(
                 {
                     insert_rows_index.push_back((*p_map2).second);
                 }
-            
+
+                if (sorted_insert_rows_value.size() > sorted_insert_rows_value.count(p_map1->first))
+                {
+                    ret = JD_ERR_NOT_SUPPORT_MULTI_SHARD_WRITE;
+                    jlog(WARNING, "Now we DO NOT support multi shard write operation");
+                    return ret;
+                }
+                
                 for (uint32_t i = 0; i < sorted_insert_rows_value.count(p_map1->first); i++)
                 {
                     p_map1++;
                 }
-                            
-                insert_stmt->append_distributed_insert_items(result_plan, insert_rows_index, insert_rows);
+
+                if (has_auto_incr_sharding_key)
+                {
+                    insert_stmt->set_auto_incr_sharding_key(true);
+                    insert_stmt->set_auto_incr_column_name(table_schema->get_sequence_name());
+                }
+                else
+                {
+                    insert_stmt->set_auto_incr_sharding_key(false);
+                }
+                if (OB_SUCCESS != (ret = insert_stmt->append_distributed_insert_items(result_plan, insert_rows_index, insert_rows)))
+                {
+                    return ret;
+                }
+                
                 insert_stmt->make_exec_plan_unit_string(result_plan, insert_rows, shard_tmp, assembled_sql);
                 ExecPlanUnit* exec_plan_unit = (ExecPlanUnit*) parse_malloc(sizeof (ExecPlanUnit), NULL);
                 if (exec_plan_unit == NULL)
@@ -1813,6 +1894,7 @@ int QueryActuator::generate_select_plan_multi_table(
             
             for (p_map1 = opted_raw_exprs.begin(); p_map1 != opted_raw_exprs.end();)
             {
+                JD_DEBUG;
                 vector<vector<ObRawExpr*> > final_exprs_array;
                 string assembled_sql;
                 uint32_t shard_key_index = 0;
@@ -1942,7 +2024,6 @@ int QueryActuator::reparse_where_with_route_for_multi_tables(
     int  ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;;
     schema_shard*       shard_info = NULL;
     vector<FromItem>    from_items;
-    vector<vector<schema_shard*> >  all_binding_table_shards;
     vector<schema_shard*>           one_binding_table_shards;
     uint32_t i = 0;
     uint32_t j = 0;
@@ -1978,9 +2059,10 @@ int QueryActuator::reparse_where_with_route_for_multi_tables(
         //if there is no route sql, this sql should be sent to all shards
         if (partition_sql_exprs.size() == 0)
         {
-            for (j = 0; j < all_binding_table_shards.size(); j++)
+            JD_DEBUG;
+            for (j = 0; j < all_binding_tables_shards.size(); j++)
             {
-                one_binding_table_shards = all_binding_table_shards.at(j);
+                one_binding_table_shards = all_binding_tables_shards.at(j);
                 //all table's shards in [one_binding_table_shards] is located at the same server
                 //so we can use the first table's first shard to behalf the same server
                 //solution here is not precise, it's just a compromise solution NOW
@@ -2022,6 +2104,7 @@ Input       :   ResultPlan& result_plan,
                 schema_table* table_schema,
                 multimap<uint32_t, uint32_t > &sorted_insert_rows_value,
                 vector<schema_shard*>  &all_table_shards
+                bool &has_auto_incr_sharding_key
 Output      :   
  **************************************************/
 int QueryActuator::reparse_insert_stmt_rows_value(
@@ -2029,7 +2112,8 @@ int QueryActuator::reparse_insert_stmt_rows_value(
                     ObInsertStmt* insert_stmt,
                     schema_table* table_schema,
                     multimap<uint32_t, uint32_t > &sorted_insert_rows_value, //first: shard index;  second: row index
-                    vector<schema_shard*>  &all_table_shards)
+                    vector<schema_shard*>  &all_table_shards,
+                    bool &has_auto_incr_sharding_key)
 {
     int  ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;;
     vector<schema_shard*> all_related_shards;
@@ -2052,18 +2136,29 @@ int QueryActuator::reparse_insert_stmt_rows_value(
         {
             shard_key_index = i;
             has_found_sharding_key = true;
+            if (insert_stmt->get_column_item(i)->column_name_ == table_schema->get_sequence_name())
+            {
+                ret = JD_ERR_SQL_NOT_SUPPORT;
+                jlog(WARNING, "Now we DO NOT support insert operation with auto_increment key");
+                return ret;
+            }
             break;
         }
     }
 
-    //sent to the first shard(default shard)
+    //not found sharding key
     if (!has_found_sharding_key)
     {
-        for (i = 0; i < all_value_rows.size(); i++)
+        if ("" == table_schema->get_sequence_name())
         {
-            sorted_insert_rows_value.insert(pair<uint32_t, uint32_t>(0, i));
+            ret = JD_ERR_NOT_SUPPORT_INSERT_NO_KEY;
+            jlog(WARNING, "Now we DO NOT support insert operation without sharding-key");
+            return ret;
         }
-        return ret;
+        else
+        {
+            has_auto_incr_sharding_key = true;
+        }
     }
     
     for (i = 0; i < all_value_rows.size(); i++)
@@ -2076,54 +2171,116 @@ int QueryActuator::reparse_insert_stmt_rows_value(
         vector<schema_shard*> route_shards;
         
         map<string, SqlItemType>::iterator it = sharding_key_tmp.begin();
-        
-        while (it != sharding_key_tmp.end())
+
+        if (!has_auto_incr_sharding_key)
         {
+            while (it != sharding_key_tmp.end())
+            {
+                key_data key_relation;
+                key_relation.db_name        = result_plan.db_name;
+                key_relation.table_name     = table_schema->get_table_name();
+                key_relation.sharding_key   = it->first;
+                key_relation.key_type       = it->second;
+                key_relation.key_value_num  = 1;
+                
+                if (it->first == column_info->get_column_name())
+                {
+                    key_relation.key_relation   = T_OP_EQ;
+                    if (!sql_expr->get_expr()->is_const())
+                    {
+                        ret = JD_ERR_COLUMN_NOT_MATCH;
+                        jlog(WARNING, "expr is not const");
+                        return ret;
+                    }
+                    else
+                    {
+                        ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+                        const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                    }
+                    key_relations.push_back(key_relation);
+                    break;
+                }
+                it++;
+            }
+            
+            if (key_relations.size() > 0)
+            {
+                if (!router::get_instance().get_route_result(key_relations, route_shards, result_plan.err_stat_.err_code_)
+                    ||(route_shards.size() == 0))
+                {
+                    if (result_plan.err_stat_.err_code_ != 0)
+                    {
+                        jlog(WARNING, "route sharding key mismatch...");
+                        return result_plan.err_stat_.err_code_;
+                    }
+                    ret = JD_ERR_CONFIG_ROUTE_ERR;
+                    jlog(WARNING, "route info manage error");
+                    return ret;
+                }
+            }
+            
+            for (uint32_t j = 0; j < route_shards.size(); j++)
+            {
+                shards_index = search_shard_from_one_table_shards(all_table_shards, route_shards.at(j));  
+                if (SHARD_NOT_FOUND != shards_index)
+                {
+                    sorted_insert_rows_value.insert(pair<uint32_t, uint32_t>(shards_index, i));
+                }
+                else
+                {
+                    sorted_insert_rows_value.clear();
+                    ret = JD_ERR_SHARD_NUM_WRONG;
+                    jlog(WARNING, "shard manage wrong");
+                    return ret;
+                }
+            }
+        }
+        //have auto_increment column
+        else
+        {
+            if (table_schema->get_sequence_name() != it->first)
+            {
+                ret = JD_ERR_COLUMN_NOT_MATCH;
+                jlog(WARNING, "expr is not const");
+                return ret;
+            }
             key_data key_relation;
             key_relation.db_name        = result_plan.db_name;
             key_relation.table_name     = table_schema->get_table_name();
             key_relation.sharding_key   = it->first;
             key_relation.key_type       = it->second;
             key_relation.key_value_num  = 1;
+            key_relation.key_relation   = T_OP_EQ;
             
-            if (it->first == column_info->get_column_name())
+            if (!meta_reader::get_instance().get_auto_incr_sequ_value(key_relation.db_name, 
+                                            key_relation.table_name, 
+                                            key_relation.sharding_key, 
+                                            key_relation.value.key_integer[0]))
             {
-                key_relation.key_relation   = T_OP_EQ;
-                if (!sql_expr->get_expr()->is_const())
-                {
-                    ret = JD_ERR_COLUMN_NOT_MATCH;
-                    jlog(WARNING, "expr is not const");
-                    return ret;
-                }
-                else
-                {
-                    ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
-                    const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
-                }
-                key_relations.push_back(key_relation);
-                break;
+                ret = JD_ERR_GET_AUTO_INCR_ID_ERR;
+                jlog(WARNING, "get insert auto increment id error.");
+                return ret;
             }
-            it++;
-        }
-        
-        if (key_relations.size() > 0)
-        {
+            
+            key_relations.push_back(key_relation);
             if (!router::get_instance().get_route_result(key_relations, route_shards, result_plan.err_stat_.err_code_)
-                ||(route_shards.size() == 0))
+                ||(route_shards.size() != 1))
             {
-                ret = JD_ERR_COLUMN_NOT_MATCH;
+                if (result_plan.err_stat_.err_code_ != 0)
+                {
+                    jlog(WARNING, "route sharding key mismatch...");
+                    return result_plan.err_stat_.err_code_;
+                }
+                ret = JD_ERR_CONFIG_ROUTE_ERR;
                 jlog(WARNING, "route info manage error");
                 return ret;
             }
-        }
-
-        
-        for (uint32_t j = 0; j < route_shards.size(); j++)
-        {
-            shards_index = search_shard_from_one_table_shards(all_table_shards, route_shards.at(j));  
+            
+            shards_index = search_shard_from_one_table_shards(all_table_shards, route_shards.at(0));  
             if (SHARD_NOT_FOUND != shards_index)
             {
                 sorted_insert_rows_value.insert(pair<uint32_t, uint32_t>(shards_index, i));
+                insert_stmt->set_auto_incr_id_value(i, key_relation.value.key_integer[0]);
             }
             else
             {
@@ -2134,6 +2291,7 @@ int QueryActuator::reparse_insert_stmt_rows_value(
             }
         }
     }
+    
     return ret;
 }
 
@@ -2194,6 +2352,11 @@ int QueryActuator::build_shard_exprs_array_with_route_one_table(
         {
             if (!router::get_instance().get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
             {
+                if (result_plan.err_stat_.err_code_ != 0)
+                {
+                    jlog(WARNING, "route sharding key mismatch...");
+                    return result_plan.err_stat_.err_code_;
+                }
                 ret = JD_ERR_CONFIG_ROUTE_ERR;
                 jlog(WARNING, "route info manage error");
                 return ret;
@@ -2202,7 +2365,18 @@ int QueryActuator::build_shard_exprs_array_with_route_one_table(
 
         if (shard_info.size() > 0)
         {
-            jlog(INFO, "The first found shard: %s", shard_info.at(0)->get_shard_name().data());
+            for (uint32_t j=0 ;j < shard_info.size(); j++)
+            {
+                if (0 == j)
+                {
+                    jlog(INFO, "FOUND SHARD BEGIN");
+                }
+                jlog(INFO, "The found shard: %s" , shard_info.at(j)->get_shard_name().data());
+                if (j == shard_info.size()-1)
+                {
+                    jlog(INFO, "FOUND SHARD END");
+                }
+            }
             all_related_shards.push_back(shard_info);
         }
     }
@@ -2262,6 +2436,7 @@ int QueryActuator::build_shard_exprs_array_with_route_one_table(
             if (SHARD_NOT_FOUND != shards_index)
             {
                 opted_raw_exprs.insert(pair<uint32_t, vector<ObRawExpr*> >(shards_index, atomic_exprs));
+                jlog(INFO, "The intersection shard: %s" , all_table_shards.at(shards_index)->get_shard_name().data());
             }
             else
             {
@@ -2355,8 +2530,13 @@ int QueryActuator::build_shard_exprs_array_with_route_multi_table(
         if (key_relations.size() > 0)
         {
             if ((!router::get_instance().get_route_result(key_relations, route_shards, result_plan.err_stat_.err_code_))
-                ||(route_shards.size() == 0))
+                    || (route_shards.size() == 0))
             {
+                if (result_plan.err_stat_.err_code_ != 0)
+                {
+                    jlog(WARNING, "route sharding key mismatch...");
+                    return result_plan.err_stat_.err_code_;
+                }
                 ret = JD_ERR_CONFIG_ROUTE_ERR;
                 jlog(WARNING, "route info manage error");
                 return ret;

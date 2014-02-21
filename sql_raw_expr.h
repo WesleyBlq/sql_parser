@@ -355,7 +355,17 @@ namespace jdbd
             {
                 return is_op_name_field;
             }
+            
+            void set_alias_table_name(string table_name)
+            {
+                alias_table_name = table_name;
+            }
 
+            string get_alias_table_name()
+            {
+                return alias_table_name;
+            }
+            
             void set_related_sql_raw_id(uint64_t sql_raw_id)
             {
                 related_sql_raw_id = sql_raw_id;
@@ -369,7 +379,8 @@ namespace jdbd
             uint64_t first_id_;
             uint64_t second_id_;
             uint64_t related_sql_raw_id;
-            bool is_op_name_field;
+            bool     is_op_name_field;
+            string   alias_table_name;
         };
 
         class ObUnaryOpRawExpr : public ObRawExpr

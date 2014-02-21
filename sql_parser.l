@@ -42,6 +42,32 @@ do \
   } \
 } while (0)
 
+inline unsigned char escaped_char(unsigned char c)
+{
+  switch (c)
+  {
+    case 'b':
+      return '\b';
+    case 'f':
+      return '\f';
+    case 'n':
+      return '\n';
+    case 'r':
+      return '\r';
+    case 't':
+      return '\t';
+    case '0':
+        return 0;
+    case 'Z':
+        return '\032';
+    case '_':
+    case '%':
+        return '\\';        // remember prefix for wildcard
+    default:
+      return c;
+  }
+}
+
 /* quote_type: 0 - single quotes; 1 - double quotation marks */
 int64_t parse_string(const char* src, char* dest, int64_t len, int quote_type)
 {
@@ -49,27 +75,23 @@ int64_t parse_string(const char* src, char* dest, int64_t len, int quote_type)
   int64_t index = 0;
   for(i = 0; i < len; ++i)
   {
-    char c = src[i];
+    unsigned char c = src[i];
+	#if 0
     if(c == '\\')
     {
-      ++i;
-      c = src[i];
-      switch(c)
+      if (i < len - 1)
       {
-      case 'n':
-        c = '\n';
-        break;
-      case 'r':
-        c = '\r';
-        break;
-      case 't':
-        c = '\t';
-        break;
-      default:
+        c = src[++i];
+      }
+      else
+      {
         break;
       }
+      c = escaped_char(c);
     }
-    else if (quote_type == 0 && c == '\'' && i + 1 < len && src[i + 1] == '\'')
+    else 
+	#endif
+	if (quote_type == 0 && c == '\'' && i + 1 < len && src[i + 1] == '\'')
     {
       ++i;
     }
@@ -225,6 +247,7 @@ ORDER             { return ORDER; }
 OUTER             { return OUTER; }
 COMMENT           { return COMMENT; }
 DATABASES		  { return DATABASES; }	
+PROCESSLIST		  { return PROCESSLIST; }
 PARAMETERS        { return PARAMETERS; }
 PASSWORD          { return PASSWORD; }
 PRECISION         { return PRECISION; }

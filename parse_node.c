@@ -256,21 +256,25 @@ const char* get_type_symbol(int type)
 void destroy_tree(ParseNode* root)
 {
   int i;
-  if(root == 0)
+  if(root == NULL)
     return;
   for(i = 0; i < root->num_child_; ++i)
   {
     destroy_tree(root->children_[i]);
+    root->children_[i] = NULL;
   }
   if(root->str_value_ != NULL)
   {
     parse_free((char*)root->str_value_);
+    root->str_value_ = NULL;
   }
   if(root->num_child_)
   {
     parse_free(root->children_);
+    root->children_ = NULL;
   }
   parse_free(root);
+  root = NULL;
 }
 
 void print_tree(ParseNode* root, int level)

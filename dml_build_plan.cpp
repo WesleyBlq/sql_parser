@@ -99,6 +99,55 @@ int resolve_hints(
         ObStmt* stmt,
         ParseNode* node);
 
+
+static bool int_value_check(const char *str, uint length)
+{
+    bool neg=0;
+
+    if (*str == '+')
+    {
+        str++;
+        length--;
+    }
+    else if (*str == '-')
+    {
+        neg=1;
+    }
+
+    if (neg)
+    {
+        if (length < SIGNED_UINT64_LEN)
+        {
+            return true;
+        }
+        else if (length > SIGNED_UINT64_LEN)
+        {
+            return false;
+        } 
+        else if (strcmp(str, SIGNED_UINT64_STR) > 0)
+        {
+            return false;
+        }
+    } 
+    else
+    {
+        if (length < UNSIGNED_UINT64_LEN)
+        {
+            return true;
+        }
+        else if (length > UNSIGNED_UINT64_LEN)
+        {
+            return false;
+        } 
+        else if (strcmp(str, UNSIGNED_UINT64_STR) > 0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 static int add_all_rowkey_columns_to_stmt(ResultPlan* result_plan, uint64_t table_id, ObStmt *stmt)
 {
     return OB_SUCCESS;
@@ -209,6 +258,7 @@ int resolve_and_exprs(
   expr; \
 })
 
+
 int resolve_expr(
         ResultPlan * result_plan,
         ObStmt* stmt,
@@ -318,6 +368,11 @@ int resolve_expr(
         }
         case T_INT:
         {
+            if (!int_value_check(node->str_value_, strlen(node->str_value_)))
+            {
+                ret = JD_ERR_INT_VALUE_EXCEED_MAX_LIMIT;
+                break;
+            }
             ObObj val;
             val.set_int(node->value_);
             ObConstRawExpr *c_expr = NULL;
@@ -403,7 +458,7 @@ int resolve_expr(
             string column_name;
             table_name.assign((char*) table_str, static_cast<int32_t> (strlen(table_str)));
             column_name.assign((char*) column_str, static_cast<int32_t> (strlen(column_str)));
-
+            
             // Column name with table name, it can't be alias name, so we don't need to check select item list
             if (expr_scope_type == T_HAVING_LIMIT)
             {
@@ -423,6 +478,9 @@ int resolve_expr(
             }
             else
             {
+                OB_ASSERT(stmt->get_stmt_type() == ObStmt::T_SELECT);
+                ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
+                TableItem* table_item;
                 ColumnItem *column_item = stmt->get_column_item(&table_name, column_name);
                 if (!column_item)
                 {
@@ -435,6 +493,25 @@ int resolve_expr(
                 ObBinaryRefRawExpr *b_expr = NULL;
                 if (CREATE_RAW_EXPR(b_expr, ObBinaryRefRawExpr, result_plan) == NULL)
                     break;
+
+                //BEGIN: added by qinbo
+                if ((select_stmt->get_table_item(table_name, &table_item)) == OB_INVALID_ID)
+                {
+                    ret = JD_ERR_TABLE_UNKNOWN;
+                    jlog(WARNING, "Unknown table %s in having clause");
+                    break;
+                }
+                
+                if (table_item->type_ == TableItem::ALIAS_TABLE)
+                {
+                    b_expr->set_alias_table_name(table_item->alias_name_);
+                }
+                else
+                {
+                    table_item->need_display_table_name = true;
+                }
+                //END: added by qinbo
+                
                 b_expr->set_expr_type(T_REF_COLUMN);
                 b_expr->set_result_type(column_item->data_type_);
                 b_expr->set_first_ref_id(column_item->table_id_);
@@ -608,6 +685,19 @@ int resolve_expr(
                         int64_t val = OB_INVALID_ID;
                         if ((ret = const_expr->get_value().get_int(val)) == OB_SUCCESS)
                         {
+                            if (node->type_ == T_OP_NEG)
+                            {
+                                char neg_int[100];
+                                memset(neg_int, 0, 100);
+                                neg_int[0] = '-';
+                                strncpy(neg_int+1, node->children_[0]->str_value_, strlen(node->children_[0]->str_value_));
+                                
+                                if (!int_value_check(neg_int, strlen(neg_int)))
+                                {
+                                    ret = JD_ERR_INT_VALUE_EXCEED_MIN_LIMIT;
+                                    break;
+                                }
+                            }
                             ObObj new_val;
                             new_val.set_int(-val);
                             const_expr->set_value(new_val);
@@ -1079,7 +1169,7 @@ int resolve_expr(
                     || expr_scope_type == T_UPDATE_LIMIT
                     || expr_scope_type == T_AGG_LIMIT)
             {
-                ret = JD_ERR_PARSER_SYNTAX;
+                ret = JD_ERR_SQL_NO_SUBQUERY;
                 jlog(WARNING, "Sub-query is illeagal in INSERT/UPDATE statement or AGGREGATION function");
                 break;
             }
@@ -1397,54 +1487,61 @@ int resolve_agg_func(
         {
             agg_expr->set_param_expr(sub_expr);
             if (node->children_[0] && node->children_[0]->type_ == T_DISTINCT)
+            {
                 agg_expr->set_param_distinct();
-            agg_expr->set_expr_type(node->type_);
-            if (node->type_ == T_FUN_COUNT)
-                agg_expr->set_expr_type(T_FUN_COUNT);
-            else if (node->type_ == T_FUN_MAX)
-                agg_expr->set_expr_type(T_FUN_MAX);
-            else if (node->type_ == T_FUN_MIN)
-                agg_expr->set_expr_type(T_FUN_MIN);
-            else if (node->type_ == T_FUN_SUM)
-                agg_expr->set_expr_type(T_FUN_SUM);
-            else if (node->type_ == T_FUN_AVG)
-                agg_expr->set_expr_type(T_FUN_AVG);
-            else
-            {
-                /* Won't be here */
+                ret = JD_ERR_NOT_SUPPORT_DISTINCT;
+            }
 
-            }
-            if (node->type_ == T_FUN_COUNT)
+            if (ret == OB_SUCCESS)
             {
-                agg_expr->set_result_type(ObIntType);
-            }
-            else if (node->type_ == T_FUN_MAX || node->type_ == T_FUN_MIN || node->type_ == T_FUN_SUM)
-            {
-                agg_expr->set_result_type(sub_expr->get_result_type());
-            }
-            else if (node->type_ == T_FUN_AVG)
-            {
-                ObObj in_type1;
-                ObObj in_type2;
-                in_type1.set_type(sub_expr->get_result_type());
-                in_type2.set_type(ObIntType);
-                if (in_type1.get_type() == ObDoubleType)
-                    agg_expr->set_result_type(ObExprObj::type_div(in_type1, in_type2, true).get_type());
+                agg_expr->set_expr_type(node->type_);
+                if (node->type_ == T_FUN_COUNT)
+                    agg_expr->set_expr_type(T_FUN_COUNT);
+                else if (node->type_ == T_FUN_MAX)
+                    agg_expr->set_expr_type(T_FUN_MAX);
+                else if (node->type_ == T_FUN_MIN)
+                    agg_expr->set_expr_type(T_FUN_MIN);
+                else if (node->type_ == T_FUN_SUM)
+                    agg_expr->set_expr_type(T_FUN_SUM);
+                else if (node->type_ == T_FUN_AVG)
+                    agg_expr->set_expr_type(T_FUN_AVG);
                 else
-                    agg_expr->set_result_type(ObExprObj::type_div(in_type1, in_type2, false).get_type());
-            }
-            else
-            {
-                /* won't be here */
-                agg_expr->set_result_type(ObMinType);
-                OB_ASSERT(false);
-            }
+                {
+                    /* Won't be here */
 
-            sql_expr->set_expr(agg_expr);
-            sql_expr->set_contain_aggr(true);
-            sql_expr->set_contain_aggr_type(node->type_);
-            // add invalid table bit index, avoid aggregate function expressions are used as filters
-            //sql_expr->get_tables_set().add_member(0);
+                }
+                if (node->type_ == T_FUN_COUNT)
+                {
+                    agg_expr->set_result_type(ObIntType);
+                }
+                else if (node->type_ == T_FUN_MAX || node->type_ == T_FUN_MIN || node->type_ == T_FUN_SUM)
+                {
+                    agg_expr->set_result_type(sub_expr->get_result_type());
+                }
+                else if (node->type_ == T_FUN_AVG)
+                {
+                    ObObj in_type1;
+                    ObObj in_type2;
+                    in_type1.set_type(sub_expr->get_result_type());
+                    in_type2.set_type(ObIntType);
+                    if (in_type1.get_type() == ObDoubleType)
+                        agg_expr->set_result_type(ObExprObj::type_div(in_type1, in_type2, true).get_type());
+                    else
+                        agg_expr->set_result_type(ObExprObj::type_div(in_type1, in_type2, false).get_type());
+                }
+                else
+                {
+                    /* won't be here */
+                    agg_expr->set_result_type(ObMinType);
+                    OB_ASSERT(false);
+                }
+
+                sql_expr->set_expr(agg_expr);
+                sql_expr->set_contain_aggr(true);
+                sql_expr->set_contain_aggr_type(node->type_);
+                // add invalid table bit index, avoid aggregate function expressions are used as filters
+                //sql_expr->get_tables_set().add_member(0);
+            }
         }
     }
     else
@@ -1781,6 +1878,7 @@ int resolve_table_columns(
 
                     if (stmt->get_stmt_type() == ObStmt::T_SELECT && num_columns <= 0)
                     {
+                        ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
                         ObBinaryRefRawExpr* expr = NULL;
                         if (CREATE_RAW_EXPR(expr, ObBinaryRefRawExpr, result_plan) == NULL)
                             break;
@@ -1788,6 +1886,15 @@ int resolve_table_columns(
                         expr->set_first_ref_id(column_item->table_id_);
                         expr->set_second_ref_id(column_item->column_id_);
                         expr->set_result_type(column_item->data_type_);
+
+                        //BEGIN: added by qinbo
+                        //singal table                          | multi tables
+                        if ((table_item.need_display_table_name)||(select_stmt->get_from_item_size() > 1))
+                        {
+                            expr->set_op_name_field();
+                        }
+                        //END: added by qinbo
+                        
                         ObSqlRawExpr* sql_expr = (ObSqlRawExpr*) parse_malloc(sizeof (ObSqlRawExpr), NULL);
                         if (sql_expr == NULL)
                         {
@@ -1810,7 +1917,7 @@ int resolve_table_columns(
                             break;
                         }
 
-                        ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
+                        //ObSelectStmt* select_stmt = static_cast<ObSelectStmt*> (stmt);
                         ret = select_stmt->add_select_item(
                                 result_plan,
                                 sql_expr->get_expr_id(),
@@ -1827,6 +1934,7 @@ int resolve_table_columns(
                 }
             }
         }
+        //BASE_TABLE OR alias table
         else
         {
             /*get table columns qinbo*/
@@ -1886,11 +1994,15 @@ int resolve_table_columns(
                         expr->set_first_ref_id(column_item->table_id_);
                         expr->set_second_ref_id(column_item->column_id_);
                         expr->set_result_type(column_item->data_type_);
-
+                        
                         //BEGIN: added by qinbo
-                        if (select_stmt->get_from_item_size() > 1)
+                        if ((table_item.need_display_table_name)||(select_stmt->get_from_item_size() > 1))
                         {
                             expr->set_op_name_field();
+                            if (table_item.type_ == TableItem::ALIAS_TABLE)
+                            {
+                                expr->set_alias_table_name(table_item.alias_name_);
+                            }
                         }
                         //END: added by qinbo
                         
@@ -1952,7 +2064,12 @@ int resolve_star(
         int32_t num = select_stmt->get_table_size();
         for (int32_t i = 0; ret == OB_SUCCESS && i < num; i++)
         {
+            //even join exist, join tables also in table_items.
             TableItem& table_item = select_stmt->get_table_item(i);
+            if (num > 1)
+            {
+                table_item.need_display_table_name = true;
+            }
             ret = resolve_table_columns(result_plan, select_stmt, table_item);
         }
     }
@@ -1968,13 +2085,17 @@ int resolve_star(
                 (char*) (table_node->str_value_),
                 static_cast<int32_t> (strlen(table_node->str_value_))
                 );
+
         if ((select_stmt->get_table_item(table_name, &table_item)) == OB_INVALID_ID)
         {
             ret = JD_ERR_TABLE_UNKNOWN;
             jlog(WARNING, "Unknown table %s", table_node->str_value_);
         }
         if (ret == OB_SUCCESS)
+        {
+            table_item->need_display_table_name = true;
             ret = resolve_table_columns(result_plan, select_stmt, *table_item);
+        }
     }
     else
     {
@@ -2556,6 +2677,7 @@ int resolve_select_stmt(
             if (node->children_[7] == NULL || node->children_[7]->type_ == T_DISTINCT)
             {
                 select_stmt->assign_set_distinct();
+                ret = JD_ERR_NOT_SUPPORT_DISTINCT;
             }
             else
             {
@@ -2599,16 +2721,16 @@ int resolve_select_stmt(
 
         if (node->children_[0] == NULL || node->children_[0]->type_ == T_ALL)
         {
-            ret = JD_ERR_ILLEGAL_ID;
             select_stmt->assign_all();
         }
         else
         {
             select_stmt->assign_distinct();
+            ret = JD_ERR_NOT_SUPPORT_DISTINCT;
         }
 
         /* resolve from clause */
-        if ((ret = resolve_from_clause(result_plan, select_stmt, node->children_[2])) == OB_SUCCESS)
+        if (ret == OB_SUCCESS && ((ret = resolve_from_clause(result_plan, select_stmt, node->children_[2])) == OB_SUCCESS))
         {
         }
         if (ret == OB_SUCCESS && node->children_[12] && node->children_[12]->value_ == 1)
@@ -2878,6 +3000,8 @@ int resolve_insert_values(
 {
     OB_ASSERT(node->type_ == T_VALUE_LIST);
     int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
+    ObLogicalPlan* logical_plan = NULL;
+    logical_plan = static_cast<ObLogicalPlan*> (result_plan->plan_tree_);
 
     vector<uint64_t> value_row;
     for (int32_t i = 0; ret == OB_SUCCESS && i < node->num_child_; i++)
@@ -2901,6 +3025,7 @@ int resolve_insert_values(
             ret = JD_ERR_COLUMN_SIZE;
             jlog(WARNING, "Column count doesn't match value count");
         }
+        
         if (ret == OB_SUCCESS)
         {
             if ((ret = insert_stmt->add_value_row(value_row)) != OB_SUCCESS)
@@ -2992,7 +3117,13 @@ int resolve_insert_stmt(
                         // value from sub-query(insert into table select ..)
                         OB_ASSERT(node->children_[3] && node->children_[3]->type_ == T_SELECT);
                         uint64_t ref_id = OB_INVALID_ID;
-                        ret = resolve_select_stmt(result_plan, node->children_[3], ref_id);
+                        ret = JD_ERR_SQL_NO_SUBQUERY;
+                        jlog(WARNING, "Now we DO NOT support sub-query in insert");
+                        
+                        if (ret == OB_SUCCESS)
+                        {
+                            ret = resolve_select_stmt(result_plan, node->children_[3], ref_id);
+                        }
                         if (ret == OB_SUCCESS)
                         {
                             insert_stmt->set_insert_query(ref_id);

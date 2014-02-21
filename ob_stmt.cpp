@@ -158,6 +158,7 @@ int ObStmt::add_table_item(
     {
         item.type_ = type;
         item.has_scan_columns_ = false;
+        item.need_display_table_name = false;
         table_items_.push_back(item);
     }
 

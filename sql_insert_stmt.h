@@ -5,6 +5,8 @@
 #include <vector>
 #include <string>
 
+#define AUTO_INCR_MAX_INDEX     1000
+
 namespace jdbd
 {
     namespace sql
@@ -50,12 +52,94 @@ namespace jdbd
             int append_distributed_insert_items(ResultPlan& result_plan,
                                                 vector<uint32_t> &insert_rows_index,
                                                 string &assembled_sql);
+            
+            /**************************************************
+            Funtion     :   set_auto_incr_sharding_key
+            Author      :   qinbo
+            Date        :   2014.1.23
+            Description :   has_auto_incr_sharding_key
+            Input       :   bool has_auto_incr_
+            Output      :   
+             **************************************************/
+            void set_auto_incr_sharding_key(bool has_auto_incr_)
+            {
+                has_auto_incr = has_auto_incr_;
+            }
 
+            /**************************************************
+            Funtion     :   has_auto_incr_sharding_key
+            Author      :   qinbo
+            Date        :   2014.1.23
+            Description :   has_auto_incr_sharding_key
+            Input       :   bool has_auto_incr_
+            Output      :   
+             **************************************************/
+            bool has_auto_incr_sharding_key()
+            {
+                return has_auto_incr;
+            }
+            
+            /**************************************************
+            Funtion     :   set_auto_incr_column_name
+            Author      :   qinbo
+            Date        :   2014.1.23
+            Description :   has_auto_incr_sharding_key
+            Input       :   bool has_auto_incr_
+            Output      :   
+             **************************************************/
+            void set_auto_incr_column_name(string column_name) 
+            {
+                auto_incr_column_name = column_name;
+            }
+            
+            /**************************************************
+            Funtion     :   get_auto_incr_column_name
+            Author      :   qinbo
+            Date        :   2014.1.23
+            Description :   has_auto_incr_sharding_key
+            Input       :   bool has_auto_incr_
+            Output      :   
+             **************************************************/
+            string get_auto_incr_column_name() 
+            {
+                return auto_incr_column_name;
+            }
+
+            /**************************************************
+            Funtion     :   set_auto_incr_id_value
+            Author      :   qinbo
+            Date        :   2014.1.23
+            Description :   set_auto_incr_id_value
+            Input       :   uint64_t index
+            Output      :   
+             **************************************************/
+            void set_auto_incr_id_value(uint32_t index, uint64_t value)
+            {
+                OB_ASSERT((index >= 0)&&(index < AUTO_INCR_MAX_INDEX));
+                auto_incr_ids[index] = value;
+            }
+
+            /**************************************************
+            Funtion     :   get_auto_incr_id_value
+            Author      :   qinbo
+            Date        :   2014.1.23
+            Description :   set_auto_incr_id_value
+            Input       :   uint64_t index
+            Output      :   
+             **************************************************/
+            uint64_t get_auto_incr_id_value(uint32_t index)
+            {
+                OB_ASSERT((index >= 0)&&(index < AUTO_INCR_MAX_INDEX));
+                return auto_incr_ids[index];
+            }
         private:
             uint64_t table_id_;
             uint64_t sub_query_id_;
             bool is_replace_; // replace semantic
             vector<vector<uint64_t> > value_vectors_;
+            bool    has_auto_incr;
+            string  auto_incr_column_name;
+            uint64_t auto_incr_ids[AUTO_INCR_MAX_INDEX];
         };
 
         inline void ObInsertStmt::set_insert_table(uint64_t id)

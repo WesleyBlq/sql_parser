@@ -105,6 +105,8 @@ public:
     void add_order_reduce_info(bool sort, int32_t pos, enum enum_field_types field_type);
     void set_original_field_item(vector<SelectItem> &select_items_);
     vector<SelectItem> &get_original_field_item( );
+    void set_all_from_tables(vector<string> from_tables);
+    vector<string>     get_all_from_tables(); 
 
     int32_t get_reduce();
     uint32_t get_group_size();
@@ -137,6 +139,7 @@ private:
     vector<AggrFuncPostReduce>  func;
     vector<HavingPostReduce>    having;
     vector<SelectItem>          select_items;
+    vector<string>              from_tables;
     
     bool  find_column_if_exist(vector<string> &columns, string goal_column, uint32_t column_off);
     bool  is_sort_asc(SqlItemType sort_type)

@@ -22,7 +22,7 @@
                         OP_GROUP + OP_HAVING + OP_ORDER + OP_LIMIT + OP_SUBSELECT)
 
 //sql sent to shard should have max rows num MAX_LIMIT_ROWS
-#define MAX_LIMIT_ROWS  1000000
+#define MAX_LIMIT_ROWS  100000000
 
 using namespace jdbd::common;
 
@@ -341,12 +341,14 @@ namespace jdbd
             }
             //END: add by tangchao at 20140106
 
-                const bool try_fetch_group_from_order_by_column_name(
-                        vector<OrderItem> &order_items, string column_name)
-                {
+            const bool try_fetch_group_item_from_order_by_items(
+                    vector<OrderItem> &order_items, GroupItem &group_item)
+            {
                 for (uint32_t i = 0; i< order_items.size(); i++)
                 {
-                    if (order_items[i].order_column_ == column_name)
+                    if ((order_items[i].order_column_ == group_item.group_column_)
+                        &&(order_items[i].order_type_ == group_item.group_type_)
+                        &&(order_items[i].column_type_== group_item.column_type_))
                     {
                         return true;
                     }
@@ -354,6 +356,7 @@ namespace jdbd
 
                 return false;
             }
+
             
             const bool is_group_by_order_by_same(ResultPlan& result_plan)
             {
@@ -364,7 +367,7 @@ namespace jdbd
                 {
                     for (uint32_t i=0; i< group_items.size(); i++)
                     {
-                        if (!try_fetch_group_from_order_by_column_name(order_items, group_items.at(i).group_column_))
+                        if (!try_fetch_group_item_from_order_by_items(order_items, group_items.at(i)))
                         {
                             return false;
                         }

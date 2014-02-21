@@ -256,7 +256,7 @@ public:
     }
     
     //BEGIN: add by tangchao 20131225
-    int get_query_type()
+    ObBasicStmt::StmtType get_query_type()
     {
         return query_type;
     }
@@ -270,7 +270,7 @@ private:
     FinalExecPlan* final_exec_plan;
     
     /*BEGIN: add by tangchao 20131225 */
-    int query_type;
+    ObBasicStmt::StmtType query_type;
     /*END: add by tangchao 20131225 */
     
     //internal functions
@@ -379,7 +379,8 @@ private:
                         ObInsertStmt* insert_stmt,
                         schema_table* table_schema,
                         multimap<uint32_t, uint32_t > &sorted_insert_rows_value,
-                        vector<schema_shard*>  &all_table_shards);
+                        vector<schema_shard*>  &all_table_shards,
+                        bool &has_auto_incr_sharding_key);
 
     /**************************************************
     Funtion     :   build_shard_exprs_array_with_route_one_table

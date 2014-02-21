@@ -60,6 +60,7 @@ namespace jdbd
             // type == GENERATED_TABLE? ref_id_ is the reference of the sub-query.
             uint64_t ref_id_;
             bool has_scan_columns_;
+            bool need_display_table_name; //such as "tt.*"
         };
 
         struct ColumnItem

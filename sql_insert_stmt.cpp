@@ -3,6 +3,7 @@
 #include <vector>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sstream>
 #include "parse_malloc.h"
 #include "sql_logical_plan.h"
 #include "utility.h"
@@ -15,8 +16,14 @@ using namespace jdbd::sql;
 ObInsertStmt::ObInsertStmt()
 : ObStmt(T_INSERT)
 {
-    sub_query_id_ = OB_INVALID_ID;
-    is_replace_ = false;
+    sub_query_id_   = OB_INVALID_ID;
+    is_replace_     = false;
+    has_auto_incr   = false;
+
+    for (int i = 0; i < AUTO_INCR_MAX_INDEX; i++)
+    {
+        auto_incr_ids[i] = 0;
+    }
 }
 
 ObInsertStmt::~ObInsertStmt()
@@ -78,7 +85,6 @@ Output      :
 int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
 {
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
-    string assembled_sql_tmp;
     ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -123,6 +129,7 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
             vector<uint64_t>& value_row = value_vectors_.at(i);
             for (uint32_t j = 0; j < value_row.size(); j++)
             {
+                string assembled_sql_tmp;
                 if (j == 0)
                 {
                     assembled_sql.append("(");
@@ -148,7 +155,6 @@ int64_t ObInsertStmt::make_stmt_string(ResultPlan& result_plan, string &assemble
                 {
                     assembled_sql.append(",");
                 }
-
             }
 
             if (i != value_vectors_.size() - 1)
@@ -222,8 +228,13 @@ int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
         if (0 == i)
         {
             assembled_sql.append(" (");
+            if (has_auto_incr_sharding_key())
+            {
+                assembled_sql.append(get_auto_incr_column_name());
+                assembled_sql.append(",");
+            }
         }
-
+        
         assembled_sql.append(ObStmt::get_column_item(i)->column_name_);
             
         if (i != ObStmt::get_column_size() - 1)
@@ -262,6 +273,48 @@ int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
                         return ret;
                     }
             
+                    //BEGIN: Added by qinbo: sql value type is same with column meta info
+                    const ColumnItem* column_item = ObStmt::get_column_item(j);
+                    
+                    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+                    if (NULL == db_schema)
+                    {
+                        ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                        jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
+                        return ret;
+                    }
+                    
+                    schema_table* table_schema = db_schema->get_table_from_db_by_id(column_item->table_id_);
+                    if (NULL == table_schema)
+                    {
+                        ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                        jlog(WARNING, "Table with id %d should not be empty in table schema", column_item->table_id_);
+                        return ret;
+                    }
+                    schema_column* column_schema =  table_schema->get_column_from_table(column_item->column_name_);
+                    if (NULL == column_schema)
+                    {
+                        ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                        jlog(WARNING, "Column %s should not be empty in table schema", column_item->column_name_.data());
+                        return ret;
+                    }
+
+                    if (column_schema->get_column_type() != sql_expr->get_expr()->get_expr_type())
+                    {
+                        if (((T_INT == column_schema->get_column_type())
+                            ||(T_FLOAT == column_schema->get_column_type())
+                            ||(T_DOUBLE == column_schema->get_column_type())
+                            ||(T_BOOL == column_schema->get_column_type()))
+                            &&(T_STRING == sql_expr->get_expr()->get_expr_type()))
+                        {
+                            ret = JD_ERR_SQL_VALUE_TYPE_ERR;
+                            jlog(WARNING, "Insert column type is %d while insert value type is %d", 
+                                        column_schema->get_column_type(),
+                                        sql_expr->get_expr()->get_expr_type());
+                            return ret;
+                        }
+                    }
+                    //END: Added by qinbo: sql value type is same with column meta info
                     sql_expr->to_string(result_plan, assembled_sql_tmp);
                     assembled_sql.append(assembled_sql_tmp);
                         
@@ -336,21 +389,74 @@ int ObInsertStmt::append_distributed_insert_items(  ResultPlan& result_plan,
         vector<uint64_t>& value_row = value_vectors_.at(insert_rows_index.at(i));
         for (uint32_t j = 0; j < value_row.size(); j++)
         {
+            string assembled_sql_tmp;
             if (j == 0)
             {
                 assembled_sql.append("(");
+                
+                if (has_auto_incr_sharding_key())
+                {
+                    uint64_t auto_id = get_auto_incr_id_value(insert_rows_index.at(i));
+                    stringstream ss;
+                    ss<< auto_id;
+                    assembled_sql.append(ss.str());
+                    assembled_sql.append(",");
+                }
             }
-
+            
             sql_expr = logical_plan->get_expr_by_id(value_row.at(j));
-
+            
             if (NULL == sql_expr)
             {
                 ret = JD_ERR_LOGICAL_PLAN_FAILD;
                 jlog(WARNING, "insert value expr error!!!");
                 return ret;
             }
+            
+            //BEGIN: Added by qinbo: sql value type is same with column meta info
+            const ColumnItem* column_item = ObStmt::get_column_item(j);
+            
+            schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+            if (NULL == db_schema)
+            {
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
+                return ret;
+            }
+            
+            schema_table* table_schema = db_schema->get_table_from_db_by_id(column_item->table_id_);
+            if (NULL == table_schema)
+            {
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                jlog(WARNING, "Table with id %d should not be empty in table schema", column_item->table_id_);
+                return ret;
+            }
+            schema_column* column_schema =  table_schema->get_column_from_table(column_item->column_name_);
+            if (NULL == column_schema)
+            {
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                jlog(WARNING, "Column %s should not be empty in table schema", column_item->column_name_.data());
+                return ret;
+            }
+            
+            if (column_schema->get_column_type() != sql_expr->get_expr()->get_expr_type())
+            {
+                if (((T_INT == column_schema->get_column_type())
+                    ||(T_FLOAT == column_schema->get_column_type())
+                    ||(T_DOUBLE == column_schema->get_column_type())
+                    ||(T_BOOL == column_schema->get_column_type()))
+                    &&(T_STRING == sql_expr->get_expr()->get_expr_type()))
+                {
+                    ret = JD_ERR_SQL_VALUE_TYPE_ERR;
+                    jlog(WARNING, "Insert column type is %d while insert value type is %d", 
+                                column_schema->get_column_type(),
+                                sql_expr->get_expr()->get_expr_type());
+                    return ret;
+                }
+            }
 
-            sql_expr->to_string(result_plan, assembled_sql);
+            sql_expr->to_string(result_plan, assembled_sql_tmp);
+            assembled_sql.append(assembled_sql_tmp);
                 
             if (j == value_row.size() - 1)
             {

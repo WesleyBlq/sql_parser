@@ -583,7 +583,8 @@ void ObConstRawExpr::get_ob_const_expr_to_key_data(key_data& key_relation,
         {
             string str;
             value_.get_varchar(str);
-            strncpy(&key_relation.value.key_str[seq][0], str.data(), str.size());
+            memset(key_relation.value.key_str[seq], 0, str.size()+1);
+            strncpy(key_relation.value.key_str[seq], str.data(), str.size()+1);
             break;
         }
         case T_FLOAT:
@@ -1043,7 +1044,15 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
 
         if (is_op_name_field)
         {
-            assembled_sql.append(table_schema->get_table_name());
+            if (!alias_table_name.empty())
+            {
+                assembled_sql.append(alias_table_name);
+            }
+            else
+            {
+                //NOT ALISE TABLE
+                assembled_sql.append(table_schema->get_table_name());
+            }
             assembled_sql.append(".");
             assembled_sql.append(column_schema->get_column_name());
         }
@@ -1552,8 +1561,9 @@ int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, string& assembled_sq
     string  assembled_sql_tmp;
 
     assembled_sql.append(get_type_symbol(get_expr_type()));
-    if (distinct_)
+    if (is_param_distinct())
     {
+        assembled_sql.append("(");
         assembled_sql.append("DISTINCT");
     }
 
@@ -1568,6 +1578,11 @@ int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, string& assembled_sq
     else
     {
         assembled_sql.append("(*)");
+    }
+    
+    if (is_param_distinct())
+    {
+        assembled_sql.append(")");
     }
     return ret;
 }

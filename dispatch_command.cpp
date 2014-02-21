@@ -17,9 +17,10 @@
 #include "../acl/privileges.h"
 #include "../log/log.h"
 #include "../include/jderror.h"
+#include "../route/meta_reader.h"
 #include "dispatch_command.h"
 
-extern pthread_mutex_t flush_mutex;
+pthread_mutex_t flush_mutex;
 
 using namespace jdbd;
 using namespace jdbd::sql;
@@ -38,9 +39,21 @@ dispatch_command::~dispatch_command()
 {
 }
 
+/**************************************************************
+Function:flush_all_privileges
+Description:reload acl.if reload failed, we use old acl continue.
+Author:tangchao
+Date:
+Input:
+Output:
+Return:
+Other:
+ **************************************************************/
 void dispatch_command::flush_all_privileges()
 {
+    pthread_mutex_lock(&flush_mutex);
     flush_acl();
+    pthread_mutex_unlock(&flush_mutex);
     return;
 }
 
@@ -58,40 +71,108 @@ void dispatch_command::com_refresh(Connection *conn)
 {
     string user;
     string host;
-    
-    pthread_mutex_lock(&flush_mutex);
 
-    user = conn->getUser();
-    host = conn->getHost();
+    jlog(INFO, "enter dispatch_command::com_refresh.");
 
-    /* If super user, we reload acl. */
-    if (!acl_check(user, host, SUPER_PRIV))
+    unsigned long options = (unsigned long) conn->getRequest()[0];
+
+#if DEBUG_ON
+    jlog(INFO, "%d", options);
+#endif
+
+    if (options & REFRESH_GRANT)
     {
-        jlog(WARNING, "%s@%s reload acl has not enought privileges.",
-                user.c_str(), host.c_str());
-        conn->queryError(ERROR_ACCESS_DENY_REFRESH,
-                "ERROR_ACCESS_DENY_REFRESH");
-        goto failed;
+        user = conn->getUser();
+        host = conn->getHost();
+
+        /* If super user, we reload acl. */
+        if (!acl_check(user, host, SUPER_PRIV))
+        {
+            jlog(WARNING, "%s@%s reload acl has not enought privileges.",
+                    user.c_str(), host.c_str());
+            conn->queryError(ERROR_ACCESS_DENY_REFRESH,
+                    "ERROR_ACCESS_DENY_REFRESH");
+            goto failed;
+        }
+
+        /* reload acl */
+        flush_all_privileges();
+
+        /* find schema in current connection. */
+        if (!acl_check(user, host))
+        {
+            conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR, "drop itself.");
+            jlog(WARNING, "User %s@%s drop itself!", user.c_str(), host.c_str());
+            goto failed;
+        }
     }
 
-
-    /* reload acl */
-    flush_all_privileges();
-
-    /* find schema in current connection. */
-    if (!acl_check(user, host))
+    if (options & REFRESH_LOG)
     {
-        conn->queryError(ERROR_ACCESS_RELOAD_ACL_ERROR,
-                "drop itself.");
-        jlog(WARNING, "User %s@%s drop itself!");
-        goto failed;
     }
-    
+
+    if (options & REFRESH_ERROR_LOG)
+    {
+    }
+
+    if (options & REFRESH_SLOW_LOG)
+    {
+    }
+
+    if (options & REFRESH_GENERAL_LOG)
+    {
+    }
+
+    if (options & REFRESH_ENGINE_LOG)
+    {
+    }
+
+    if (options & REFRESH_BINARY_LOG)
+    {
+    }
+    if (options & REFRESH_RELAY_LOG)
+    {
+    }
+
+    /*
+      Note that if REFRESH_READ_LOCK bit is set then REFRESH_TABLES is set too
+      (see mysql-[version]/sql/sql_yacc.yy)
+     */
+    if (options & (REFRESH_TABLES | REFRESH_READ_LOCK))
+    {
+        if (options & REFRESH_READ_LOCK)
+        {
+            /*
+              On the first hand we need write lock on the tables to be flushed,
+              on the other hand we must not try to aspire a global read lock
+              if we have a write locked table as this would lead to a deadlock
+              when trying to reopen (and re-lock) the table after the flush.
+             */
+        }
+    }
+
+    if (options & REFRESH_HOSTS)
+    {
+
+    }
+    if (options & REFRESH_STATUS)
+    {
+
+    }
+    if (options & REFRESH_THREADS)
+    {
+
+    }
+
+    if (options & REFRESH_USER_RESOURCES)
+    {
+
+    }
+
     /* add in here. */
     conn->sendOk(2, 0, 0, 0, "Query OK");
 
 failed:
-    pthread_mutex_unlock(&flush_mutex);
     return;
 }
 
@@ -108,9 +189,11 @@ Other:
  **************************************************************/
 bool dispatch_command::dispatch(Connection *conn, unsigned char* buf)
 {
-    bool res = true;
-    enum enum_server_command command = (enum enum_server_command)buf[0];
+    enum enum_server_command command;
 
+    jlog(INFO, "enter dispatch_command::dispatch");
+
+    command = (enum enum_server_command)buf[0];
     /* buff[0] is command from client. */
     conn->SetRequest(buf + 1);
     error = 0;
@@ -121,60 +204,48 @@ bool dispatch_command::dispatch(Connection *conn, unsigned char* buf)
     {
         case COM_INIT_DB:
         {
-            /* change db */
-            conn->setDb((const char*) conn->getRequest());
-            conn->sendOk(2, 0, 0, 0, "JDDB OK");
-            goto toWaitting;
+            if (NULL != meta_reader::get_instance().get_DB_schema((const char*) conn->getRequest()))
+            {
+                /* change db */
+                conn->setDb((const char*) conn->getRequest());
+                conn->sendOk(2, 0, 0, 0, "JDDB OK");
+            }
+            else
+            {
+                conn->queryError(ERROR_SERVER_DB_NOT_EXIST,
+                        get_error_msg(ERROR_SERVER_DB_NOT_EXIST));
+            }
+            goto connection_waitting;
+            break;
         }
         case COM_CHANGE_USER:
         {
-            /* not support */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
         }
         case COM_STMT_EXECUTE:
         {
             /* Prepared statement:execute a previously prepared statement. */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
         }
         case COM_STMT_FETCH:
         {
-            /* Prepared statement:fetches requested amount of rows from cursor. */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
         }
         case COM_STMT_SEND_LONG_DATA:
         {
             /* Handle long data in pieces from client. */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
         }
         case COM_STMT_PREPARE:
         {
             /* Prepared statement:create a prepared statement from it 
              * and send PS info back to the client. */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
         }
         case COM_STMT_CLOSE:
         {
             /* Delete a prepared statement from memory. */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
         }
         case COM_STMT_RESET:
         {
             /* Reset a prepared statement in case there was a recoverable error. */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
+            goto nonsupport;
+            break;
         }
         case COM_QUERY:
         {
@@ -183,6 +254,7 @@ bool dispatch_command::dispatch(Connection *conn, unsigned char* buf)
             {
                 conn->setStatus(CONN_JOB_GENERATE);
             }
+            goto connection_continue;
             break;
         }
         case COM_FIELD_LIST: // This isn't actually needed
@@ -191,20 +263,18 @@ bool dispatch_command::dispatch(Connection *conn, unsigned char* buf)
              * 1. Init TABLE_LIST
              * 2. Send field list
              */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
+            goto nonsupport;
             break;
         }
         case COM_QUIT:
         {
             /* We don't calculate statistics for this command */
-            conn->setStatus(CONN_QUIT);
+            goto connection_end;
             break;
         }
         case COM_BINLOG_DUMP:
         {
-            goto toWaitting;
+            goto nonsupport;
             break;
         }
         case COM_REFRESH:
@@ -213,83 +283,70 @@ bool dispatch_command::dispatch(Connection *conn, unsigned char* buf)
              * Reload configs & flush memory.
              */
             com_refresh(conn);
-            goto toWaitting;
+            goto connection_waitting;
             break;
         }
         case COM_SHUTDOWN:
         {
             /* clean & close */
-            break;
         }
         case COM_STATISTICS:
         {
             /* mysql client command, status. */
-            conn->queryError(ERROR_ACCESS_DENY_COM_STATISTICS,
-                    "Sorry, blue dolphin have not this function.");
-            goto toWaitting;
+            goto nonsupport;
+            break;
         }
         case COM_PING:
         {
             /* tell client we are ok. */
             conn->sendOk(2, 0, 0, 0, "OK");
-            goto toWaitting;
+            goto connection_waitting;
+            break;
         }
         case COM_PROCESS_INFO:
         {
             /* show processlist. */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
         }
         case COM_PROCESS_KILL:
         {
             /* kill process, we do not support. */
-            conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT,
-                    "ERROR_ACCESS_DO_NOT_SUPPORT");
-            goto toWaitting;
         }
         case COM_SET_OPTION:
         {
-            uint opt_command = uint2korr(conn->getRequest());
-
-            switch (opt_command)
-            {
-                case (int) MYSQL_OPTION_MULTI_STATEMENTS_ON:
-                    //client_capabilities |= CLIENT_MULTI_STATEMENTS;
-                    break;
-                case (int) MYSQL_OPTION_MULTI_STATEMENTS_OFF:
-                    //client_capabilities &= ~CLIENT_MULTI_STATEMENTS;
-                    break;
-                default:
-                    conn->queryError(ERROR_SQL_UNKNOWN_COMMAND, "ERROR_SQL_UNKNOWN_COMMAND");
-                    goto toWaitting;
-            }
-            break;
         }
         case COM_DEBUG:
         {
             /* print all variables into log. */
-            break;
         }
         case COM_SLEEP:
         case COM_CONNECT: // Impossible here
         case COM_TIME: // Impossible from client
         case COM_DELAYED_INSERT:
         case COM_END:
+        {
+            goto nonsupport;
+            break;
+        }
         default:
         {
-            conn->queryError(ERROR_SQL_UNKNOWN_COMMAND, "ERROR_SQL_UNKNOWN_COMMAND");
-            goto toWaitting;
+            conn->queryError(JD_ERR_SQL_UNKNOWN_COMMAND, "ERROR_SQL_UNKNOWN_COMMAND");
+            goto connection_waitting;
         }
     }
 
-    return res;
+connection_end:
+    conn->setStatus(CONN_QUIT);
+    return false;
 
-toWaitting:
-    res = false;
-    return res;
+nonsupport:
+    conn->queryError(ERROR_ACCESS_DO_NOT_SUPPORT, "Nonsupport & developing.");
+
+connection_waitting:
+    return false;
+
+connection_continue:
+    return true;
 }
-
 
 /**************************************************
 Funtion     :   execute_command
@@ -302,18 +359,16 @@ Description :   We sent some query to SCHEMA dictionary, sent some query to
 Input       :   
 Output      :   true or false
 return      :   
-**************************************************/
+ **************************************************/
 bool dispatch_command::execute_command(Connection *conn)
 {
     QueryActuator *query = NULL;
     bool dict_or_dataNode = false;
-    string user;
-    string host;
     string db;
-    int queryType = 0;
+    ObBasicStmt::StmtType queryType = ObBasicStmt::T_NONE;
     vector<string>::iterator iter;
     error = 0;
-    r_or_w = QUERY_READ;
+    r_or_w = true;
 
     jlog(INFO, "enter dispatch_command::execute_command");
 
@@ -329,7 +384,7 @@ bool dispatch_command::execute_command(Connection *conn)
         jlog(FATAL, "Hit a bug.");
         return dict_or_dataNode; //for compiler through
     }
-    
+
     queryType = query->get_query_type();
     db = query->get_result_plan().meta_db_name;
 
@@ -343,8 +398,6 @@ bool dispatch_command::execute_command(Connection *conn)
         }
     }
 
-    user = conn->getUser();
-    host = conn->getHost();
     jlog(INFO, "query type %d", queryType);
     /* convenient */
     switch (queryType)
@@ -367,6 +420,8 @@ bool dispatch_command::execute_command(Connection *conn)
             dict_or_dataNode = true;
         }
             break;
+        default:
+            break;
     }
 
     /* convenient */
@@ -387,7 +442,7 @@ bool dispatch_command::execute_command(Connection *conn)
         case ObBasicStmt::T_SHOW_PROCESSLIST:
         case ObBasicStmt::T_SELECT:
         {
-            r_or_w = QUERY_READ;
+            r_or_w = true;
         }
             break;
             /* Write from database */
@@ -397,11 +452,70 @@ bool dispatch_command::execute_command(Connection *conn)
         case ObBasicStmt::T_UPDATE:
         case ObBasicStmt::T_INSERT:
         {
-            r_or_w = QUERY_WRITE;
+            r_or_w = false;
         }
+            break;
+        default:
             break;
     }
 
+    /* specific */
+
+    if (query->get_result_plan().is_show_sys_var)
+    {
+        dict_or_dataNode = true;
+        r_or_w = true;
+        error = 0;
+    }
+
+    jlog(INFO, "Query should be sent to %s, execute %s.",
+            dict_or_dataNode ? "schema dictionary" : "data node",
+            r_or_w ? "read" : "write");
+
+    return dict_or_dataNode;
+}
+
+/**************************************************
+Funtion     :   check_acl
+Author      :   tangchao
+Date        :   2014.1.23
+Description :   check acl 
+Input       :   
+Output      :   true or false
+return      :   
+ **************************************************/
+bool dispatch_command::check_acl(Connection *conn)
+{
+    QueryActuator *query = NULL;
+    string user;
+    string host;
+    string db;
+    int queryType = 0;
+    error = 0;
+
+    jlog(INFO, "enter dispatch_command::check_acl");
+
+    if (NULL == conn)
+    {
+        jlog(FATAL, "Hit a bug.");
+        return false;
+    }
+
+    query = conn->getQueryActuator();
+    if (NULL == query)
+    {
+        jlog(FATAL, "Hit a bug.");
+        return false; //for compiler through
+    }
+
+    queryType = query->get_query_type();
+    
+    user = conn->getUser();
+    host = conn->getHost();
+    db = conn->getDb();
+    
+    unsigned int next = 0;
+    vector<string> tables = conn->getQueryPostReduce()->get_all_from_tables();
     /* convenient */
     switch (queryType)
     {
@@ -418,35 +532,51 @@ bool dispatch_command::execute_command(Connection *conn)
         }
         case ObBasicStmt::T_SELECT:
         {
-            if (!acl_check(user, host, conn->getDb(), "tt", SELECT_PRIV))
+            for (next = 0; next < tables.size(); next++)
             {
-                error = ERROR_ACCESS_DENY_SELECT_TABLE;
+                if (!acl_check(user, host, conn->getDb(), tables[next], SELECT_PRIV))
+                {
+                    error = ERROR_ACCESS_DENY_SELECT_TABLE;
+                    break;
+                }
             }
         }
             break;
             /* Write from database */
         case ObBasicStmt::T_DELETE:
         {
-            if (!acl_check(user, host, conn->getDb(), "tt", DELETE_PRIV))
+            for (next = 0; next < tables.size(); next++)
             {
-                error = ERROR_ACCESS_DENY_SELECT_TABLE;
+                if (!acl_check(user, host, conn->getDb(), tables[next], DELETE_PRIV))
+                {
+                    error = ERROR_ACCESS_DENY_SELECT_TABLE;
+                    break;
+                }
             }
         }
             break;
         case ObBasicStmt::T_VARIABLE_SET:
         case ObBasicStmt::T_REPLACE:
         {
-            if (!acl_check(user, host, conn->getDb(), "tt", INSERT_PRIV))
+            for (next = 0; next < tables.size(); next++)
             {
-                error = ERROR_ACCESS_DENY_INSERT_TABLE;
+                if (!acl_check(user, host, conn->getDb(), tables[next], INSERT_PRIV))
+                {
+                    error = ERROR_ACCESS_DENY_INSERT_TABLE;
+                    break;
+                }
             }
         }
             break;
         case ObBasicStmt::T_UPDATE:
         {
-            if (!acl_check(user, host, conn->getDb(), "tt", UPDATE_PRIV))
+            for (next = 0; next < tables.size(); next++)
             {
-                error = ERROR_ACCESS_DENY_UPDATE_TABLE;
+                if (!acl_check(user, host, conn->getDb(), tables[next], UPDATE_PRIV))
+                {
+                    error = ERROR_ACCESS_DENY_UPDATE_TABLE;
+                    break;
+                }
             }
         }
             break;
@@ -464,20 +594,10 @@ bool dispatch_command::execute_command(Connection *conn)
         }
     }
 
-    /* specific */
-
-    if (query->get_result_plan().is_show_sys_var)
-    {
-        dict_or_dataNode = true;
-        r_or_w = QUERY_READ;
-        error = 0;
-    }
-
-    jlog(INFO, "Query should be sent to %s, execute %s.",
-            dict_or_dataNode ? "schema dictionary" : "data node",
-            r_or_w ? "read" : "write");
-
-    return dict_or_dataNode;
+    if(error)
+        return false;
+    else
+        return true;
 }
 
 /**************************************************
@@ -488,7 +608,7 @@ Description :   return query type, read or write.
 Input       :   
 Output      :   true or false
 return      :   
-**************************************************/
+ **************************************************/
 int dispatch_command::read_or_write()
 {
     return this->r_or_w;
@@ -502,7 +622,7 @@ Description :
 Input       :   
 Output      :   
 return      :   
-**************************************************/
+ **************************************************/
 int dispatch_command::get_error()
 {
     return error;
@@ -516,7 +636,7 @@ Description :   my debug, i think put here it's ok.
 Input       :   
 Output      :   
 return      :   
-**************************************************/
+ **************************************************/
 void dispatch_command::debug(int command)
 {
     switch (command)
