@@ -457,9 +457,9 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
                     &&(key_relation.sharding_key == column_name))
             {
                 key_relation.key_relation = this->get_expr_type();
-
                 ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (binary_expr->get_first_op_expr()));
                 const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                key_relation.key_type = binary_expr->get_first_op_expr()->get_expr_type();
                 return true;
             }
         }
@@ -471,6 +471,7 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
                 key_relation.key_relation = this->get_expr_type();
                 ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (binary_expr->get_second_op_expr()));
                 const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                key_relation.key_type = binary_expr->get_second_op_expr()->get_expr_type();
                 return true;
             }
         }
@@ -488,17 +489,32 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
             ObRawExpr *raw_expr = NULL;
             ObConstRawExpr *const_expr = NULL;
 
+            SqlItemType key_type = T_INVALID;
             for (int32_t i = 0; i < expr_size; i++)
             {
                 raw_expr = multi_expr->get_op_expr(i);
                 if (raw_expr->is_const())
                 {
+                    if (0 == i)
+                    {
+                        key_type = raw_expr->get_expr_type();
+                    }
+                    else if (key_type != raw_expr->get_expr_type())
+                    {
+                        return false;
+                    }
+                        
                     key_relation.key_value_num++;
 
                     const_expr = dynamic_cast<ObConstRawExpr*> (const_cast<ObRawExpr *> (raw_expr));
                     const_expr->get_ob_const_expr_to_key_data(key_relation, i);
                 }
+                else
+                {
+                    return false;
+                }
             }
+            key_relation.key_type = multi_expr->get_op_expr(0)->get_expr_type();
             return true;
         }
     }
@@ -517,6 +533,7 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
 
                     ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (binary_expr->get_first_op_expr()));
                     const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                    key_relation.key_type = binary_expr->get_first_op_expr()->get_expr_type();
                     return true;
                 }
             }
@@ -528,6 +545,7 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
                     key_relation.key_relation = this->get_expr_type();
                     ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (binary_expr->get_second_op_expr()));
                     const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                    key_relation.key_type = binary_expr->get_second_op_expr()->get_expr_type();
                     return true;
                 }
             }
@@ -540,11 +558,17 @@ bool ObRawExpr::convert_ob_expr_to_route(ResultPlan& result_plan, key_data& key_
                     &&(key_relation.sharding_key == column_name))
             {
                 key_relation.key_relation = this->get_expr_type();
-                ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (triple_expr->get_second_op_expr()));
-                const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
+                ObConstRawExpr *const_expr1 = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (triple_expr->get_second_op_expr()));
+                const_expr1->get_ob_const_expr_to_key_data(key_relation, 0);
 
-                const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (triple_expr->get_third_op_expr()));
-                const_expr->get_ob_const_expr_to_key_data(key_relation, 1);
+                ObConstRawExpr *const_expr2 = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (triple_expr->get_third_op_expr()));
+                const_expr2->get_ob_const_expr_to_key_data(key_relation, 1);
+
+                if (triple_expr->get_second_op_expr()->get_expr_type() != triple_expr->get_third_op_expr()->get_expr_type())
+                {
+                    return false;
+                }
+                key_relation.key_type = triple_expr->get_third_op_expr()->get_expr_type();
                 return true;
             }
         }
@@ -1603,18 +1627,33 @@ int ObAggFunRawExpr::fill_sql_expression(
 }
 #endif
 
-#if 0
 
 void ObSysFunRawExpr::print(FILE* fp, int32_t level) const
 {
     for (int i = 0; i < level; ++i) fprintf(fp, "    ");
-    fprintf(fp, "%s : %.*s\n", get_type_name(get_expr_type()), func_name_.size(), func_name_.data());
-    for (int32_t i = 0; i < exprs_.size(); i++)
+    fprintf(fp, "%s : %.*s\n", get_type_name(get_expr_type()), (int)func_name_.size(), func_name_.data());
+    for (uint32_t i = 0; i < exprs_.size(); i++)
     {
         exprs_[i]->print(fp, level + 1);
     }
 }
 
+/**************************************************
+Funtion		:	ObSysFunRawExpr::to_string
+Author		:	qinbo
+Date		:	2014.2.24
+Description	:   convert expr to string
+Input		:	
+Output		:	string& assembled_sql
+ **************************************************/
+int64_t ObSysFunRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
+{
+    int64_t ret = OB_SUCCESS;
+    return ret;
+}
+
+
+#if 0
 int ObSysFunRawExpr::fill_sql_expression(
         ObSqlExpression& inter_expr,
         ObTransformer *transformer,

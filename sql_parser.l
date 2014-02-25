@@ -156,9 +156,9 @@ c_cmt_end     \*+\/
 c_cmt_cnt     [^*/]+
 c_comment     ({c_cmt_begin}{c_cmt_cnt}{c_cmt_end})
 comment       ({c_comment}|{sql_comment})
-identifer         ([A-Za-z_][A_Za-z0-9_]*)
-system_variable  (@@[A-Za-z_][A_Za-z0-9_]*)
-temp_variable (@[A-Za-z_][A_Za-z0-9_]*)
+identifer         ([A-Za-z_][A-Za-z0-9_]*)
+system_variable  (@@[A-Za-z_][A-Za-z0-9_]*)
+temp_variable (@[A-Za-z_][A-Za-z0-9_]*)
 
 %%
 ADD               { return ADD; }
@@ -185,7 +185,6 @@ COMMIT            { return COMMIT; }
 CONSISTENT        { return CONSISTENT; }
 CREATE            { return CREATE; }
 CREATETIME        { return CREATETIME; }
-CURRENT_USER      { return CURRENT_USER; }
 DATE              { return DATE; }
 DATETIME          { return DATETIME; }
 DEALLOCATE        { return DEALLOCATE; }
@@ -235,7 +234,6 @@ LOCAL             { return LOCAL; }
 LOCKED            { return LOCKED; }
 MEDIUMINT         { return MEDIUMINT; }
 MEMORY            { return MEMORY; }
-MOD               { return MOD; }
 MODIFYTIME        { return MODIFYTIME; }
 NOT               { return NOT; }
 NUMERIC           { return NUMERIC; }
@@ -262,7 +260,6 @@ RIGHT             { return RIGHT; }
 ROLLBACK          { return ROLLBACK; }
 PRIVILEGES        { return PRIVILEGES; }
 SELECT            { return SELECT; }
-SCHEMA            { return SCHEMA; }
 SCOPE             { return SCOPE; }
 SESSION           { return SESSION; }
 SET               { return SET; }
@@ -284,7 +281,6 @@ TRAILING          { return TRAILING; }
 TRANSACTION       { return TRANSACTION; }
 UNION             { return UNION; }
 UPDATE            { return UPDATE; }
-USER              { return USER; }
 USING             { return USING; }
 VALUES            { return VALUES; }
 VARBINARY         { return VARBINARY; }
@@ -371,7 +367,6 @@ FALSE {
 
   node->str_value_ = dest;
   node->value_ = parse_string(src, dest, len, 0);
-
   return STRING;
 }
 

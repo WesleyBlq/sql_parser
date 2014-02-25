@@ -114,8 +114,9 @@ ORDER BY tt.name";
     // UNION distinct SELECT id FROM tt
     string sql_test5 = "SELECT MAX(id) from pp where id>5  AND id<20 AND name = 'beijing' GROUP BY name, id Having SUM(age)>100 ORDER BY age";
     string sql_test4 = "select max(id), name, avg(age) as cao  from tt  group by age HAVING cao>1 order by id LIMIT 10,100"; //
-    string sql_test6 = "show databases"; //
-    string sql_test8 = "update tt set id=3 where id is null";
+    string sql_test71 = "SELECT current_user()"; //
+    
+    string sql_test8 = "update tt set name='aaa' where id = 1 AND age = '99'";
     string sql12 = "insert into tt(id,name) select id,name from tt"; //id, name, age 
     string sql_test9 = "replace into tt set id=8,name='name8'";
     string sql_test10= "select concat(name,age) from tt";
@@ -132,14 +133,14 @@ ORDER BY tt.name";
         ('Human Resources', 100),\
         (2, 'Sales', 10), \
         (3, 'Finance', 20)";
-    if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql_test13)))
+    if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql_test71)))
     { 
         ret = JD_ERR_GEN_PLAN;
     }
     #if 0
     query_actuator->release_exec_plan();
     query_actuator->init_exec_plan("oxwf");
-    if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql_multi_table)))
+    if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql_test70)))
     {
         ret = JD_ERR_GEN_PLAN;
     }
@@ -147,7 +148,7 @@ ORDER BY tt.name";
     #endif
     #if 0
     query_actuator->init_exec_plan("oxwf");
-    if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql_test15)))
+    if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql_test71)))
     {
         ret = JD_ERR_GEN_PLAN;
     }

@@ -500,6 +500,16 @@ namespace jdbd
             {
                 return limit_item_;
             }
+
+            bool is_sys_func_query()
+            {
+                return is_sys_func_query_;
+            }
+
+            void set_sys_func_query(bool is_sys_func_query)
+            {
+                is_sys_func_query_ = is_sys_func_query;
+            }
             //END: added by qinbo
 
             int add_order_item(OrderItem& order_item)
@@ -632,6 +642,7 @@ namespace jdbd
 
             // this sql is exec on multi shard(>1)
             bool is_sql_relate_multi_shards;
+            bool is_sys_func_query_;
         };
     }
 }

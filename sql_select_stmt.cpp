@@ -22,6 +22,7 @@ ObSelectStmt::ObSelectStmt()
     for_update_ = false;
     gen_joined_tid_ = UINT64_MAX - 2;
     is_sql_relate_multi_shards = false;
+    is_sys_func_query_ = false;
 }
 
 ObSelectStmt::~ObSelectStmt()

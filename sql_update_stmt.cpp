@@ -167,6 +167,49 @@ namespace jdbd
                     return ret;
                 }
 
+                //BEGIN: Added by qinbo: sql value type is same with column meta info
+                const ColumnItem* column_item = ObStmt::get_column_item(i);
+                
+                schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+                if (NULL == db_schema)
+                {
+                    ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                    jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
+                    return ret;
+                }
+                
+                schema_table* table_schema = db_schema->get_table_from_db_by_id(column_item->table_id_);
+                if (NULL == table_schema)
+                {
+                    ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                    jlog(WARNING, "Table with id %d should not be empty in table schema", column_item->table_id_);
+                    return ret;
+                }
+                schema_column* column_schema =  table_schema->get_column_from_table(column_item->column_name_);
+                if (NULL == column_schema)
+                {
+                    ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                    jlog(WARNING, "Column %s should not be empty in table schema", column_item->column_name_.data());
+                    return ret;
+                }
+                
+                if (column_schema->get_column_type() != sql_expr->get_expr()->get_expr_type())
+                {
+                    if (((T_INT == column_schema->get_column_type())
+                        ||(T_FLOAT == column_schema->get_column_type())
+                        ||(T_DOUBLE == column_schema->get_column_type())
+                        ||(T_BOOL == column_schema->get_column_type()))
+                        &&(T_STRING == sql_expr->get_expr()->get_expr_type()))
+                    {
+                        ret = JD_ERR_SQL_VALUE_TYPE_ERR;
+                        jlog(WARNING, "update column meta type is %d while actual update value type is %d", 
+                                    column_schema->get_column_type(),
+                                    sql_expr->get_expr()->get_expr_type());
+                        return ret;
+                    }
+                }
+                //END: Added by qinbo: sql value type is same with column meta info
+
                 sql_expr->to_string(result_plan, assembled_sql_tmp);
                 assembled_sql.append(assembled_sql_tmp);
 

@@ -703,7 +703,6 @@ namespace jdbd
             bool distinct_;
         };
 
-#if 0
 
         class ObSysFunRawExpr : public ObRawExpr
         {
@@ -717,7 +716,7 @@ namespace jdbd
             {
             }
 
-            ObRawExpr* get_param_expr(int32_t index) const
+            ObRawExpr* get_param_expr(uint32_t index) const
             {
                 ObRawExpr* expr = NULL;
                 if (index >= 0 || index < exprs_.size())
@@ -751,12 +750,13 @@ namespace jdbd
                 ObLogicalPlan *logical_plan = NULL,
                 ObPhysicalPlan *physical_plan = NULL) const = 0;*//*deleted by qinbo*/
             void print(FILE* fp, int32_t level) const;
+            /*added by qinbo*/
+            int64_t to_string(ResultPlan& result_plan, string& assembled_sql) const;
 
         private:
             string func_name_;
             vector<ObRawExpr*> exprs_;
         };
-#endif
 
         class ObSqlRawExpr
         {

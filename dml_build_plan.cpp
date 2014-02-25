@@ -116,30 +116,30 @@ static bool int_value_check(const char *str, uint length)
 
     if (neg)
     {
-        if (length < SIGNED_UINT64_LEN)
+        if (length < SIGNED_UINT64_MIN_LEN)
         {
             return true;
         }
-        else if (length > SIGNED_UINT64_LEN)
+        else if (length > SIGNED_UINT64_MIN_LEN)
         {
             return false;
         } 
-        else if (strcmp(str, SIGNED_UINT64_STR) > 0)
+        else if (strcmp(str, SIGNED_UINT64_MIN_STR) > 0)
         {
             return false;
         }
     } 
     else
     {
-        if (length < UNSIGNED_UINT64_LEN)
+        if (length < SIGNED_UINT64_MAX_LEN)
         {
             return true;
         }
-        else if (length > UNSIGNED_UINT64_LEN)
+        else if (length > SIGNED_UINT64_MAX_LEN)
         {
             return false;
         } 
-        else if (strcmp(str, UNSIGNED_UINT64_STR) > 0)
+        else if (strcmp(str, SIGNED_UINT64_MAX_STR) > 0)
         {
             return false;
         }
@@ -368,7 +368,7 @@ int resolve_expr(
         }
         case T_INT:
         {
-            if (!int_value_check(node->str_value_, strlen(node->str_value_)))
+            if ((sub_query_results_scalar)&&(!int_value_check(node->str_value_, strlen(node->str_value_))))
             {
                 ret = JD_ERR_INT_VALUE_EXCEED_MAX_LIMIT;
                 break;
@@ -662,7 +662,32 @@ int resolve_expr(
         case T_OP_NOT:
         {
             ObRawExpr* sub_expr = NULL;
-            ret = resolve_expr(result_plan, stmt, node->children_[0], sql_expr, sub_expr, expr_scope_type, true);
+            bool       is_min_int = false;
+            if ((node->type_ == T_OP_NEG)&&(node->children_[0]->type_ == T_INT))
+            {
+                JD_DEBUG;
+                char neg_int[100];
+                memset(neg_int, 0, 100);
+                neg_int[0] = '-';
+                strncpy(neg_int+1, node->children_[0]->str_value_, strlen(node->children_[0]->str_value_));
+                
+                if (!int_value_check(neg_int, strlen(neg_int)))
+                {
+                    ret = JD_ERR_INT_VALUE_EXCEED_MIN_LIMIT;
+                    break;
+                }
+
+                if (strcmp(neg_int, SIGNED_UINT64_MIN_STR) == 0)
+                {
+                    is_min_int = true;
+                }
+                ret = resolve_expr(result_plan, stmt, node->children_[0], sql_expr, sub_expr, expr_scope_type, false);
+            }
+            else
+            {
+                ret = resolve_expr(result_plan, stmt, node->children_[0], sql_expr, sub_expr, expr_scope_type, true);
+            }
+            
             if (ret != OB_SUCCESS)
                 break;
             // only INT/FLOAT/DOUBLE are in consideration
@@ -685,21 +710,15 @@ int resolve_expr(
                         int64_t val = OB_INVALID_ID;
                         if ((ret = const_expr->get_value().get_int(val)) == OB_SUCCESS)
                         {
-                            if (node->type_ == T_OP_NEG)
-                            {
-                                char neg_int[100];
-                                memset(neg_int, 0, 100);
-                                neg_int[0] = '-';
-                                strncpy(neg_int+1, node->children_[0]->str_value_, strlen(node->children_[0]->str_value_));
-                                
-                                if (!int_value_check(neg_int, strlen(neg_int)))
-                                {
-                                    ret = JD_ERR_INT_VALUE_EXCEED_MIN_LIMIT;
-                                    break;
-                                }
-                            }
                             ObObj new_val;
-                            new_val.set_int(-val);
+                            if (is_min_int)
+                            {
+                                new_val.set_int(SIGNED_UINT64_MIN_VALUE);
+                            }
+                            else
+                            {
+                                new_val.set_int(-val);
+                            }
                             const_expr->set_value(new_val);
                         }
                         break;
@@ -801,6 +820,13 @@ int resolve_expr(
             ret = resolve_expr(result_plan, stmt, node->children_[1], sql_expr, sub_expr2, expr_scope_type, true);
             if (ret != OB_SUCCESS)
                 break;
+
+            if ((T_FUN_SYS == sub_expr1->get_expr_type())||(T_FUN_SYS == sub_expr2->get_expr_type()))
+            {
+                ret = JD_ERR_NOT_SUPPORT_FUNC_CALC;
+                break;
+            }
+            
             ObBinaryOpRawExpr *b_expr = NULL;
             if (CREATE_RAW_EXPR(b_expr, ObBinaryOpRawExpr, result_plan) == NULL)
                 break;
@@ -1236,7 +1262,6 @@ int resolve_expr(
             expr = col_expr;
             break;
         }
-#if 0    
         case T_FUN_SYS:
         {
             ObSysFunRawExpr *func_expr = NULL;
@@ -1271,6 +1296,9 @@ int resolve_expr(
                         break;
                 }
             }
+            
+            func_expr->set_result_type(ObIntType);
+#if 0    
             if (ret == OB_SUCCESS)
             {
                 int32_t param_num = 0;
@@ -1422,13 +1450,13 @@ int resolve_expr(
                     jlog(WARNING, "system function `%.*s' not supported", func_name.size(), func_name.data());
                 }
             }
+#endif
             if (ret == OB_SUCCESS)
             {
                 expr = func_expr;
             }
             break;
         }
-#endif
         default:
             ret = JD_ERR_PARSER_SYNTAX;
             jlog(WARNING, "Wrong type in expression");
@@ -1765,6 +1793,7 @@ int resolve_table(
                 else
                 {
                     result_plan->meta_db_name = db_name;
+                    result_plan->is_show_sys_var = true;
                     jlog(INFO, "Current meta dic query database is: %s", db_name.c_str());
                 }
                 break;
@@ -2217,14 +2246,33 @@ int resolve_select_clause(
             break;
         }
 
-        //sql like "select @@version_comment limit 1" should be processed 
+        //sql like "select @@version_comment limit 1" or "select @version_comment limit 1"
+        //should be processed 
         if ((NULL != select_expr->get_expr())
-            &&(select_expr->get_expr()->get_expr_type() == T_SYSTEM_VARIABLE))
+            &&((select_expr->get_expr()->get_expr_type() == T_SYSTEM_VARIABLE)
+            ||(select_expr->get_expr()->get_expr_type() == T_TEMP_VARIABLE)))
         {
             result_plan->is_show_sys_var = true;
             break;
         }
+
         
+        if ((NULL != select_expr->get_expr())
+            &&(select_expr->get_expr()->get_expr_type() == T_FUN_SYS))
+        {
+            if (select_stmt->is_sys_func_query())
+            {
+                result_plan->is_show_sys_var = true;
+                break;
+            }
+            else
+            {
+                result_plan->is_show_sys_var = false;
+                ret = JD_ERR_NOT_SUPPORT_FUNCTION;
+                jlog(WARNING, "do not support query with function which sent to data node.");
+                break;
+            }
+        }
 
         /* if IDENT, we need to assign new id for it to avoid same (table_id, column_id) in ObRowDesc */
         /* 1. select price + off new_price, new_price from tbl; */
@@ -2719,6 +2767,27 @@ int resolve_select_stmt(
         /* normal select */
         select_stmt->assign_set_op(ObSelectStmt::NONE);
 
+        if ((NULL == node->children_[0])
+            &&(NULL == node->children_[2])
+            &&(NULL == node->children_[3])
+            &&(NULL == node->children_[4])
+            &&(NULL == node->children_[5])
+            &&(NULL == node->children_[6])
+            &&(NULL == node->children_[7])
+            &&(NULL == node->children_[8])
+            &&(NULL == node->children_[9])
+            &&(NULL == node->children_[10])
+            &&(NULL == node->children_[11])
+            &&(NULL == node->children_[12])
+            &&(NULL == node->children_[13]))
+        {
+            select_stmt->set_sys_func_query(true);
+        }
+        else
+        {
+            select_stmt->set_sys_func_query(false);
+        }
+
         if (node->children_[0] == NULL || node->children_[0]->type_ == T_ALL)
         {
             select_stmt->assign_all();
@@ -2730,9 +2799,11 @@ int resolve_select_stmt(
         }
 
         /* resolve from clause */
-        if (ret == OB_SUCCESS && ((ret = resolve_from_clause(result_plan, select_stmt, node->children_[2])) == OB_SUCCESS))
+        if (ret == OB_SUCCESS)
         {
+            ret = resolve_from_clause(result_plan, select_stmt, node->children_[2]);
         }
+        
         if (ret == OB_SUCCESS && node->children_[12] && node->children_[12]->value_ == 1)
         {
             if (select_stmt->get_table_size() != 1)
@@ -3015,6 +3086,7 @@ int resolve_insert_values(
             if (ret != OB_SUCCESS)
             {
                 jlog(WARNING, "Can not add expr_id to vector");
+                break;
             }
             value_row.push_back(expr_id);
         }

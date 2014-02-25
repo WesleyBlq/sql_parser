@@ -522,13 +522,13 @@ int QueryActuator::generate_exec_plan(
     if (0 == sql.compare(0, 3, "set"))
     {
         query_type = ObBasicStmt::T_VARIABLE_SET;
-        jlog(INFO, "set command");
+        jlog(INFO, "now executed set command: %s", sql.data());
         return ret;
     }
     else if (0 == sql.compare(0, 4, "show"))
     {
         query_type = ObBasicStmt::T_SHOW_DATABASES;
-        jlog(INFO, "show command");
+        jlog(INFO, "now executed show command: %s", sql.data());
         return ret;
     }
 
@@ -562,7 +562,7 @@ int QueryActuator::generate_exec_plan(
     }
     else
     {
-#if 0
+#if 1
     jlog(INFO, "<<Part 2 : PARSE TREE>>");
     print_tree(result.result_tree_, 0);
 #endif
@@ -1894,7 +1894,6 @@ int QueryActuator::generate_select_plan_multi_table(
             
             for (p_map1 = opted_raw_exprs.begin(); p_map1 != opted_raw_exprs.end();)
             {
-                JD_DEBUG;
                 vector<vector<ObRawExpr*> > final_exprs_array;
                 string assembled_sql;
                 uint32_t shard_key_index = 0;
@@ -2059,7 +2058,6 @@ int QueryActuator::reparse_where_with_route_for_multi_tables(
         //if there is no route sql, this sql should be sent to all shards
         if (partition_sql_exprs.size() == 0)
         {
-            JD_DEBUG;
             for (j = 0; j < all_binding_tables_shards.size(); j++)
             {
                 one_binding_table_shards = all_binding_tables_shards.at(j);
@@ -2180,7 +2178,7 @@ int QueryActuator::reparse_insert_stmt_rows_value(
                 key_relation.db_name        = result_plan.db_name;
                 key_relation.table_name     = table_schema->get_table_name();
                 key_relation.sharding_key   = it->first;
-                key_relation.key_type       = it->second;
+                //key_relation.key_type       = it->second;
                 key_relation.key_value_num  = 1;
                 
                 if (it->first == column_info->get_column_name())
@@ -2197,6 +2195,7 @@ int QueryActuator::reparse_insert_stmt_rows_value(
                         ObConstRawExpr *const_expr = dynamic_cast<ObConstRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
                         const_expr->get_ob_const_expr_to_key_data(key_relation, 0);
                     }
+                    key_relation.key_type  = sql_expr->get_expr()->get_expr_type();
                     key_relations.push_back(key_relation);
                     break;
                 }
@@ -2341,10 +2340,15 @@ int QueryActuator::build_shard_exprs_array_with_route_one_table(
             key_relation.db_name        = result_plan.db_name;
             key_relation.table_name     = table_name;
             key_relation.sharding_key   = it->first;
-            key_relation.key_type       = it->second;
+            //key_relation.key_type       = raw_expr->get_expr_type();
             if (raw_expr->convert_ob_expr_to_route(result_plan, key_relation))
             {
                 key_relations.push_back(key_relation);
+            }
+            else
+            {
+                ret = JD_ERR_VALUE_MISMATCH;
+                return ret;
             }
             it++;
         }
@@ -2518,11 +2522,15 @@ int QueryActuator::build_shard_exprs_array_with_route_multi_table(
             key_relation.db_name        = result_plan.db_name;
             key_relation.table_name     = table_name;
             key_relation.sharding_key   = it->first;
-            key_relation.key_type       = it->second;
-
+            //key_relation.key_type       = raw_expr->get_expr_type();
             if (raw_expr->convert_ob_expr_to_route(result_plan, key_relation))
             {
                 key_relations.push_back(key_relation);
+            }
+            else
+            {
+                ret = JD_ERR_VALUE_MISMATCH;
+                return ret;
             }
             it++;
         }
