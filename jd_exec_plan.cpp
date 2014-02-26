@@ -562,7 +562,7 @@ int QueryActuator::generate_exec_plan(
     }
     else
     {
-#if 1
+#if DEBUG_ON
     jlog(INFO, "<<Part 2 : PARSE TREE>>");
     print_tree(result.result_tree_, 0);
 #endif
@@ -638,7 +638,7 @@ int QueryActuator::generate_exec_plan(
         
     if (logic_plan)
     {
-#if 0
+#if DEBUG_ON
         jlog(INFO, "\n=======================================\n");
         jlog(INFO, "\n<<Part 2 : LOGICAL PLAN>>\n");
         logic_plan->print();
@@ -2136,7 +2136,7 @@ int QueryActuator::reparse_insert_stmt_rows_value(
             has_found_sharding_key = true;
             if (insert_stmt->get_column_item(i)->column_name_ == table_schema->get_sequence_name())
             {
-                ret = JD_ERR_SQL_NOT_SUPPORT;
+                ret = JD_ERR_NOT_SUPPORT_INSERT_AUTPINCR_KEY;
                 jlog(WARNING, "Now we DO NOT support insert operation with auto_increment key");
                 return ret;
             }
@@ -2147,7 +2147,7 @@ int QueryActuator::reparse_insert_stmt_rows_value(
     //not found sharding key
     if (!has_found_sharding_key)
     {
-        if ("" == table_schema->get_sequence_name())
+        if (table_schema->get_sequence_name().empty())
         {
             ret = JD_ERR_NOT_SUPPORT_INSERT_NO_KEY;
             jlog(WARNING, "Now we DO NOT support insert operation without sharding-key");
