@@ -38,7 +38,7 @@ namespace jdbd
         virtual ~ObVariableSetStmt();
 
         int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
-        int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql);
+        int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*>& shard_info,string &assembled_sql);
         void add_variable_node(const VariableSetNode& node);
         uint32_t get_variables_size() const;
         const VariableSetNode& get_variable_node(uint32_t index) const;

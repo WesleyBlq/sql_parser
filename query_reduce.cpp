@@ -111,8 +111,7 @@ Output      :
 return      :   
  **************************************************/
 AggrFuncPostReduce::AggrFuncPostReduce(int32_t pos, int32_t func,
-        enum enum_field_types field_type) : pos(pos), func(func),
-field_type(field_type)
+        enum enum_field_types field_type, int32_t avg_com_pos) : pos(pos), func(func), field_type(field_type),avg_com_pos(avg_com_pos)
 {
 }
 
@@ -126,7 +125,7 @@ Output      :
 return      :   
  **************************************************/
 AggrFuncPostReduce::AggrFuncPostReduce(const AggrFuncPostReduce& orig)
-: pos(orig.pos), func(orig.func), field_type(orig.field_type)
+: pos(orig.pos), func(orig.func), field_type(orig.field_type), avg_com_pos(orig.avg_com_pos)
 {
 }
 
@@ -183,6 +182,20 @@ return      :
 enum enum_field_types AggrFuncPostReduce::get_field_type()
 {
     return field_type;
+}
+
+/**************************************************
+Funtion     :   get_avg_pos
+Author      :   qinbo
+Date        :   2014.3.5
+Description :   
+Input       :   
+Output      :   
+return      :   
+ **************************************************/
+int32_t AggrFuncPostReduce::get_avg_pos()
+{
+    return avg_com_pos;
 }
 
 /**************************************************
@@ -369,43 +382,25 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
         return;
     }
 
-    vector<SelectItem>  select_items    = select_stmt->get_all_select_items();
-    vector<GroupItem>   group_items     = select_stmt->get_all_group_items();
-    vector<OrderItem>   order_items     = select_stmt->get_all_order_items();
-    vector<HavingItem>  having_items    = select_stmt->get_all_having_items();
+    const vector<SelectItem>  &select_items    = select_stmt->get_all_select_items();
+    const vector<GroupItem>   &group_items     = select_stmt->get_all_group_items();
+    const vector<OrderItem>   &order_items     = select_stmt->get_all_order_items();
+    const vector<HavingItem>  &having_items    = select_stmt->get_all_having_items();
     LimitItem           limit_item      = select_stmt->get_limit_item();
     uint32_t            raw_select_num  = select_items.size();
-    vector<FromItem>    from_items      = select_stmt->get_all_from_items();
-    vector<string>      from_tables;
 
-    for (i = 0; i < from_items.size(); i++)
-    {
-        FromItem from_item = from_items.at(i);
-        if (!from_item.is_joined_)
-        {
-            from_tables.push_back(from_item.table_name_);
-        }
-        else
-        {
-            JoinedTable* joined_table = select_stmt->get_joined_table(from_item.table_id_);
-            from_tables.push_back(select_stmt->get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_);
-            from_tables.push_back(select_stmt->get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_);
-        }
-    }
-    set_all_from_tables(from_tables);
 
     //set limit 
     set_limit_reduce_info(limit_item.start, limit_item.end);
-    //set original field columns info
-    set_original_field_item(select_items);
 
+    uint32_t select_avg_pos = 0;
     for (i = 0; i < raw_select_num; i++)
     {
         SelectItem select_item = select_items.at(i);
-        if (0 != select_item.aggr_fun_type)
+        if ((0 != select_item.aggr_fun_type)&&(T_FUN_AVG != select_item.aggr_fun_type))
         {
             add_aggr_func_reduce_info(i, select_item.aggr_fun_type,
-                    trans_ob_sql2_mysql(select_item.type_));
+                    trans_ob_sql2_mysql(select_item.type_), -1);
         }
     }
 
@@ -448,6 +443,7 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
 
     if ((get_func().size() > 0)&&(NO_REDUCE == get_reduce()))
     {
+        jlog(ERROR,"(get_func().size() > 0)&&(NO_REDUCE == get_reduce()");
         set_post_reduce_type(REDUCE_AGGREGATE);
     }
 
@@ -464,7 +460,8 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
                         having_item.aggr_fun_type,
                         having_item.aggr_fun_operate,
                         having_item.aggr_fun_value,
-                        trans_ob_sql2_mysql(having_item.column_type_));
+                        trans_ob_sql2_mysql(having_item.column_type_),
+                        -1);
             }
             else
             {
@@ -472,7 +469,8 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
                         having_item.aggr_fun_type,
                         having_item.aggr_fun_operate,
                         having_item.aggr_fun_value,
-                        trans_ob_sql2_mysql(having_item.column_type_));
+                        trans_ob_sql2_mysql(having_item.column_type_),
+                        -1);
             }
         }
 
@@ -500,6 +498,7 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
                     add_order_reduce_info(is_sort_asc(order_item.order_type_),
                             raw_select_num + exist_column_names.size(),
                             trans_ob_sql2_mysql(order_item.column_type_));
+                    exist_column_names.push_back(order_item.order_column_);
                 }
                 else
                 {
@@ -519,6 +518,20 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
         if (NO_REDUCE == get_reduce())
         {
             set_post_reduce_type(REDUCE_ORDER);
+        }
+    }
+
+    for (i = 0; i < raw_select_num; i++)
+    {
+        SelectItem select_item = select_items.at(i);
+        if (T_FUN_AVG == select_item.aggr_fun_type)
+        {
+            add_aggr_func_reduce_info(i, select_item.aggr_fun_type,
+                    trans_ob_sql2_mysql(select_item.type_), select_avg_pos + raw_select_num
+                        + exist_column_names.size());
+            jlog(WARNING, "AGGR_FUNC: select_avg_pos %d", select_avg_pos + raw_select_num
+                        + exist_column_names.size());
+            select_avg_pos+=2;
         }
     }
 
@@ -569,64 +582,6 @@ void QueryPostReduce::set_limit_reduce_info(uint64_t row_offset,
 {
     this->row_offset = row_offset;
     this->row_count = row_count;
-}
-
-/**************************************************
-Funtion     :   set_original_field_item
-Author      :   qinbo
-Date        :   2013.11.20
-Description :   add sql post process info
-Input       :   int32_t reduce
-Output      :   
-return      :   
- **************************************************/
-void QueryPostReduce::set_original_field_item(
-        vector<SelectItem> &select_items_)
-{
-    select_items = select_items_;
-}
-
-/**************************************************
-Funtion     :   set_original_field_item
-Author      :   tangchao
-Date        :   2013.11.20
-Description :   get sql post process info
-Input       :   int32_t reduce
-Output      :   
-return      :   
- **************************************************/
-vector<SelectItem> &QueryPostReduce::get_original_field_item()
-{
-    return select_items;
-}
-
-/**************************************************
-Funtion     :   set_all_from_tables
-Author      :   qinbo
-Date        :   2014.1.20
-Description :   set all from tables
-Input       :   
-Output      :   
-return      :   
- **************************************************/
-void QueryPostReduce::set_all_from_tables(vector<string> from_tables)
-{
-    this->from_tables = from_tables;
-}
-
-
-/**************************************************
-Funtion     :   get_all_from_tables
-Author      :   qinbo
-Date        :   2014.1.20
-Description :   get all from tables
-Input       :   
-Output      :   
-return      :   
- **************************************************/
-vector<string> QueryPostReduce::get_all_from_tables()
-{
-    return this->from_tables;
 }
 
 /**************************************************
@@ -684,13 +639,14 @@ Description :
 Input       :   int32_t pos, 
                 int32_t func,
                 enum enum_field_types field_type
+                int32_t avg_com_pos
 Output      :   
 return      :   
  **************************************************/
 void QueryPostReduce::add_aggr_func_reduce_info(int32_t pos, int32_t func,
-        enum enum_field_types field_type)
+        enum enum_field_types field_type, int32_t avg_com_pos)
 {
-    this->func.push_back(AggrFuncPostReduce(pos, func, field_type));
+    this->func.push_back(AggrFuncPostReduce(pos, func, field_type, avg_com_pos));
 }
 
 /**************************************************
@@ -707,7 +663,7 @@ Output      :
 return      :   
  **************************************************/
 void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func,
-        int32_t operate, double value, enum enum_field_types field_type)
+        int32_t operate, double value, enum enum_field_types field_type, int32_t avg_com_pos)
 {
     //whether this aggr func is already in func vector
     uint32_t i = 0;
@@ -728,7 +684,7 @@ void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func,
 
         if (!func_exist)
         {
-            this->func.push_back(AggrFuncPostReduce(pos, func, field_type));
+            this->func.push_back(AggrFuncPostReduce(pos, func, field_type, avg_com_pos));
         }
     }
     else
@@ -739,7 +695,7 @@ void QueryPostReduce::add_having_reduce_info(int32_t pos, int32_t func,
         }
         else
         {
-            this->func.push_back(AggrFuncPostReduce(pos, func, field_type));
+            this->func.push_back(AggrFuncPostReduce(pos, func, field_type, avg_com_pos));
         }
     }
 

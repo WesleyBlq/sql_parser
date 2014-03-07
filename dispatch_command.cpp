@@ -204,7 +204,7 @@ bool dispatch_command::dispatch(Connection *conn, unsigned char* buf)
     {
         case COM_INIT_DB:
         {
-            if (NULL != meta_reader::get_instance().get_DB_schema((const char*) conn->getRequest()))
+            if (NULL != meta_reader::get_instance().get_DB_schema_with_lock((const char*) conn->getRequest()))
             {
                 /* change db */
                 conn->setDb((const char*) conn->getRequest());
@@ -473,131 +473,6 @@ bool dispatch_command::execute_command(Connection *conn)
             r_or_w ? "read" : "write");
 
     return dict_or_dataNode;
-}
-
-/**************************************************
-Funtion     :   check_acl
-Author      :   tangchao
-Date        :   2014.1.23
-Description :   check acl 
-Input       :   
-Output      :   true or false
-return      :   
- **************************************************/
-bool dispatch_command::check_acl(Connection *conn)
-{
-    QueryActuator *query = NULL;
-    string user;
-    string host;
-    string db;
-    int queryType = 0;
-    error = 0;
-
-    jlog(INFO, "enter dispatch_command::check_acl");
-
-    if (NULL == conn)
-    {
-        jlog(FATAL, "Hit a bug.");
-        return false;
-    }
-
-    query = conn->getQueryActuator();
-    if (NULL == query)
-    {
-        jlog(FATAL, "Hit a bug.");
-        return false; //for compiler through
-    }
-
-    queryType = query->get_query_type();
-    
-    user = conn->getUser();
-    host = conn->getHost();
-    db = conn->getDb();
-    
-    unsigned int next = 0;
-    vector<string> tables = conn->getQueryPostReduce()->get_all_from_tables();
-    /* convenient */
-    switch (queryType)
-    {
-            /* Read from database */
-        case ObBasicStmt::T_SHOW_SCHEMA:
-        case ObBasicStmt::T_SHOW_DATABASES:
-        case ObBasicStmt::T_SHOW_TABLES:
-        case ObBasicStmt::T_SHOW_COLUMNS:
-        case ObBasicStmt::T_SHOW_VARIABLES:
-        case ObBasicStmt::T_SHOW_CREATE_TABLE:
-        case ObBasicStmt::T_SHOW_TABLE_STATUS:
-        {
-            break;
-        }
-        case ObBasicStmt::T_SELECT:
-        {
-            for (next = 0; next < tables.size(); next++)
-            {
-                if (!acl_check(user, host, conn->getDb(), tables[next], SELECT_PRIV))
-                {
-                    error = ERROR_ACCESS_DENY_SELECT_TABLE;
-                    break;
-                }
-            }
-        }
-            break;
-            /* Write from database */
-        case ObBasicStmt::T_DELETE:
-        {
-            for (next = 0; next < tables.size(); next++)
-            {
-                if (!acl_check(user, host, conn->getDb(), tables[next], DELETE_PRIV))
-                {
-                    error = ERROR_ACCESS_DENY_SELECT_TABLE;
-                    break;
-                }
-            }
-        }
-            break;
-        case ObBasicStmt::T_VARIABLE_SET:
-        case ObBasicStmt::T_REPLACE:
-        {
-            for (next = 0; next < tables.size(); next++)
-            {
-                if (!acl_check(user, host, conn->getDb(), tables[next], INSERT_PRIV))
-                {
-                    error = ERROR_ACCESS_DENY_INSERT_TABLE;
-                    break;
-                }
-            }
-        }
-            break;
-        case ObBasicStmt::T_UPDATE:
-        {
-            for (next = 0; next < tables.size(); next++)
-            {
-                if (!acl_check(user, host, conn->getDb(), tables[next], UPDATE_PRIV))
-                {
-                    error = ERROR_ACCESS_DENY_UPDATE_TABLE;
-                    break;
-                }
-            }
-        }
-            break;
-        case ObBasicStmt::T_SHOW_SERVER_STATUS:
-        case ObBasicStmt::T_SHOW_WARNINGS:
-        case ObBasicStmt::T_SHOW_GRANTS:
-        case ObBasicStmt::T_SHOW_PARAMETERS:
-        case ObBasicStmt::T_SHOW_PROCESSLIST:
-        {
-            if (!acl_check(user, host, SUPER_PRIV))
-            {
-                error = ERROR_ACCESS_DENY_NO_SUPER_PRIVILEGE;
-            }
-            break;
-        }
-    }
-
-    if(error)
-        return false;
-    else
-        return true;
 }
 
 /**************************************************

@@ -575,27 +575,6 @@ func_expr:
         }
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_AVG, 2, NULL, $3);
       }
-      else if (strcasecmp($1->str_value_, "trim") == 0)
-      {
-        if ($3->type_ == T_LINK_NODE)
-        {
-          yyerror(&@1, result, "TRIM function syntax error! TRIM don't take %d params", $3->num_child_);
-          YYABORT;
-        }
-        else
-        {
-          ParseNode* default_type = NULL;
-          malloc_terminal_node(default_type, result->malloc_pool_, T_INT);
-          default_type->value_ = 0;
-          ParseNode* default_operand = NULL;
-          malloc_terminal_node(default_operand, result->malloc_pool_, T_STRING);
-          default_operand->str_value_ = " "; /* blank for default */
-          default_operand->value_ = strlen(default_operand->str_value_);
-          ParseNode *params = NULL;
-          malloc_non_terminal_node(params, result->malloc_pool_, T_EXPR_LIST, 3, default_type, default_operand, $3);
-          malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_SYS, 2, $1, params);
-        }
-      }
       else  /* system function */
       {
         ParseNode *params = NULL;

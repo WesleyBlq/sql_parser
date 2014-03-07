@@ -62,7 +62,7 @@ bool ObRawExpr::is_column_and_sharding_key(ResultPlan& result_plan) const
 
     ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (this));
 
-    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id_with_lock(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
     if (NULL == table_schema)
     {
         return false;
@@ -99,7 +99,7 @@ bool ObRawExpr::get_table_name_in_sharding_column(ResultPlan& result_plan, strin
     
     ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (this));
 
-    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id_with_lock(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
     if (NULL == table_schema)
     {
         return false;
@@ -126,7 +126,7 @@ bool ObRawExpr::get_column_and_sharding_key(ResultPlan& result_plan, string &col
 
     ObBinaryRefRawExpr *binary_ref_raw_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (this));
 
-    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id_with_lock(result_plan.db_name, binary_ref_raw_expr->get_first_ref_id());
     if (NULL == table_schema)
     {
         return false;
@@ -1050,7 +1050,7 @@ int64_t ObBinaryRefRawExpr::to_string(ResultPlan& result_plan, string &assembled
     }
     else
     {
-        schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id(result_plan.db_name, first_id_);
+        schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id_with_lock(result_plan.db_name, first_id_);
         if (NULL == table_schema)
         {
             ret = JD_ERR_SCHEMA_UNSET;
@@ -1597,6 +1597,15 @@ int64_t ObAggFunRawExpr::to_string(ResultPlan& result_plan, string& assembled_sq
         param_expr_->to_string(result_plan, assembled_sql_tmp);
         assembled_sql.append(assembled_sql_tmp);
         assembled_sql.append(")");
+
+        if (is_need_to_add_count())
+        {
+            string tmp;
+            assembled_sql.append(", COUNT(");
+            param_expr_->to_string(result_plan, tmp);
+            assembled_sql.append(tmp);
+            assembled_sql.append(")");
+        }
     }
     //set it to '*'
     else
@@ -1760,7 +1769,6 @@ Output		:	string& assembled_sql
  **************************************************/
 int64_t ObSqlRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql) const
 {
-    key_data key_relation;
     if (NULL != expr_)
     {
         expr_->to_string(result_plan, assembled_sql);

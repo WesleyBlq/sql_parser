@@ -40,6 +40,8 @@
 #include "crud_build_plan.h"
 #include "sql_logical_plan.h"
 #include "query_reduce.h"
+#include "../acl/sql_acl.h"
+#include "../acl/privileges.h"
 
 using namespace jdbd::common;
 using namespace jdbd::sql;
@@ -99,7 +101,7 @@ public:
     void set_first_plan_true();
     bool is_first_plan();
     void add_exec_plan_unit(ExecPlanUnit* exec_plan_unit);
-    vector<ExecPlanUnit*> get_all_exec_plan_units();
+    vector<ExecPlanUnit*> &get_all_exec_plan_units();
     void set_query_post_reduce_info(QueryPostReduce* query_post_reduce_info_)
     {
         query_post_reduce_info = query_post_reduce_info_;
@@ -146,14 +148,14 @@ public:
     }
     
     void add_same_level_exec_plan(SameLevelExecPlan* same_level_exec_plan);
-    vector<SameLevelExecPlan*> get_all_same_level_exec_plans();
+    vector<SameLevelExecPlan*> &get_all_same_level_exec_plans();
 };
 
 /*���ڲ���ִ�мƻ��Ķ�����class*/
 class QueryActuator
 {
 public:
-    QueryActuator(string current_db_name);
+    QueryActuator(string current_db_name, string host, string user);
     virtual ~QueryActuator();
     FinalExecPlan* popActuator();
     void pushActuator(FinalExecPlan* exec_plan);
@@ -169,10 +171,10 @@ public:
     Author      :   qinbo
     Date        :   2013.10.28
     Description :   generate exec plan
-    Input       :   string current_db_name
+    Input       :   string current_db_name, string host, string user
     Output      :   
      **************************************************/
-    int init_exec_plan(string current_db_name);
+    int init_exec_plan(string current_db_name, string host, string user);
 
     /**************************************************
     Funtion     :   release_exec_plan
@@ -189,7 +191,8 @@ public:
     Author      :   qinbo
     Date        :   2013.10.28
     Description :   generate exec plan
-    Input       :   
+    Input       :   Connection *conn,
+                    uint32_t* index
     Output      :   
      **************************************************/
     int generate_exec_plan(
@@ -476,7 +479,7 @@ private:
     Output      :   
      **************************************************/
     void generate_all_table_shards( ResultPlan& result_plan,
-                                    vector<FromItem> &from_items,
+                                    const vector<FromItem> &from_items,
                                     vector<vector<schema_shard*> > &all_tables_shards);
 
     
@@ -538,7 +541,7 @@ private:
     return      :   bool
      **************************************************/
     bool is_from_tables_binding(ResultPlan& result_plan,
-                                vector<FromItem> &from_items);
+                                const vector<FromItem> &from_items);
     
     
     /**************************************************
@@ -553,6 +556,19 @@ private:
      **************************************************/
     void set_sql_dispatched_info(ObSelectStmt *select_stmt, 
                                 multimap<uint32_t, vector<ObRawExpr*> > &opted_raw_exprs);
+    
+    /**************************************************
+    Funtion     :   check_acl
+    Author      :   tangchao
+    Date        :   2014.1.23
+    Description :   check acl 
+    Input       :   string db, string host, string user, ObBasicStmt::StmtType  queryType,
+                    vector<string> &acl_checked_tables
+    Output      :   acl checked ok or false
+    return      :   
+     **************************************************/
+    int check_acl(string db, string host, string user, ObBasicStmt::StmtType  queryType,
+                                        vector<string> &acl_checked_tables);
 };
 
 

@@ -195,7 +195,7 @@ Output      :
  **************************************************/
 int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan, 
                                                 string insert_rows, 
-                                                vector<schema_shard*> binding_shard_info,
+                                                vector<schema_shard*> &binding_shard_info,
                                                 string &assembled_sql)
 {
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
@@ -276,7 +276,7 @@ int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
                     //BEGIN: Added by qinbo: sql value type is same with column meta info
                     const ColumnItem* column_item = ObStmt::get_column_item(j);
                     
-                    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+                    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
                     if (NULL == db_schema)
                     {
                         ret = JD_ERR_LOGICAL_PLAN_FAILD;
@@ -416,7 +416,7 @@ int ObInsertStmt::append_distributed_insert_items(  ResultPlan& result_plan,
             //BEGIN: Added by qinbo: sql value type is same with column meta info
             const ColumnItem* column_item = ObStmt::get_column_item(j);
             
-            schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+            schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
             if (NULL == db_schema)
             {
                 ret = JD_ERR_LOGICAL_PLAN_FAILD;

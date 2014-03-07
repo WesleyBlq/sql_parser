@@ -54,17 +54,19 @@ class AggrFuncPostReduce
 {
 public:
     AggrFuncPostReduce(int32_t pos, int32_t func,
-            enum enum_field_types field_type);
+            enum enum_field_types field_type,int32_t avg_com_pos);
     AggrFuncPostReduce(const AggrFuncPostReduce& orig);
     virtual ~AggrFuncPostReduce();
     
     int32_t get_pos();
     int32_t get_func();
+    int32_t get_avg_pos();
     enum enum_field_types get_field_type();
 private:
     int32_t pos;
     int32_t func;
     enum enum_field_types field_type;
+    int32_t avg_com_pos;
 };
 
 class HavingPostReduce
@@ -100,13 +102,11 @@ public:
     void set_appended_column_num(uint32_t original_field_num, uint32_t real_field_num);   //column nums.
     void set_limit_reduce_info(uint64_t row_offset, uint64_t row_count);                   //limit     
     void add_group_reduce_info(bool sort, int32_t pos, enum enum_field_types field_type);  //pos: column sequ in select columns 
-    void add_aggr_func_reduce_info(int32_t pos, int32_t func, enum enum_field_types field_type);//same to 
-    void add_having_reduce_info(int32_t pos, int32_t func, int32_t operate, double value, enum enum_field_types field_type);
+    void add_aggr_func_reduce_info(int32_t pos, int32_t func, enum enum_field_types field_type, int32_t avg_pos);//same to 
+    void add_having_reduce_info(int32_t pos, int32_t func, int32_t operate, double value, enum enum_field_types field_type, int32_t avg_pos);
     void add_order_reduce_info(bool sort, int32_t pos, enum enum_field_types field_type);
-    void set_original_field_item(vector<SelectItem> &select_items_);
+    void set_original_field_item(const vector<SelectItem> &select_items_);
     vector<SelectItem> &get_original_field_item( );
-    void set_all_from_tables(vector<string> from_tables);
-    vector<string>     get_all_from_tables(); 
 
     int32_t get_reduce();
     uint32_t get_group_size();
@@ -138,8 +138,6 @@ private:
     vector<OrderPostReduce>     order;
     vector<AggrFuncPostReduce>  func;
     vector<HavingPostReduce>    having;
-    vector<SelectItem>          select_items;
-    vector<string>              from_tables;
     
     bool  find_column_if_exist(vector<string> &columns, string goal_column, uint32_t column_off);
     bool  is_sort_asc(SqlItemType sort_type)

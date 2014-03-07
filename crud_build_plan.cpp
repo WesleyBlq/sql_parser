@@ -317,7 +317,7 @@ int resolve_show_stmt(
             if (show_table_id == OB_INVALID_ID)
             {
             ret = JD_ERR_TABLE_UNKNOWN;
-            jlog(WARNING, "Unknown table \"%s\", show_table_node->str_value_);
+            jlog(WARNING, "Unknown table \"%s\"", show_table_node->str_value_);
             }
             else
             {

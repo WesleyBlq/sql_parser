@@ -71,11 +71,21 @@ sql_parser(string sql, string current_db_name)
 int main(void)
 {
     int ret = 0;
-    QueryActuator *query_actuator = new QueryActuator("oxwf");
+    QueryActuator *query_actuator = new QueryActuator("oxwf", "172.17.4.49", "admin");
     meta_reader::get_instance().init();
     router::get_instance().init();
     init_signal_handler();
     
+    if (load_acl())
+    {
+        cout << "Load sql acl success." << endl;
+    }
+    else
+    {
+        cout << "Load acl error, please check your MySQL connection." << endl;
+        return 1;
+    }
+
     string sql1 = "INSERT INTO persons (lastname, address) VALUES ('Wilson', 'Champs-Elysees')";
     string sql2 = "SELECT * FROM persons";
     string sql3 = "SELECT COUNT(lastname), address AS addr FROM persons WHERE id IN (select id from order_list) GROUP BY lastname";
@@ -132,6 +142,7 @@ ORDER BY tt.name";
         ('Human Resources', 100),\
         (2, 'Sales', 10), \
         (3, 'Finance', 20)";
+
     if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql_test13)))
     { 
         ret = JD_ERR_GEN_PLAN;

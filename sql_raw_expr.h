@@ -658,6 +658,7 @@ namespace jdbd
             {
                 param_expr_ = NULL;
                 distinct_ = false;
+                is_need_to_add_count_ = false;
             }
 
             ObAggFunRawExpr(ObRawExpr *param_expr, bool is_distinct, SqlItemType expr_type = T_INVALID)
@@ -697,10 +698,21 @@ namespace jdbd
             /*added by qinbo*/
             int64_t to_string(ResultPlan& result_plan, string& assembled_sql) const;
 
+            void set_is_need_to_add_count(bool is_need_to_add_count)
+            {
+                is_need_to_add_count_ = is_need_to_add_count;
+            }
+
+            bool is_need_to_add_count() const
+            {
+                return is_need_to_add_count_;
+            }
+
         private:
             // NULL means '*'
             ObRawExpr* param_expr_;
             bool distinct_;
+            bool is_need_to_add_count_;
         };
 
 

@@ -286,7 +286,7 @@ namespace jdbd
 
             //BEGIN: Added by qinbo
             const bool try_fetch_select_item_by_column_name(
-                    vector<SelectItem> &select_items, string column_name,
+                    const vector<SelectItem> &select_items, string column_name,
                     uint32_t &offset)
             {
                 for (uint32_t i = 0; i < select_items.size(); i++)
@@ -304,7 +304,7 @@ namespace jdbd
 
             //BEGIN: add by tangchao at 20140106
             const bool try_fetch_select_item_by_group(
-                    vector<SelectItem> &select_items, string column_name,
+                    const vector<SelectItem> &select_items, string column_name,
                     uint32_t &offset)
             {
                 for (uint32_t i = 0; i < select_items.size(); i++)
@@ -321,7 +321,7 @@ namespace jdbd
             }
 
             const bool try_fetch_select_item_by_having(
-                    vector<SelectItem> &select_items, HavingItem& having,
+                    const vector<SelectItem> &select_items, HavingItem& having,
                     uint32_t & offset)
             {
                 for (uint32_t i = 0; i < select_items.size(); i++)
@@ -342,7 +342,7 @@ namespace jdbd
             //END: add by tangchao at 20140106
 
             const bool try_fetch_group_item_from_order_by_items(
-                    vector<OrderItem> &order_items, GroupItem &group_item)
+                    const vector<OrderItem> &order_items, const GroupItem &group_item)
             {
                 for (uint32_t i = 0; i< order_items.size(); i++)
                 {
@@ -360,8 +360,8 @@ namespace jdbd
             
             const bool is_group_by_order_by_same(ResultPlan& result_plan)
             {
-                vector<GroupItem> group_items = get_all_group_items();
-                vector<OrderItem> order_items = get_all_order_items();
+                const vector<GroupItem> &group_items = get_all_group_items();
+                const vector<OrderItem> &order_items = get_all_order_items();
                 
                 if (group_items.size() == order_items.size())
                 {
@@ -555,7 +555,7 @@ namespace jdbd
             void print(FILE* fp, int32_t level, int32_t index = 0);
 
             int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
-            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql);
+            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> &shard_info,string &assembled_sql);
             int64_t make_select_item_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t append_select_items_reduce_used(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_from_string(ResultPlan& result_plan, string &assembled_sql);
@@ -609,6 +609,16 @@ namespace jdbd
             return      :   
              **************************************************/
             int decompose_join_on_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array);
+            void set_has_avg_in_having(bool has_avg_in_having_ )
+            {
+                has_avg_in_having = has_avg_in_having_;
+            }
+            bool is_has_avg_in_having()
+            {
+                return has_avg_in_having;
+            }
+            int append_avg_content(ResultPlan& result_plan, ObSqlRawExpr* sql_expr, SelectItem& item, string &assembled_sql);
+            
         private:
             // These fields are only used by normal select
             bool is_distinct_;
@@ -643,6 +653,7 @@ namespace jdbd
             // this sql is exec on multi shard(>1)
             bool is_sql_relate_multi_shards;
             bool is_sys_func_query_;
+            bool has_avg_in_having;
         };
     }
 }

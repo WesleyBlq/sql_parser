@@ -1,18 +1,3 @@
-/**
- * (C) 2010-2012 Alibaba Group Holding Limited.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
- *
- * Version: $Id$
- *
- * dml_build_plan.cpp
- *
- * Authors:
- *   Guibin Du <tianguan.dgb@taobao.com>
- *
- */
 #include "dml_build_plan.h"
 #include "sql_raw_expr.h"
 #include "sql_select_stmt.h"
@@ -44,7 +29,8 @@ int resolve_agg_func(
         ResultPlan * result_plan,
         ObSelectStmt* select_stmt,
         ParseNode* node,
-        ObSqlRawExpr*& ret_sql_expr);
+        ObSqlRawExpr*& ret_sql_expr,
+        int32_t expr_scope_type);
 int resolve_joined_table(
         ResultPlan * result_plan,
         ObSelectStmt* select_stmt,
@@ -283,10 +269,7 @@ int resolve_expr(
             string str;
             string str_val;
             str_val.assign(const_cast<char*> (node->str_value_), static_cast<int32_t> (node->value_));
-            if (OB_SUCCESS != (ret = ob_write_string(str_val, str)))
-            {
-                break;
-            }
+            str = str_val;
             ObObj val;
             val.set_varchar(str);
             ObConstRawExpr *c_expr = NULL;
@@ -302,11 +285,7 @@ int resolve_expr(
         case T_SYSTEM_VARIABLE:
         case T_TEMP_VARIABLE:
         {
-            string str;
-            if (OB_SUCCESS != (ret = ob_write_string(make_string(node->str_value_), str)))
-            {
-                break;
-            }
+            string str = make_string(node->str_value_);
             ObObj val;
             val.set_varchar(str);
             ObConstRawExpr *c_expr = NULL;
@@ -350,11 +329,7 @@ int resolve_expr(
         }
         case T_DECIMAL: // set as string
         {
-            string str;
-            if (OB_SUCCESS != (ret = ob_write_string(make_string(node->str_value_), str)))
-            {
-                break;
-            }
+            string str = make_string(node->str_value_);
             ObObj val;
             val.set_varchar(str);
             ObConstRawExpr *c_expr = NULL;
@@ -1244,7 +1219,7 @@ int resolve_expr(
             }
             ObSelectStmt* select_stmt = dynamic_cast<ObSelectStmt*> (stmt);
             ObSqlRawExpr *ret_sql_expr = NULL;
-            if ((ret = resolve_agg_func(result_plan, select_stmt, node, ret_sql_expr)) != OB_SUCCESS)
+            if ((ret = resolve_agg_func(result_plan, select_stmt, node, ret_sql_expr, expr_scope_type)) != OB_SUCCESS)
                 break;
             ObBinaryRefRawExpr *col_expr = NULL;
             if (CREATE_RAW_EXPR(col_expr, ObBinaryRefRawExpr, result_plan) == NULL)
@@ -1268,36 +1243,10 @@ int resolve_expr(
             if (CREATE_RAW_EXPR(func_expr, ObSysFunRawExpr, result_plan) == NULL)
                 break;
             func_expr->set_expr_type(T_FUN_SYS);
-            string func_name;
-            ret = ob_write_string(make_string(node->children_[0]->str_value_), func_name);
-            if (ret != OB_SUCCESS)
-            {
-                ret = JD_ERR_PARSER_MALLOC_FAILED;
-                jlog(WARNING, "out of memory");
-                break;
-            }
+            string func_name = make_string(node->children_[0]->str_value_);
             func_expr->set_func_name(func_name);
-            if (node->num_child_ > 1)
-            {
-                OB_ASSERT(node->children_[1]->type_ == T_EXPR_LIST);
-                ObRawExpr *para_expr = NULL;
-                int32_t num = node->children_[1]->num_child_;
-                for (int32_t i = 0; ret == OB_SUCCESS && i < num; i++)
-                {
-                    ret = resolve_expr(
-                            result_plan,
-                            stmt,
-                            node->children_[1]->children_[i],
-                            sql_expr,
-                            para_expr);
-                    if (ret != OB_SUCCESS)
-                        break;
-                    if (OB_SUCCESS != (ret = func_expr->add_param_expr(para_expr)))
-                        break;
-                }
-            }
-            
             func_expr->set_result_type(ObIntType);
+            
 #if 0    
             if (ret == OB_SUCCESS)
             {
@@ -1469,7 +1418,8 @@ int resolve_agg_func(
         ResultPlan * result_plan,
         ObSelectStmt* select_stmt,
         ParseNode* node,
-        ObSqlRawExpr*& ret_sql_expr)
+        ObSqlRawExpr*& ret_sql_expr,
+        int32_t expr_scope_type)
 {
     int& ret = result_plan->err_stat_.err_code_ = OB_SUCCESS;
     uint64_t expr_id = OB_INVALID_ID;
@@ -1532,7 +1482,13 @@ int resolve_agg_func(
                 else if (node->type_ == T_FUN_SUM)
                     agg_expr->set_expr_type(T_FUN_SUM);
                 else if (node->type_ == T_FUN_AVG)
+                {
+                    if (expr_scope_type == T_HAVING_LIMIT)
+                    {
+                        select_stmt->set_has_avg_in_having(true);
+                    }
                     agg_expr->set_expr_type(T_FUN_AVG);
+                }
                 else
                 {
                     /* Won't be here */
@@ -1883,14 +1839,8 @@ int resolve_table_columns(
                     column_item = stmt->get_column_item_by_id(table_item.table_id_, OB_APP_MIN_COLUMN_ID + i);
                     if (column_item == NULL)
                     {
-                        new_column_item.column_id_ = OB_APP_MIN_COLUMN_ID + i;
-                        if ((ret = ob_write_string(select_item.alias_name_,
-                                new_column_item.column_name_)) != OB_SUCCESS)
-                        {
-                            ret = JD_ERR_PARSER_MALLOC_FAILED;
-                            jlog(WARNING, "Can not malloc space for column name");
-                            break;
-                        }
+                        new_column_item.column_id_  = OB_APP_MIN_COLUMN_ID + i;
+                        new_column_item.column_name_= select_item.alias_name_;
                         new_column_item.table_id_ = table_item.table_id_;
                         new_column_item.query_id_ = 0; // no use now, because we don't support correlated subquery
                         new_column_item.is_name_unique_ = false;
@@ -1972,7 +1922,7 @@ int resolve_table_columns(
 #endif
             string db_name_tmp;
             db_name_tmp.assign(result_plan->db_name);
-            vector<class schema_column*> schema_columns = meta_reader::get_instance().get_all_column_schemas(db_name_tmp, table_item.table_name_);
+            vector<class schema_column*> schema_columns = meta_reader::get_instance().get_all_column_schemas_with_lock(db_name_tmp, table_item.table_name_);
 
             int32_t column_size = schema_columns.size();
 
@@ -1991,14 +1941,7 @@ int resolve_table_columns(
                     column_item = stmt->get_column_item_by_id(table_item.table_id_, new_column_item.column_id_);
                     if (column_item == NULL)
                     {
-                        ret = ob_write_string(schema_column_->get_column_name(),
-                                new_column_item.column_name_);
-                        if (ret != OB_SUCCESS)
-                        {
-                            ret = JD_ERR_PARSER_MALLOC_FAILED;
-                            jlog(WARNING, "Can not malloc space for column name");
-                            break;
-                        }
+                        new_column_item.column_name_ = schema_column_->get_column_name();
                         new_column_item.table_id_ = table_item.table_id_;
                         new_column_item.query_id_ = 0; // no use now, because we don't support correlated subquery
                         new_column_item.is_name_unique_ = false;

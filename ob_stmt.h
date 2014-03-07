@@ -213,7 +213,7 @@ namespace jdbd
 
             virtual void print(FILE* fp, int32_t level, int32_t index = 0);
             virtual int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
-            virtual int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql);
+            virtual int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> &shard_info,string &assembled_sql);
             virtual int decompose_where_items(ObRawExpr* sql_expr, vector<vector<ObRawExpr*> > &atomic_exprs_array);
 
         protected:

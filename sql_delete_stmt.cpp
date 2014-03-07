@@ -65,7 +65,7 @@ namespace jdbd
                         
         Output      :   
          **************************************************/
-        int64_t ObDeleteStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql)
+        int64_t ObDeleteStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> &shard_info,string &assembled_sql)
         {
             int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
             ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);

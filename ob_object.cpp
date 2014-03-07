@@ -869,7 +869,7 @@ int64_t ObObj::to_string(char* buffer, const int64_t length) const
                 }
                 break;
             case ObBoolType:
-                databuff_printf(buffer, length, pos, "%c", value_.bool_val ? 'Y' : 'N');
+                databuff_printf(buffer, length, pos, "%s", value_.bool_val ? "TRUE" : "FALSE");
                 break;
             case ObDecimalType:
             {

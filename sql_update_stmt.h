@@ -83,7 +83,7 @@ namespace jdbd
 
             void print(FILE* fp, int32_t level, int32_t index);
             int64_t make_stmt_string(ResultPlan& result_plan, string &assembled_sql);
-            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql);
+            int64_t make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> &shard_info,string &assembled_sql);
             int64_t make_update_table_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_update_column_string(ResultPlan& result_plan, string &assembled_sql);
             int64_t make_update_where_string(ResultPlan& result_plan, string &assembled_sql);

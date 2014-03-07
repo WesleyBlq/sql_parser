@@ -75,6 +75,8 @@ typedef struct
   ErrStat   err_stat_;
   int       is_prepare_;
   string    db_name;        //record current db name
+  string    host_name;      
+  string    user_name;      
   string    meta_db_name;   //record meta db name 
   bool      is_show_sys_var;//this sql is "select @@xxxxx" 
   bool      has_sub_query;

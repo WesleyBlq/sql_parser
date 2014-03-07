@@ -79,7 +79,7 @@ namespace jdbd
                         string &assembled_sql
         Output      :   
          **************************************************/
-        int64_t ObUpdateStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql)
+        int64_t ObUpdateStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> &shard_info,string &assembled_sql)
         {
             int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
             ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
@@ -170,7 +170,7 @@ namespace jdbd
                 //BEGIN: Added by qinbo: sql value type is same with column meta info
                 const ColumnItem* column_item = ObStmt::get_column_item(i);
                 
-                schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+                schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
                 if (NULL == db_schema)
                 {
                     ret = JD_ERR_LOGICAL_PLAN_FAILD;

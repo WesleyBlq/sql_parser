@@ -52,7 +52,7 @@ int ObStmt::add_table_item(
         {
             string db_name_tmp;
             db_name_tmp.assign(result_plan.db_name);
-            schema_table *schema_table = meta_reader::get_instance().get_table_schema(db_name_tmp, table_name);
+            schema_table *schema_table = meta_reader::get_instance().get_table_schema_with_lock(db_name_tmp, table_name);
 
             if (NULL == schema_table)
             {
@@ -142,20 +142,8 @@ int ObStmt::add_table_item(
 
     if (ret == OB_SUCCESS)
     {
-        if ((ret = ob_write_string(table_name, item.table_name_)) != OB_SUCCESS)
-        {
-            jlog(WARNING, "Can not make space for table name %.*s", (int32_t)table_name.size(), table_name.data());
-        }
-    }
-    if (ret == OB_SUCCESS)
-    {
-        if ((ret = ob_write_string(alias_name, item.alias_name_)) != OB_SUCCESS)
-        {
-            jlog(WARNING, "Can not make space for alias name %.*s", (int32_t)alias_name.size(), alias_name.data());
-        }
-    }
-    if (ret == OB_SUCCESS)
-    {
+        item.table_name_ = table_name;
+        item.alias_name_ = alias_name;
         item.type_ = type;
         item.has_scan_columns_ = false;
         item.need_display_table_name = false;
@@ -351,13 +339,7 @@ int ObStmt::add_column_item(
         }
     }
 
-    ret = ob_write_string(column_name, column_item.column_name_);
-    if (ret != OB_SUCCESS)
-    {
-        ret = JD_ERR_PARSER_MALLOC_FAILED;
-        jlog(WARNING, "Malloc column name %.*s failed", (int32_t)column_name.size(), column_name.data());
-        return ret;
-    }
+    column_item.column_name_ = column_name;
     // not be used now
     column_item.is_group_based_ = false;
     column_item.query_id_ = 0;
@@ -429,7 +411,7 @@ int ObStmt::check_table_column(
         {
             string db_name_tmp;
             db_name_tmp.assign(result_plan.db_name);
-            schema_column* schema_column = meta_reader::get_instance().get_column_schema(db_name_tmp, table_item.table_name_, column_name);
+            schema_column* schema_column = meta_reader::get_instance().get_column_schema_with_lock(db_name_tmp, table_item.table_name_, column_name);
             if (NULL != schema_column)
             {
                 column_id = schema_column->get_column_id();
@@ -559,7 +541,7 @@ int64_t ObStmt::make_stmt_string(ResultPlan& result_plan, string &assembled_sql)
     return OB_SUCCESS;
 }
 
-int64_t ObStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> shard_info,string &assembled_sql)
+int64_t ObStmt::make_exec_plan_unit_string(ResultPlan& result_plan, string where_conditions, vector<schema_shard*> &shard_info,string &assembled_sql)
 {
     return OB_SUCCESS;
 }

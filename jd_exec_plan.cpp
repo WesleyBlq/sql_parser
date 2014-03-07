@@ -165,7 +165,7 @@ Input       :
 Output      :   
 return      :
  **************************************************/
-vector<ExecPlanUnit*> SameLevelExecPlan::get_all_exec_plan_units()
+vector<ExecPlanUnit*> &SameLevelExecPlan::get_all_exec_plan_units()
 {
     return exec_plan_units;
 }
@@ -259,7 +259,7 @@ Input       :
 Output      :   
 return      :
  **************************************************/
-vector<SameLevelExecPlan*> FinalExecPlan::get_all_same_level_exec_plans()
+vector<SameLevelExecPlan*> &FinalExecPlan::get_all_same_level_exec_plans()
 {
     return same_level_exec_plans;
 }
@@ -302,9 +302,9 @@ Input       :
 Output      :   
 return      :
  **************************************************/
-QueryActuator::QueryActuator(string current_db_name)
+QueryActuator::QueryActuator(string current_db_name, string host, string user)
 {
-    init_exec_plan(current_db_name);
+    init_exec_plan(current_db_name,host,user);
 }
 
 /**************************************************
@@ -399,7 +399,7 @@ return      :
  **************************************************/
 bool QueryActuator::get_next_plan_reparsed()
 {
-    return false;;
+    return false;
 }
 
 /**************************************************
@@ -423,14 +423,17 @@ Description :   generate exec plan
 Input       :   string current_db_name
 Output      :   
  **************************************************/
-int QueryActuator::init_exec_plan(string current_db_name)
+int QueryActuator::init_exec_plan(string current_db_name, string host, string user)
 {
     memset(&result, 0, sizeof(ParseResult));
     result_plan.name_pool_ = NULL;
     result_plan.plan_tree_ = NULL;
     result_plan.db_name    = current_db_name;
+    result_plan.host_name  = host;
+    result_plan.user_name  = user;
     final_exec_plan        = NULL;
     result_plan.has_sub_query= false;
+    result_plan.is_show_sys_var = false;
     //BEGIN: add by tangchao 20131225
     query_type = ObBasicStmt::T_NONE;
     //END: add by tangchao 20131225
@@ -448,14 +451,14 @@ Output      :
  **************************************************/
 void QueryActuator::release_exec_plan()
 {
+    query_type = ObBasicStmt::T_NONE;
+    
     if (result_plan.plan_tree_)
     {
         ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
         logical_plan->~ObLogicalPlan();
         parse_free(result_plan.plan_tree_);
         result_plan.plan_tree_ = NULL;
-        result_plan.name_pool_ = NULL;
-        result_plan.has_sub_query= false;
     }
 
     if (final_exec_plan)
@@ -464,6 +467,11 @@ void QueryActuator::release_exec_plan()
         parse_free(final_exec_plan);
         final_exec_plan = NULL;
     }
+    
+    result_plan.name_pool_ = NULL;
+    result_plan.has_sub_query= false;
+    result_plan.is_show_sys_var = false;
+    result_plan.meta_db_name = "";
 }
 
 /**************************************************
@@ -886,11 +894,11 @@ int QueryActuator::gen_exec_plan_update(
     string db_name;
     string table_name;
     string sql_exec_plan_unit;
-    vector<schema_shard*> all_related_shards;
     schema_column*  column_info = NULL;
     ObSqlRawExpr*   sql_expr = NULL;
     uint64_t        column_id= 0;
     uint64_t        i = 0;
+    vector<string>  acl_checked_tables;
     
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, update_stmt)))
@@ -908,7 +916,7 @@ int QueryActuator::gen_exec_plan_update(
     }
 
     db_name.assign(result_plan.db_name);
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(db_name);
     if (NULL == db_schema)
     {
         ret = JD_ERR_CONFIG_ROUTE_ERR;
@@ -937,13 +945,13 @@ int QueryActuator::gen_exec_plan_update(
         physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
-
-    if (result_plan.has_sub_query)
+    //BEGIN: set acl 
+    acl_checked_tables.push_back(table_name);
+    if (OB_SUCCESS != (ret = check_acl(result_plan.db_name, result_plan.host_name, result_plan.user_name, ObBasicStmt::T_UPDATE, acl_checked_tables)))
     {
-        ret = JD_ERR_SQL_NO_SUBQUERY;
-        jlog(WARNING, "Now we DO NOT support sub-query");
         return ret;
     }
+    //END: set acl
 
     //this table is not distributed table
     if (!table_schema->get_is_distributed_table())
@@ -989,8 +997,8 @@ int QueryActuator::gen_exec_plan_update(
             }
         }
 
-        vector<schema_shard*>   table_all_shards= table_schema->get_all_shards();
-        vector<uint64_t>        expr_ids        = update_stmt->get_where_exprs();
+        vector<schema_shard*>   &table_all_shards= table_schema->get_all_shards();
+        vector<uint64_t>        &expr_ids        = update_stmt->get_where_exprs();
         //if there is no where conditions
         if (0 == expr_ids.size())
         {
@@ -1142,6 +1150,7 @@ int QueryActuator::gen_exec_plan_delete(
     string table_name;
     string db_name;
     string sql_exec_plan_unit;
+    vector<string> acl_checked_tables;
     ObSqlRawExpr* sql_expr = NULL;
     uint32_t    i = 0;
 
@@ -1161,9 +1170,10 @@ int QueryActuator::gen_exec_plan_delete(
     }
 
     db_name.assign(result_plan.db_name);
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(db_name);
     if (NULL == db_schema)
     {
+        
         ret = JD_ERR_CONFIG_ROUTE_ERR;
         jlog(WARNING, "Database %s should not be empty in db schema", db_name.data());
         return ret;
@@ -1190,13 +1200,13 @@ int QueryActuator::gen_exec_plan_delete(
         physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
-
-    if (result_plan.has_sub_query)
+    //BEGIN: set acl 
+    acl_checked_tables.push_back(table_name);
+    if (OB_SUCCESS != (ret = check_acl(result_plan.db_name, result_plan.host_name, result_plan.user_name, ObBasicStmt::T_DELETE, acl_checked_tables)))
     {
-        ret = JD_ERR_SQL_NO_SUBQUERY;
-        jlog(WARNING, "Now we DO NOT support sub-query");
         return ret;
     }
+    //END: set acl
 
     //this table is not distributed table
     if (!table_schema->get_is_distributed_table())
@@ -1214,8 +1224,8 @@ int QueryActuator::gen_exec_plan_delete(
     //this table is distributed table
     else
     {
-        vector<schema_shard*>   table_all_shards= table_schema->get_all_shards();
-        vector<uint64_t>        expr_ids        = delete_stmt->get_where_exprs();
+        vector<schema_shard*>   &table_all_shards= table_schema->get_all_shards();
+        vector<uint64_t>        &expr_ids        = delete_stmt->get_where_exprs();
         //if there is no where conditions
         if (0 == expr_ids.size())
         {
@@ -1338,9 +1348,8 @@ int QueryActuator::gen_exec_plan_insert(
     
     string table_name;
     string sql_exec_plan_unit;
-    vector<schema_shard*> all_related_shards;
     schema_shard*   shard_info = NULL;
-    vector<schema_shard*>   all_table_shards;
+    vector<string> acl_checked_tables;
     
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, insert_stmt)))
@@ -1357,7 +1366,7 @@ int QueryActuator::gen_exec_plan_insert(
         return ret;
     }
 
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
     if (NULL == db_schema)
     {
         ret = JD_ERR_CONFIG_ROUTE_ERR;
@@ -1386,14 +1395,15 @@ int QueryActuator::gen_exec_plan_insert(
         physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
-    if (result_plan.has_sub_query)
+    //BEGIN: set acl 
+    acl_checked_tables.push_back(table_name);
+    if (OB_SUCCESS != (ret = check_acl(result_plan.db_name, result_plan.host_name, result_plan.user_name, ObBasicStmt::T_INSERT, acl_checked_tables)))
     {
-        ret = JD_ERR_SQL_NO_SUBQUERY;
-        jlog(WARNING, "Now we DO NOT support sub-query");
         return ret;
     }
+    //END: set acl
 
-    all_table_shards = table_schema->get_all_shards();
+    vector<schema_shard*>  &all_table_shards = table_schema->get_all_shards();
     if (0 == all_table_shards.size())
     {
         ret = JD_ERR_SHARD_NUM_WRONG;
@@ -1542,10 +1552,10 @@ int QueryActuator::generate_select_plan_single_table(
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     OB_ASSERT(NULL != logical_plan);
     
-    vector<FromItem> from_items;
     string table_name;
     string sql_exec_plan_unit;
     ObSqlRawExpr* sql_expr = NULL;
+    vector<string> acl_checked_tables;
 
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
@@ -1555,13 +1565,14 @@ int QueryActuator::generate_select_plan_single_table(
         return ret;
     }
 
-    from_items = select_stmt->get_all_from_items();
+    const vector<FromItem> &from_items = select_stmt->get_all_from_items();
     if (from_items.size() > 1)
     {
         ret = JD_ERR_LOGICAL_TREE_WRONG;
         jlog(WARNING, "From table size is not right");
         return ret;
     }
+
 
     if (select_stmt->get_joined_table_size() == 0)
     {
@@ -1573,7 +1584,7 @@ int QueryActuator::generate_select_plan_single_table(
         return ret;
     }
     
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
     if (NULL == db_schema)
     {
         ret = JD_ERR_CONFIG_ROUTE_ERR;
@@ -1601,6 +1612,23 @@ int QueryActuator::generate_select_plan_single_table(
         exec_plan = new(exec_plan) SameLevelExecPlan();
         physical_plan->add_same_level_exec_plan(exec_plan);
     }
+
+    //BEGIN: set acl 
+    if (!from_items.at(0).is_joined_)
+    {
+        acl_checked_tables.push_back(from_items.at(0).table_name_);
+    }
+    else
+    {
+        JoinedTable* joined_table = select_stmt->get_joined_table(from_items.at(0).table_id_);
+        acl_checked_tables.push_back(select_stmt->get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_);
+        acl_checked_tables.push_back(select_stmt->get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_);
+    }
+    if (OB_SUCCESS != (ret = check_acl(result_plan.db_name, result_plan.host_name, result_plan.user_name, ObBasicStmt::T_SELECT, acl_checked_tables)))
+    {
+        return ret;
+    }
+    //END: set acl
 
     //set sql post process info
     QueryPostReduce* query_post_reduce_info = (QueryPostReduce*) parse_malloc(sizeof (QueryPostReduce), NULL);
@@ -1634,11 +1662,17 @@ int QueryActuator::generate_select_plan_single_table(
     //this table is distributed table
     else
     {
-        vector<schema_shard*>   table_all_shards= table_schema->get_all_shards();
-        vector<uint64_t>        expr_ids        = select_stmt->get_where_exprs();
+        vector<schema_shard*>   &table_all_shards= table_schema->get_all_shards();
+        vector<uint64_t>        &expr_ids        = select_stmt->get_where_exprs();
         /*if there is no where conditions*/
         if (0 == expr_ids.size())
         {
+            if (select_stmt->is_has_avg_in_having())
+            {
+                ret = JD_ERR_AVG_NOT_SUPPORT_IN_SELECT_HAVING;
+                jlog(WARNING, "do not support multi shard select query with avg OP in having clause for the result is not precise.");
+                return ret;
+            }
             select_stmt->set_sql_dispatched_multi_shards(true);
             ret = distribute_sql_to_all_shards( result_plan, query_id, table_schema, exec_plan);
             return ret;
@@ -1683,6 +1717,13 @@ int QueryActuator::generate_select_plan_single_table(
                     for (p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
                     {
                         final_exprs_array.push_back((*p_map2).second);
+                    }
+
+                    if ((opted_raw_exprs.size() > opted_raw_exprs.count(p_map1->first))&&(select_stmt->is_has_avg_in_having()))
+                    {
+                        ret = JD_ERR_AVG_NOT_SUPPORT_IN_SELECT_HAVING;
+                        jlog(WARNING, "do not support multi shard select query with avg OP in having clause for the result is not precise.");
+                        return ret;
                     }
 
                     for (uint32_t i = 0; i < opted_raw_exprs.count(p_map1->first); i++)
@@ -1749,11 +1790,12 @@ int QueryActuator::generate_select_plan_multi_table(
     ObSelectStmt *select_stmt = NULL;
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     OB_ASSERT(NULL != logical_plan);
-    vector<FromItem> from_items;
+    FromItem  from_item;
     ObSqlRawExpr* sql_expr = NULL;
     vector<vector<schema_shard*> >  all_binding_table_shards;
     vector<schema_shard*>           one_binding_table_shards;
     uint32_t i = 0;
+    vector<string>  acl_checked_tables;
 
     // get statement
     if (OB_SUCCESS != (ret = get_stmt(logical_plan, err_stat, query_id, select_stmt)))
@@ -1763,7 +1805,7 @@ int QueryActuator::generate_select_plan_multi_table(
         return ret;
     }
 
-    from_items = select_stmt->get_all_from_items();
+    const vector<FromItem> &from_items = select_stmt->get_all_from_items();
     if (from_items.size() <= 1)
     {
         ret = JD_ERR_LOGICAL_TREE_WRONG;
@@ -1799,6 +1841,28 @@ int QueryActuator::generate_select_plan_multi_table(
         physical_plan->add_same_level_exec_plan(exec_plan);
     }
 
+    //BEGIN: set acl 
+    for (i = 0; i< from_items.size(); i++)
+    {
+        from_item = from_items.at(i);
+        if (!from_item.is_joined_)
+        {
+            acl_checked_tables.push_back(from_item.table_name_);
+        }
+        else
+        {
+            JoinedTable* joined_table = select_stmt->get_joined_table(from_item.table_id_);
+            acl_checked_tables.push_back(select_stmt->get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_);
+            acl_checked_tables.push_back(select_stmt->get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_);
+        }
+    }
+    i = 0;
+    if (OB_SUCCESS != (ret = check_acl(result_plan.db_name, result_plan.host_name, result_plan.user_name, ObBasicStmt::T_SELECT, acl_checked_tables)))
+    {
+        return ret;
+    }
+    //END: set acl
+
     //set sql post process info
     QueryPostReduce* query_post_reduce_info = (QueryPostReduce*) parse_malloc(sizeof (QueryPostReduce), NULL);
     if (query_post_reduce_info == NULL)
@@ -1814,7 +1878,7 @@ int QueryActuator::generate_select_plan_multi_table(
         exec_plan->set_query_post_reduce_info(query_post_reduce_info);
     }
 
-    vector<uint64_t> expr_ids = select_stmt->get_where_exprs();
+    vector<uint64_t> &expr_ids = select_stmt->get_where_exprs();
 
     generate_all_table_shards(result_plan, from_items, all_binding_table_shards);
     if (0 == all_binding_table_shards.size())
@@ -1836,6 +1900,12 @@ int QueryActuator::generate_select_plan_multi_table(
         if (all_binding_table_shards.size() > 1)
         {
             select_stmt->set_sql_dispatched_multi_shards(true);
+            if (select_stmt->is_has_avg_in_having())
+            {
+                ret = JD_ERR_AVG_NOT_SUPPORT_IN_SELECT_HAVING;
+                jlog(WARNING, "do not support multi shard select query with avg OP in having clause for the result is not precise.");
+                return ret;
+            }
         }
         
         for (i = 0; i < all_binding_table_shards.size(); i++)
@@ -1903,6 +1973,13 @@ int QueryActuator::generate_select_plan_multi_table(
                 for (p_map2 = raw_exprs_same_shard.first; p_map2 != raw_exprs_same_shard.second; p_map2++)
                 {
                     final_exprs_array.push_back((*p_map2).second);
+                }
+                
+                if ((opted_raw_exprs.size() > opted_raw_exprs.count(p_map1->first))&&(select_stmt->is_has_avg_in_having()))
+                {
+                    ret = JD_ERR_AVG_NOT_SUPPORT_IN_SELECT_HAVING;
+                    jlog(WARNING, "do not support multi shard select query with avg OP in having clause for the result is not precise.");
+                    return ret;
                 }
 
                 for (i = 0; i < opted_raw_exprs.count(p_map1->first); i++)
@@ -2022,8 +2099,7 @@ int QueryActuator::reparse_where_with_route_for_multi_tables(
 {
     int  ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;;
     schema_shard*       shard_info = NULL;
-    vector<FromItem>    from_items;
-    vector<schema_shard*>           one_binding_table_shards;
+    vector<schema_shard*>    one_binding_table_shards;
     uint32_t i = 0;
     uint32_t j = 0;
     
@@ -2039,7 +2115,7 @@ int QueryActuator::reparse_where_with_route_for_multi_tables(
     .........................
     */
 
-    from_items = select_stmt->get_all_from_items();
+    const vector<FromItem> &from_items = select_stmt->get_all_from_items();
     if (from_items.size() < 2)
     {
         ret = JD_ERR_LOGICAL_TREE_WRONG;
@@ -2144,6 +2220,7 @@ int QueryActuator::reparse_insert_stmt_rows_value(
         }
     }
 
+    jlog (INFO,"table_schema->get_sequence_name() :%s", table_schema->get_sequence_name().data() );
     //not found sharding key
     if (!has_found_sharding_key)
     {
@@ -2204,7 +2281,7 @@ int QueryActuator::reparse_insert_stmt_rows_value(
             
             if (key_relations.size() > 0)
             {
-                if (!router::get_instance().get_route_result(key_relations, route_shards, result_plan.err_stat_.err_code_)
+                if (!router::get_instance().get_route_result_with_lock(key_relations, route_shards, result_plan.err_stat_.err_code_)
                     ||(route_shards.size() == 0))
                 {
                     if (result_plan.err_stat_.err_code_ != 0)
@@ -2262,7 +2339,7 @@ int QueryActuator::reparse_insert_stmt_rows_value(
             }
             
             key_relations.push_back(key_relation);
-            if (!router::get_instance().get_route_result(key_relations, route_shards, result_plan.err_stat_.err_code_)
+            if (!router::get_instance().get_route_result_with_lock(key_relations, route_shards, result_plan.err_stat_.err_code_)
                 ||(route_shards.size() != 1))
             {
                 if (result_plan.err_stat_.err_code_ != 0)
@@ -2354,7 +2431,7 @@ int QueryActuator::build_shard_exprs_array_with_route_one_table(
         }
         if (key_relations.size() > 0)
         {
-            if (!router::get_instance().get_route_result(key_relations, shard_info, result_plan.err_stat_.err_code_))
+            if (!router::get_instance().get_route_result_with_lock(key_relations, shard_info, result_plan.err_stat_.err_code_))
             {
                 if (result_plan.err_stat_.err_code_ != 0)
                 {
@@ -2502,7 +2579,7 @@ int QueryActuator::build_shard_exprs_array_with_route_multi_table(
             continue;
         }
         
-        table_schema = meta_reader::get_instance().get_table_schema(result_plan.db_name, table_name);
+        table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, table_name);
 
         for (j = 0; j<all_binding_tables_shards.size();j++)
         {
@@ -2537,7 +2614,7 @@ int QueryActuator::build_shard_exprs_array_with_route_multi_table(
 
         if (key_relations.size() > 0)
         {
-            if ((!router::get_instance().get_route_result(key_relations, route_shards, result_plan.err_stat_.err_code_))
+            if ((!router::get_instance().get_route_result_with_lock(key_relations, route_shards, result_plan.err_stat_.err_code_))
                     || (route_shards.size() == 0))
             {
                 if (result_plan.err_stat_.err_code_ != 0)
@@ -2612,13 +2689,13 @@ Input       :   ResultPlan& result_plan,
 Output      :   
  **************************************************/
 void QueryActuator::generate_all_table_shards(ResultPlan& result_plan,
-                                              vector<FromItem> &from_items,
+                                              const vector<FromItem> &from_items,
                                               vector<vector<schema_shard*> > &all_binding_tables_shards)
 {
     string   db_name;
     db_name.assign(result_plan.db_name);
     schema_table* table_schema = NULL;
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(db_name);
     
     if (NULL == db_schema)
     {
@@ -2889,15 +2966,13 @@ Output      :
 return      :   bool
  **************************************************/
 bool QueryActuator::is_from_tables_binding(ResultPlan& result_plan,
-                                          vector<FromItem> &from_items)
+                                          const vector<FromItem> &from_items)
 {
-    schema_table*  table_schema          = NULL;
-    schema_table*  first_table_schema    = NULL;
-    vector<string> binding_tables;
+    schema_table*   table_schema          = NULL;
+    schema_table*   first_table_schema    = NULL;
+    schema_db*      db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
     
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
     first_table_schema = db_schema->get_table_from_db(from_items.at(0).table_name_);
-
     if (NULL == first_table_schema)
     {
         jlog(ERROR, "shard schema manage error!!");
@@ -2910,7 +2985,7 @@ bool QueryActuator::is_from_tables_binding(ResultPlan& result_plan,
         return false;
     }
 
-    binding_tables = first_table_schema->get_relation_table();
+    vector<string> &binding_tables = first_table_schema->get_relation_table();
     if (binding_tables.size() == 0)
     {
         return false;
@@ -2964,6 +3039,121 @@ void QueryActuator::set_sql_dispatched_info(ObSelectStmt *select_stmt,
     {
         select_stmt->set_sql_dispatched_multi_shards(false);
     }
+}
+
+
+/**************************************************
+Funtion     :   check_acl
+Author      :   tangchao
+Date        :   2014.1.23
+Description :   check acl 
+Input       :   string db, string host, string user, ObBasicStmt::StmtType  queryType,
+                vector<string> &acl_checked_tables
+Output      :   acl checked ok or false
+return      :   
+ **************************************************/
+int QueryActuator::check_acl(string db, string host, string user, ObBasicStmt::StmtType  queryType,
+                                    vector<string> &acl_checked_tables)
+{
+    int error = OB_SUCCESS;
+    uint32_t next = 0;
+
+    jlog(INFO, "enter dispatch_command::check_acl");
+    
+#if 0
+    if (5 == result_plan.meta_db_name.size() &&  0 == result_plan.meta_db_name.compare("mysql"))
+    {
+        if (!acl_check(user, host, SUPER_PRIV))
+        {
+            error = ERROR_ACCESS_DENY_NO_SUPER_PRIVILEGE;
+        }
+        return error;
+    }
+#endif
+    
+    /* convenient */
+    switch (queryType)
+    {
+            /* Read from database */
+        case ObBasicStmt::T_SHOW_SCHEMA:
+        case ObBasicStmt::T_SHOW_DATABASES:
+        case ObBasicStmt::T_SHOW_TABLES:
+        case ObBasicStmt::T_SHOW_COLUMNS:
+        case ObBasicStmt::T_SHOW_VARIABLES:
+        case ObBasicStmt::T_SHOW_CREATE_TABLE:
+        case ObBasicStmt::T_SHOW_TABLE_STATUS:
+        {
+            break;
+        }
+        case ObBasicStmt::T_SELECT:
+        {
+            for (next = 0; next < acl_checked_tables.size(); next++)
+            {
+                if (!acl_check(user, host, db, acl_checked_tables[next], SELECT_PRIV))
+                {
+                    error = ERROR_ACCESS_DENY_SELECT_TABLE;
+                    break;
+                }
+            }
+        }
+            break;
+            /* Write from database */
+        case ObBasicStmt::T_DELETE:
+        {
+            for (next = 0; next < acl_checked_tables.size(); next++)
+            {
+                if (!acl_check(user, host, db, acl_checked_tables[next], DELETE_PRIV))
+                {
+                    error = ERROR_ACCESS_DENY_SELECT_TABLE;
+                    break;
+                }
+            }
+        }
+            break;
+        case ObBasicStmt::T_VARIABLE_SET:
+        case ObBasicStmt::T_INSERT:
+        case ObBasicStmt::T_REPLACE:
+        {
+            for (next = 0; next < acl_checked_tables.size(); next++)
+            {
+                if (!acl_check(user, host, db, acl_checked_tables[next], INSERT_PRIV))
+                {
+                    error = ERROR_ACCESS_DENY_INSERT_TABLE;
+                    break;
+                }
+            }
+        }
+            break;
+        case ObBasicStmt::T_UPDATE:
+        {
+            for (next = 0; next < acl_checked_tables.size(); next++)
+            {
+                if (!acl_check(user, host, db, acl_checked_tables[next], UPDATE_PRIV))
+                {
+                    error = ERROR_ACCESS_DENY_UPDATE_TABLE;
+                    break;
+                }
+            }
+        }
+            break;
+        case ObBasicStmt::T_SHOW_SERVER_STATUS:
+        case ObBasicStmt::T_SHOW_WARNINGS:
+        case ObBasicStmt::T_SHOW_GRANTS:
+        case ObBasicStmt::T_SHOW_PARAMETERS:
+        case ObBasicStmt::T_SHOW_PROCESSLIST:
+        {
+            if (!acl_check(user, host, SUPER_PRIV))
+            {
+                error = ERROR_ACCESS_DENY_NO_SUPER_PRIVILEGE;
+            }
+            break;
+        }
+        default:
+            error = JD_ERR_INVALID_ACL_CHECK_CMD;
+            break;
+    }
+
+    return error;
 }
 
 

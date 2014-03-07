@@ -23,6 +23,7 @@ ObSelectStmt::ObSelectStmt()
     gen_joined_tid_ = UINT64_MAX - 2;
     is_sql_relate_multi_shards = false;
     is_sys_func_query_ = false;
+    has_avg_in_having  = false;
 }
 
 ObSelectStmt::~ObSelectStmt()
@@ -62,7 +63,7 @@ int ObSelectStmt::check_alias_name(
         {
             string db_name_tmp;
             db_name_tmp.assign(result_plan.db_name);
-            schema_column* schema_column = meta_reader::get_instance().get_column_schema(db_name_tmp, item.table_name_, alias_name);
+            schema_column* schema_column = meta_reader::get_instance().get_column_schema_with_lock(db_name_tmp, item.table_name_, alias_name);
             if (NULL == schema_column)
             {
                 ret = JD_ERR_COLUMN_DUPLICATE;
@@ -116,9 +117,8 @@ int ObSelectStmt::add_select_item(
         SelectItem item;
         item.expr_id_ = eid;
         item.is_real_alias_ = is_real_alias;
-        ret = ob_write_string(alias_name, item.alias_name_);
-        if (ret == OB_SUCCESS)
-            ret = ob_write_string(expr_name, item.expr_name_);
+        item.alias_name_ = alias_name;
+        item.expr_name_  = expr_name;
 
         ret = get_column_info_by_expr_id(result_plan, item.expr_id_, item.type_, item.aggr_fun_type, item.select_column_name_);
 
@@ -266,7 +266,6 @@ bool ObSelectStmt::is_join_tables_binded(ResultPlan& result_plan, ObSelectStmt *
 {
     JoinedTable *joined_table = NULL;
     uint32_t num = get_joined_table_size();
-    vector<string> binding_join_tables;
     ObSqlRawExpr*  sql_expr = NULL;
     vector<vector<ObRawExpr*> > atomic_exprs_array;
     ObRawExpr*     join_on_condition = NULL;
@@ -286,7 +285,7 @@ bool ObSelectStmt::is_join_tables_binded(ResultPlan& result_plan, ObSelectStmt *
 
     joined_table = get_joined_table(from_items_[0].table_id_);
     first_join_table = ObStmt::get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_;
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema(result_plan.db_name);
+    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
     if (NULL == db_schema)
     {
         jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
@@ -300,7 +299,7 @@ bool ObSelectStmt::is_join_tables_binded(ResultPlan& result_plan, ObSelectStmt *
         return false;
     }
 
-    binding_join_tables = table_schema->get_relation_table();
+    vector<string> &binding_join_tables = table_schema->get_relation_table();
 
     if (binding_join_tables.size() > 1)
     {
@@ -529,13 +528,10 @@ int ObSelectStmt::copy_select_items(ObSelectStmt* select_stmt)
         new_select_item.expr_id_ = select_item.expr_id_;
         new_select_item.type_ = select_item.type_;
         new_select_item.aggr_fun_type = select_item.aggr_fun_type;
-        ret = ob_write_string(select_item.alias_name_, new_select_item.alias_name_);
-        if (ret == OB_SUCCESS)
-            ret = ob_write_string(select_item.expr_name_, new_select_item.expr_name_);
-        if (ret == OB_SUCCESS)
-            ret = ob_write_string(select_item.select_column_name_, new_select_item.select_column_name_);
-        if (ret == OB_SUCCESS)
-            select_items_.push_back(new_select_item);
+        new_select_item.alias_name_ = select_item.alias_name_;
+        new_select_item.expr_name_  = select_item.expr_name_;
+        new_select_item.select_column_name_ = select_item.select_column_name_;
+        select_items_.push_back(new_select_item);
     }
     return ret;
 }
@@ -776,7 +772,7 @@ Output      :
  **************************************************/
 int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan, 
                                                 string where_conditions, 
-                                                vector<schema_shard*> binding_shard_info,
+                                                vector<schema_shard*> &binding_shard_info,
                                                 string &assembled_sql)
 {
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
@@ -800,7 +796,7 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
     {
         if (0 == i)
         {
-            assembled_sql.append("FROM ");
+            assembled_sql.append(" FROM ");
         }
 
         FromItem& item = from_items_[i];
@@ -842,7 +838,7 @@ int64_t ObSelectStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
                     break;
             }
 
-            if (NULL == (binding_shard = meta_reader::get_instance().get_relation_shard(result_plan.db_name, 
+            if (NULL == (binding_shard = meta_reader::get_instance().get_relation_shard_with_lock(result_plan.db_name, 
                                                             ObStmt::get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_, 
                                                             binding_shard_info.at(i)->get_shard_name(), 
                                                             ObStmt::get_table_item_by_id(joined_table->table_ids_.at(1))->table_name_)))
@@ -1039,6 +1035,69 @@ int64_t ObSelectStmt::make_select_item_string(ResultPlan& result_plan, string &a
     return ret;
 }
 
+
+/**************************************************
+Funtion     :   append_avg_content
+Author      :   qinbo
+Date        :   2014.3.6
+Description :   generate distributed where conditions items
+Input       :   ResultPlan& result_plan
+                ObSqlRawExpr* sql_expr
+                SelectItem& item
+                string &assembled_sql
+Output      :   vector<vector<ObRawExpr*> > &atomic_exprs_array
+return      :   
+ **************************************************/
+int ObSelectStmt::append_avg_content(ResultPlan& result_plan, ObSqlRawExpr* sql_expr, SelectItem& item, string &assembled_sql)
+{
+    int ret = OB_SUCCESS;
+    ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
+    OB_ASSERT(NULL != logical_plan);
+    
+    string assembled_sql_tmp;
+    ObBinaryRefRawExpr *select_expr = dynamic_cast<ObBinaryRefRawExpr *> (const_cast<ObRawExpr *> (sql_expr->get_expr()));
+    if (NULL == select_expr)
+    {
+        ret = JD_ERR_SQL_NOT_SUPPORT;
+        jlog(WARNING, "Now we DO NOT support this type of sql.");
+        return ret;
+    }
+    
+    if (select_expr->get_first_ref_id() == OB_INVALID_ID)
+    {
+        string tmp;
+        ObSqlRawExpr* aggr_sql_expr = NULL;
+        aggr_sql_expr = logical_plan->get_expr_by_id(select_expr->get_related_sql_raw_id());
+        if (NULL == aggr_sql_expr)
+        {
+            ret = JD_ERR_ILLEGAL_ID;
+            jlog(WARNING, "ref column error!!!");
+            return ret;
+        }
+    
+        if (aggr_sql_expr->get_expr()->is_aggr_fun())
+        {
+            ObAggFunRawExpr *agg_fun_raw_expr = dynamic_cast<ObAggFunRawExpr *> (const_cast<ObRawExpr *> (aggr_sql_expr->get_expr()));
+            
+            if ((!agg_fun_raw_expr->get_param_expr())||(!agg_fun_raw_expr->get_param_expr()->is_column()))
+            {
+                ret = JD_ERR_ILLEGAL_ID;
+                jlog(WARNING, "Now we DO NOT support aggr function with parameter which is NOT column type!!!");
+                return ret;
+            }
+            assembled_sql.append(",");
+            agg_fun_raw_expr->set_expr_type(T_FUN_SUM);
+            agg_fun_raw_expr->set_is_need_to_add_count(true);
+            sql_expr->to_string(result_plan, tmp);
+            assembled_sql.append(tmp);
+            agg_fun_raw_expr->set_expr_type(T_FUN_AVG);
+            agg_fun_raw_expr->set_is_need_to_add_count(false);
+        }
+    }
+
+    return ret;
+}
+
 /**************************************************
 Funtion     :   append_select_items_reduce_used
 Author      :   qinbo
@@ -1055,6 +1114,7 @@ int64_t ObSelectStmt::append_select_items_reduce_used(
 {
     uint32_t i = 0;
     int& ret = result_plan.err_stat_.err_code_ = OB_SUCCESS;
+    ObSqlRawExpr* sql_expr = NULL;
 
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     OB_ASSERT(NULL != logical_plan);
@@ -1162,6 +1222,49 @@ int64_t ObSelectStmt::append_select_items_reduce_used(
         }
     }
 
+
+    for (i = 0; i < select_items_.size(); i++)
+    {
+        SelectItem& item = select_items_[i];
+        
+        if (item.is_real_alias_)
+        {
+            sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
+            if (NULL == sql_expr)
+            {
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                jlog(WARNING, "join table expr name error!!!");
+                return ret;
+            }
+            
+            if ((T_FUN_AVG == item.aggr_fun_type)&&(T_FUN_AVG == sql_expr->get_contain_aggr_type()))
+            {
+                if (OB_SUCCESS != (ret = append_avg_content(result_plan, sql_expr, item, assembled_sql)))
+                {
+                    return ret;
+                }
+            }
+        }
+        else
+        {
+            sql_expr = logical_plan->get_expr_by_id(item.expr_id_);
+            if (NULL == sql_expr)
+            {
+                ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                jlog(WARNING, "join table expr name error!!!");
+                return ret;
+            }
+            
+            if ((T_FUN_AVG == item.aggr_fun_type)&&(T_FUN_AVG == sql_expr->get_contain_aggr_type()))
+            {
+                if (OB_SUCCESS != (ret = append_avg_content(result_plan, sql_expr, item, assembled_sql)))
+                {
+                    return ret;
+                }
+            }
+        }
+    }
+
     return ret;
 }
 
@@ -1184,7 +1287,7 @@ int64_t ObSelectStmt::make_from_string(ResultPlan& result_plan, string &assemble
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     OB_ASSERT(NULL != logical_plan);
     
-    assembled_sql.append("FROM ");
+    assembled_sql.append(" FROM ");
     
     for (i = 0; i < from_items_.size(); i++)
     {
