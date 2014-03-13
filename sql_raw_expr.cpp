@@ -170,10 +170,10 @@ bool ObRawExpr::is_equal_filter_need_route(ResultPlan& result_plan) const
     if (type_ == T_OP_EQ || type_ == T_OP_IS)
     {
         ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
-        if (((binary_expr->get_first_op_expr()->is_const())
+        if (( (binary_expr->get_first_op_expr()->is_const())
                 && binary_expr->get_second_op_expr()->is_column_and_sharding_key(result_plan))
-                || (binary_expr->get_second_op_expr()->is_const())
-                &&(binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan)))
+                || ((binary_expr->get_second_op_expr()->is_const())
+                && (binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan))))
         {
             ret = true;
         }
@@ -306,8 +306,8 @@ bool ObRawExpr::is_range_filter_need_route(ResultPlan& result_plan) const
         ObBinaryOpRawExpr *binary_expr = dynamic_cast<ObBinaryOpRawExpr *> (const_cast<ObRawExpr *> (this));
         if (((binary_expr->get_first_op_expr()->is_const())
                 && binary_expr->get_second_op_expr()->is_column_and_sharding_key(result_plan))
-                || (binary_expr->get_second_op_expr()->is_const())
-                &&(binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan)))
+                || ((binary_expr->get_second_op_expr()->is_const())
+                &&(binary_expr->get_first_op_expr()->is_column_and_sharding_key(result_plan))))
         {
             ret = true;
         }
@@ -780,18 +780,18 @@ int64_t ObConstRawExpr::to_string(ResultPlan& result_plan, string& assembled_sql
 {
     int64_t ret = OB_SUCCESS;
     char buf_tmp[RAW_EXPR_BUF_SIZE] = {0};
-
+    memset(buf_tmp, 0 , RAW_EXPR_BUF_SIZE);
+    string str_val;
+    
     switch (get_expr_type())
     {
         case T_STRING:
         case T_BINARY:
-        {
+            value_.get_varchar(str_val);
             assembled_sql.append("\'");
-            value_.to_string(buf_tmp, RAW_EXPR_BUF_SIZE);
-            assembled_sql.append(buf_tmp, strlen(buf_tmp));
+            assembled_sql.append(str_val);
             assembled_sql.append("\'");
             break;
-        }
         case T_NULL:
             assembled_sql.append("null");
             break;

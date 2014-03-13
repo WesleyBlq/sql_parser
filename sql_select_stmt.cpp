@@ -285,14 +285,8 @@ bool ObSelectStmt::is_join_tables_binded(ResultPlan& result_plan, ObSelectStmt *
 
     joined_table = get_joined_table(from_items_[0].table_id_);
     first_join_table = ObStmt::get_table_item_by_id(joined_table->table_ids_.at(0))->table_name_;
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
-    if (NULL == db_schema)
-    {
-        jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
-        return false;
-    }
-    
-    schema_table* table_schema = db_schema->get_table_from_db(first_join_table);
+
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, first_join_table);
     if (NULL == table_schema)
     {
         jlog(WARNING, "Table %s should not be empty in table schema", first_join_table.data());

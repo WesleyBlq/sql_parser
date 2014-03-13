@@ -17,12 +17,6 @@
 #include "utility.h"
 
 
-string make_string(const char* cstr)
-{
-    string ret(const_cast<char*> (cstr), static_cast<int32_t> (strlen(cstr)));
-    return ret;
-}
-
 int ob_write_string(const string &src, string &dst)
 {
     int ret = jdbd::common::OB_SUCCESS;

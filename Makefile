@@ -25,7 +25,7 @@ LDLIBS = $(USERLIBS_test)  \
 	../sql/libsql.a ../route/libroute.a -lcrypto ../log/liblog.a ../acl/libacl.a \
 	/usr/local/lib/libzookeeper_mt.a \
 	/usr/local/lib/libjson_linux-gcc-4.1.2_libmt.a \
-	-lmysqlclient 
+	-lmysqlclient  -lpthread
 	
 
 ##libsql.a

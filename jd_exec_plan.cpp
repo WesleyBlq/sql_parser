@@ -891,7 +891,6 @@ int QueryActuator::gen_exec_plan_update(
     ObLogicalPlan* logical_plan = static_cast<ObLogicalPlan*> (result_plan.plan_tree_);
     OB_ASSERT(NULL != logical_plan);
     
-    string db_name;
     string table_name;
     string sql_exec_plan_unit;
     schema_column*  column_info = NULL;
@@ -915,16 +914,8 @@ int QueryActuator::gen_exec_plan_update(
         return ret;
     }
 
-    db_name.assign(result_plan.db_name);
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(db_name);
-    if (NULL == db_schema)
-    {
-        ret = JD_ERR_CONFIG_ROUTE_ERR;
-        jlog(WARNING, "Database %s should not be empty in db schema", db_name.data());
-        return ret;
-    }
     table_name.assign(update_stmt->get_table_item_by_id(update_stmt->get_update_table_id())->table_name_);
-    schema_table* table_schema = db_schema->get_table_from_db(table_name);
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, table_name);
     if (NULL == table_schema)
     {
         ret = JD_ERR_CONFIG_ROUTE_ERR;
@@ -1148,7 +1139,6 @@ int QueryActuator::gen_exec_plan_delete(
     OB_ASSERT(NULL != logical_plan);
     
     string table_name;
-    string db_name;
     string sql_exec_plan_unit;
     vector<string> acl_checked_tables;
     ObSqlRawExpr* sql_expr = NULL;
@@ -1169,17 +1159,8 @@ int QueryActuator::gen_exec_plan_delete(
         return ret;
     }
 
-    db_name.assign(result_plan.db_name);
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(db_name);
-    if (NULL == db_schema)
-    {
-        
-        ret = JD_ERR_CONFIG_ROUTE_ERR;
-        jlog(WARNING, "Database %s should not be empty in db schema", db_name.data());
-        return ret;
-    }
     table_name.assign(delete_stmt->get_table_item_by_id(delete_stmt->get_delete_table_id())->table_name_);
-    schema_table* table_schema = db_schema->get_table_from_db(table_name);
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, table_name);
     if (NULL == table_schema)
     {
         ret = JD_ERR_CONFIG_ROUTE_ERR;
@@ -1366,15 +1347,8 @@ int QueryActuator::gen_exec_plan_insert(
         return ret;
     }
 
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
-    if (NULL == db_schema)
-    {
-        ret = JD_ERR_CONFIG_ROUTE_ERR;
-        jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
-        return ret;
-    }
     table_name.assign(insert_stmt->get_table_item_by_id(insert_stmt->get_table_id())->table_name_);
-    schema_table* table_schema = db_schema->get_table_from_db(table_name);
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, table_name);
     if (NULL == table_schema)
     {
         ret = JD_ERR_CONFIG_ROUTE_ERR;
@@ -1584,15 +1558,7 @@ int QueryActuator::generate_select_plan_single_table(
         return ret;
     }
     
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
-    if (NULL == db_schema)
-    {
-        ret = JD_ERR_CONFIG_ROUTE_ERR;
-        jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
-        return ret;
-    }
-
-    schema_table* table_schema = db_schema->get_table_from_db(table_name);
+    schema_table* table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, table_name);
     if (NULL == table_schema)
     {
         ret = JD_ERR_CONFIG_ROUTE_ERR;
@@ -2241,11 +2207,18 @@ int QueryActuator::reparse_insert_stmt_rows_value(
         vector<uint64_t>& value_row = all_value_rows.at(i);
         sql_expr = logical_plan->get_expr_by_id(value_row.at(shard_key_index));
 
-        map<string, SqlItemType> sharding_key_tmp = table_schema->get_sharding_key();
+        map<string, SqlItemType> &sharding_key_tmp = table_schema->get_sharding_key();
         vector<key_data> key_relations;
         vector<schema_shard*> route_shards;
         
         map<string, SqlItemType>::iterator it = sharding_key_tmp.begin();
+
+        if (it == sharding_key_tmp.end())
+        {
+            ret = JD_ERR_CONFIG_ROUTE_ERR;
+            jlog(WARNING, "meta data sharding key is null.");
+            return ret;
+        }
 
         if (!has_auto_incr_sharding_key)
         {
@@ -2406,7 +2379,7 @@ int QueryActuator::build_shard_exprs_array_with_route_one_table(
         raw_expr = partition_sql_exprs.at(i);
 
         string table_name = table_schema->get_table_name();
-        map<string, SqlItemType> sharding_key_tmp = table_schema->get_sharding_key();
+        map<string, SqlItemType> &sharding_key_tmp = table_schema->get_sharding_key();
         vector<key_data> key_relations;
         vector<schema_shard*> shard_info;
 
@@ -2587,7 +2560,7 @@ int QueryActuator::build_shard_exprs_array_with_route_multi_table(
             
         }
         
-        map<string, SqlItemType> sharding_key_tmp = table_schema->get_sharding_key();
+        map<string, SqlItemType> &sharding_key_tmp = table_schema->get_sharding_key();
         vector<key_data> key_relations;
         vector<schema_shard*> route_shards;
 
@@ -2695,12 +2668,6 @@ void QueryActuator::generate_all_table_shards(ResultPlan& result_plan,
     string   db_name;
     db_name.assign(result_plan.db_name);
     schema_table* table_schema = NULL;
-    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(db_name);
-    
-    if (NULL == db_schema)
-    {
-        return;
-    }
         
     if(!is_from_tables_binding(result_plan,from_items))
     {
@@ -2713,14 +2680,21 @@ void QueryActuator::generate_all_table_shards(ResultPlan& result_plan,
     table1.2 table2.2 table3.2
     .........................
     */
-    uint32_t binding_shards_num = db_schema->get_table_from_db(from_items.at(0).table_name_)->get_all_shards().size();
+    table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, from_items.at(0).table_name_);
+    if (NULL == table_schema)
+    {
+        jlog(WARNING, "Table %s should not be empty in table schema", from_items.at(0).table_name_.data());
+        return;
+    }
+
+    uint32_t binding_shards_num = table_schema->get_all_shards().size();
 
     for (uint32_t i = 0; i < binding_shards_num; i++)
     {
         vector<schema_shard*>  one_binding_shards;
         for (uint32_t j = 0; j < from_items.size(); j++)
         {
-            table_schema = db_schema->get_table_from_db(from_items.at(j).table_name_);
+            table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, from_items.at(j).table_name_);
             one_binding_shards.push_back(table_schema->get_all_shards().at(i));
         }
         all_binding_tables_shards.push_back(one_binding_shards);
@@ -2970,9 +2944,8 @@ bool QueryActuator::is_from_tables_binding(ResultPlan& result_plan,
 {
     schema_table*   table_schema          = NULL;
     schema_table*   first_table_schema    = NULL;
-    schema_db*      db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
+    first_table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, from_items.at(0).table_name_);
     
-    first_table_schema = db_schema->get_table_from_db(from_items.at(0).table_name_);
     if (NULL == first_table_schema)
     {
         jlog(ERROR, "shard schema manage error!!");
@@ -2993,8 +2966,7 @@ bool QueryActuator::is_from_tables_binding(ResultPlan& result_plan,
     
     for (uint32_t i = 1; i < from_items.size(); i++)
     {
-        table_schema = db_schema->get_table_from_db(from_items.at(i).table_name_);
-        
+        table_schema = meta_reader::get_instance().get_table_schema_with_lock(result_plan.db_name, from_items.at(i).table_name_);
         vector<string>::iterator pos;
         pos = find(binding_tables.begin(),binding_tables.end(),from_items.at(i).table_name_);
         if(pos == binding_tables.end())

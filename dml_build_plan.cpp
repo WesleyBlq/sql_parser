@@ -285,7 +285,8 @@ int resolve_expr(
         case T_SYSTEM_VARIABLE:
         case T_TEMP_VARIABLE:
         {
-            string str = make_string(node->str_value_);
+            string str = node->str_value_;
+            //make_string(node->str_value_);
             ObObj val;
             val.set_varchar(str);
             ObConstRawExpr *c_expr = NULL;
@@ -329,7 +330,7 @@ int resolve_expr(
         }
         case T_DECIMAL: // set as string
         {
-            string str = make_string(node->str_value_);
+            string str = node->str_value_;//make_string(node->str_value_);
             ObObj val;
             val.set_varchar(str);
             ObConstRawExpr *c_expr = NULL;
@@ -1243,7 +1244,7 @@ int resolve_expr(
             if (CREATE_RAW_EXPR(func_expr, ObSysFunRawExpr, result_plan) == NULL)
                 break;
             func_expr->set_expr_type(T_FUN_SYS);
-            string func_name = make_string(node->children_[0]->str_value_);
+            string func_name = node->children_[0]->str_value_;//make_string(node->children_[0]->str_value_);
             func_expr->set_func_name(func_name);
             func_expr->set_result_type(ObIntType);
             

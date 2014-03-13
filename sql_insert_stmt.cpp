@@ -276,18 +276,10 @@ int64_t ObInsertStmt::make_exec_plan_unit_string(ResultPlan& result_plan,
                     //BEGIN: Added by qinbo: sql value type is same with column meta info
                     const ColumnItem* column_item = ObStmt::get_column_item(j);
                     
-                    schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
-                    if (NULL == db_schema)
-                    {
-                        ret = JD_ERR_LOGICAL_PLAN_FAILD;
-                        jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
-                        return ret;
-                    }
-                    
-                    schema_table* table_schema = db_schema->get_table_from_db_by_id(column_item->table_id_);
+                    schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id_with_lock(result_plan.db_name, column_item->table_id_);
                     if (NULL == table_schema)
                     {
-                        ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                        ret = JD_ERR_CONFIG_ROUTE_ERR;
                         jlog(WARNING, "Table with id %d should not be empty in table schema", column_item->table_id_);
                         return ret;
                     }
@@ -416,18 +408,10 @@ int ObInsertStmt::append_distributed_insert_items(  ResultPlan& result_plan,
             //BEGIN: Added by qinbo: sql value type is same with column meta info
             const ColumnItem* column_item = ObStmt::get_column_item(j);
             
-            schema_db* db_schema = meta_reader::get_instance().get_DB_schema_with_lock(result_plan.db_name);
-            if (NULL == db_schema)
-            {
-                ret = JD_ERR_LOGICAL_PLAN_FAILD;
-                jlog(WARNING, "Database %s should not be empty in db schema", result_plan.db_name.data());
-                return ret;
-            }
-            
-            schema_table* table_schema = db_schema->get_table_from_db_by_id(column_item->table_id_);
+            schema_table* table_schema = meta_reader::get_instance().get_table_schema_by_id_with_lock(result_plan.db_name, column_item->table_id_);
             if (NULL == table_schema)
             {
-                ret = JD_ERR_LOGICAL_PLAN_FAILD;
+                ret = JD_ERR_CONFIG_ROUTE_ERR;
                 jlog(WARNING, "Table with id %d should not be empty in table schema", column_item->table_id_);
                 return ret;
             }

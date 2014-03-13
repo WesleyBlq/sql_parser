@@ -54,7 +54,7 @@
 #endif
 
 
-#define RAW_EXPR_BUF_SIZE   512
+#define RAW_EXPR_BUF_SIZE   1024
 #define STMT_BUF_SIZE       1024
 #define SQL_PLAN_BUF_SIZE   4096
 

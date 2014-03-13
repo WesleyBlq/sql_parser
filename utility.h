@@ -52,7 +52,6 @@ using namespace jdbd::common;
 #define UINT64_MAX              (18446744073709551615ULL)
 #endif
 
-extern string make_string(const char* cstr);
 extern int ob_write_string(const string &src, string &dst);
 //BEGIN: Added by qinbo for add print stack process
 #ifndef BACKTRACE

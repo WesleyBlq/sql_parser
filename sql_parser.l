@@ -13,7 +13,7 @@
 #include "sql_item_type.h"
 #include "sql_parser.tab.h"
 
-extern void yyerror(YYLTYPE* yylloc, ParseResult* p, char* s,...);
+extern void yyerror(YYLTYPE* yylloc, ParseResult* p, char* s, ...);
 
 #define YY_USER_ACTION yylloc->first_line = yylloc->last_line = ((ParseResult*)yyextra)->yylineno_;\
   yylloc->first_column = ((ParseResult*)yyextra)->yycolumn_;\

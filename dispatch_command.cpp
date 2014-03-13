@@ -20,10 +20,10 @@
 #include "../route/meta_reader.h"
 #include "dispatch_command.h"
 
-pthread_mutex_t flush_mutex;
-
 using namespace jdbd;
 using namespace jdbd::sql;
+
+extern pthread_rwlock_t  acl_rwlock;
 
 dispatch_command::dispatch_command() : error(0), r_or_w(QUERY_READ)
 {
@@ -51,9 +51,9 @@ Other:
  **************************************************************/
 void dispatch_command::flush_all_privileges()
 {
-    pthread_mutex_lock(&flush_mutex);
+    pthread_rwlock_wrlock(&acl_rwlock);
     flush_acl();
-    pthread_mutex_unlock(&flush_mutex);
+    pthread_rwlock_unlock(&acl_rwlock);
     return;
 }
 
@@ -117,6 +117,7 @@ void dispatch_command::com_refresh(Connection *conn)
 
     if (options & REFRESH_SLOW_LOG)
     {
+        
     }
 
     if (options & REFRESH_GENERAL_LOG)
