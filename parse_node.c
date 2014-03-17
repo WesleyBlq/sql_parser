@@ -351,6 +351,7 @@ ParseNode* new_node(void *malloc_pool, SqlItemType type, int num)
       else
       {
         parse_free(node);
+        node = NULL;
       }
     }
     else

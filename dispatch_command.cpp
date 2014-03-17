@@ -23,8 +23,6 @@
 using namespace jdbd;
 using namespace jdbd::sql;
 
-extern pthread_rwlock_t  acl_rwlock;
-
 dispatch_command::dispatch_command() : error(0), r_or_w(QUERY_READ)
 {
     //dictDatabase.push_back("mysql");
@@ -51,9 +49,7 @@ Other:
  **************************************************************/
 void dispatch_command::flush_all_privileges()
 {
-    pthread_rwlock_wrlock(&acl_rwlock);
     flush_acl();
-    pthread_rwlock_unlock(&acl_rwlock);
     return;
 }
 

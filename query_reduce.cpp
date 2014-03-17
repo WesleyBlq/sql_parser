@@ -529,8 +529,6 @@ void QueryPostReduce::set_post_reduce_info(ResultPlan& result_plan,
             add_aggr_func_reduce_info(i, select_item.aggr_fun_type,
                     trans_ob_sql2_mysql(select_item.type_), select_avg_pos + raw_select_num
                         + exist_column_names.size());
-            jlog(INFO, "AGGR_FUNC: select_avg_pos %d", select_avg_pos + raw_select_num
-                        + exist_column_names.size());
             select_avg_pos+=2;
         }
     }

@@ -505,22 +505,27 @@ func_expr:
       if (strcasecmp($1->str_value_, "count") == 0)
       {
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_COUNT, 2, $3, $4);
+		destroy_tree($1);
       }
       else if (strcasecmp($1->str_value_, "sum") == 0)
       {
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_SUM, 2, $3, $4);
+		destroy_tree($1);
       }
       else if (strcasecmp($1->str_value_, "max") == 0)
       {
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_MAX, 2, $3, $4);
+		destroy_tree($1);
       }
       else if (strcasecmp($1->str_value_, "min") == 0)
       {
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_MIN, 2, $3, $4);
+		destroy_tree($1);
       }
       else if (strcasecmp($1->str_value_, "avg") == 0)
       {
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_AVG, 2, $3, $4);
+		destroy_tree($1);
       }
       else
       {
@@ -538,6 +543,7 @@ func_expr:
           YYABORT;
         }
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_COUNT, 2, NULL, $3);
+		destroy_tree($1);
       }
       else if (strcasecmp($1->str_value_, "sum") == 0)
       {
@@ -547,6 +553,7 @@ func_expr:
           YYABORT;
         }
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_SUM, 2, NULL, $3);
+		destroy_tree($1);
       }
       else if (strcasecmp($1->str_value_, "max") == 0)
       {
@@ -556,6 +563,7 @@ func_expr:
           YYABORT;
         }
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_MAX, 2, NULL, $3);
+		destroy_tree($1);
       }
       else if (strcasecmp($1->str_value_, "min") == 0)
       {
@@ -565,6 +573,7 @@ func_expr:
           YYABORT;
         }
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_MIN, 2, NULL, $3);
+		destroy_tree($1);
       }
       else if (strcasecmp($1->str_value_, "avg") == 0)
       {
@@ -574,6 +583,7 @@ func_expr:
           YYABORT;
         }
         malloc_non_terminal_node($$, result->malloc_pool_, T_FUN_AVG, 2, NULL, $3);
+		destroy_tree($1);
       }
       else  /* system function */
       {

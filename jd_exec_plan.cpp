@@ -77,7 +77,9 @@ SameLevelExecPlan::~SameLevelExecPlan()
 {
     for(uint32_t i = 0; i < exec_plan_units.size(); i++)
     {
+        exec_plan_units[i]->~ExecPlanUnit();
         parse_free(exec_plan_units.at(i));
+        exec_plan_units.at(i)= NULL;
     }
     exec_plan_units.clear();
 
@@ -85,6 +87,7 @@ SameLevelExecPlan::~SameLevelExecPlan()
     {
         query_post_reduce_info->~QueryPostReduce();
         parse_free(query_post_reduce_info);
+        query_post_reduce_info = NULL;
     }
 }
 
@@ -550,9 +553,8 @@ int QueryActuator::generate_exec_plan(
     }
     
     jlog(INFO, "<<Part 1 : SQL STRING>> %s" ,sql.data());
-    parse_sql(&result, sql.data(), sql.size());
-
-    if (result.result_tree_ == NULL)
+    if ((parse_sql(&result, sql.c_str(), sql.size()) != 0)
+      || (NULL == result.result_tree_))
     {
         ret = JD_ERR_SQL_PARSER_WRONG;
         jlog(WARNING, "parse: %p, %p, %p, msg=[%s], start_col_=[%d], end_col_[%d], line_[%d], yycolumn[%d], yylineno_[%d]",
@@ -565,75 +567,68 @@ int QueryActuator::generate_exec_plan(
             result.line_,
             result.yycolumn_,
             result.yylineno_);
+        destroy_tree(result.result_tree_);
         parse_terminate(&result);
         return ret;
     }
-    else
-    {
+
 #if DEBUG_ON
     jlog(INFO, "<<Part 2 : PARSE TREE>>");
     print_tree(result.result_tree_, 0);
 #endif
-    }
 
-    if (result.result_tree_ != NULL)
+    switch (result.result_tree_->children_[0]->type_)
     {
-        switch (result.result_tree_->children_[0]->type_)
+        case T_SELECT:
         {
-            case T_SELECT:
-            {
-                ret = resolve_select_stmt(&result_plan, result.result_tree_->children_[0], query_id);
-                break;
-            }
-            case T_DELETE:
-            {
-                ret = resolve_delete_stmt(&result_plan, result.result_tree_->children_[0], query_id);
-                break;
-            }
-            case T_INSERT:
-            {
-                ret = resolve_insert_stmt(&result_plan, result.result_tree_->children_[0], query_id);
-                break;
-            }
-            case T_UPDATE:
-            {
-                ret = resolve_update_stmt(&result_plan, result.result_tree_->children_[0], query_id);
-                break;
-            }
-            case T_SHOW_DATABASES:
-            case T_SHOW_TABLES:
-            case T_SHOW_VARIABLES:
-            case T_SHOW_COLUMNS:
-            case T_SHOW_SCHEMA:
-            case T_SHOW_CREATE_TABLE:
-            case T_SHOW_TABLE_STATUS:
-            case T_SHOW_SERVER_STATUS:
-            case T_SHOW_WARNINGS:
-            case T_SHOW_GRANTS:
-            case T_SHOW_PARAMETERS:
-            case T_SHOW_PROCESSLIST :
-            {
-                ret = resolve_show_stmt(&result_plan, result.result_tree_->children_[0], query_id);
-                break;
-            }
-            
-            case T_VARIABLE_SET:
-            {
-                ret = resolve_variable_set_stmt(&result_plan, result.result_tree_->children_[0], query_id);
-                break;
-            }
-            default:
-                ret = JD_ERR_SQL_NOT_SUPPORT;
-                break;
+            ret = resolve_select_stmt(&result_plan, result.result_tree_->children_[0], query_id);
+            break;
         }
+        case T_DELETE:
+        {
+            ret = resolve_delete_stmt(&result_plan, result.result_tree_->children_[0], query_id);
+            break;
+        }
+        case T_INSERT:
+        {
+            ret = resolve_insert_stmt(&result_plan, result.result_tree_->children_[0], query_id);
+            break;
+        }
+        case T_UPDATE:
+        {
+            ret = resolve_update_stmt(&result_plan, result.result_tree_->children_[0], query_id);
+            break;
+        }
+        case T_SHOW_DATABASES:
+        case T_SHOW_TABLES:
+        case T_SHOW_VARIABLES:
+        case T_SHOW_COLUMNS:
+        case T_SHOW_SCHEMA:
+        case T_SHOW_CREATE_TABLE:
+        case T_SHOW_TABLE_STATUS:
+        case T_SHOW_SERVER_STATUS:
+        case T_SHOW_WARNINGS:
+        case T_SHOW_GRANTS:
+        case T_SHOW_PARAMETERS:
+        case T_SHOW_PROCESSLIST :
+        {
+            ret = resolve_show_stmt(&result_plan, result.result_tree_->children_[0], query_id);
+            break;
+        }
+        
+        case T_VARIABLE_SET:
+        {
+            ret = resolve_variable_set_stmt(&result_plan, result.result_tree_->children_[0], query_id);
+            break;
+        }
+        default:
+            ret = JD_ERR_SQL_NOT_SUPPORT;
+            break;
     }
 
-    if (result.result_tree_)
-    {
-        destroy_tree(result.result_tree_);
-        result.result_tree_ = NULL;
-    }
 
+    destroy_tree(result.result_tree_);
+    result.result_tree_ = NULL;
     parse_terminate(&result);
 
     if (OB_SUCCESS != ret)
