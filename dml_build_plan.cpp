@@ -1248,6 +1248,12 @@ int resolve_expr(
             func_expr->set_func_name(func_name);
             func_expr->set_result_type(ObIntType);
             
+            if (stmt->get_stmt_type() != ObStmt::T_SELECT)
+            {
+                ret = JD_ERR_NOT_SUPPORT_SYS_FUNC;
+                jlog(WARNING, "We do not support system functions in INSERT/UPDATE/DELETE query");
+                break;
+            }
 #if 0    
             if (ret == OB_SUCCESS)
             {
@@ -3029,7 +3035,6 @@ int resolve_insert_values(
                     expr_id, T_INSERT_LIMIT);
             if (ret != OB_SUCCESS)
             {
-                jlog(WARNING, "Can not add expr_id to vector");
                 break;
             }
             value_row.push_back(expr_id);

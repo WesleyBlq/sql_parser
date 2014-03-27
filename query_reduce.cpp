@@ -5,7 +5,7 @@
  * Created on 2013年11月25日, 上午10:10
  */
 
-#include "../log/log.h"
+#include "../common/log.h"
 #include "query_reduce.h"
 #include "sql_select_stmt.h"
 

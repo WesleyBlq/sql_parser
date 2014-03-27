@@ -75,7 +75,8 @@ int main(void)
     meta_reader::get_instance().init();
     router::get_instance().init();
     init_signal_handler();
-    
+
+    #if 0
     if (load_acl())
     {
         cout << "Load sql acl success." << endl;
@@ -85,6 +86,7 @@ int main(void)
         cout << "Load acl error, please check your MySQL connection." << endl;
         return 1;
     }
+    #endif
 
     string sql1 = "INSERT INTO persons (lastname, address) VALUES ('Wilson', 'Champs-Elysees')";
     string sql2 = "SELECT * FROM persons";
@@ -133,7 +135,7 @@ ORDER BY tt.name";
     string sql_test14 = "SELECT tt.id, tt.name, pp.age FROM tt JOIN pp ON tt.id = pp.id where tt.id > 1 ORDER BY tt.name";
     string sql_test15 = "SELECT * FROM tt JOIN pp ON tt.id = pp.id where tt.id = 100 ORDER BY tt.name";
     
-    string sql_test12 = "insert into tt(id) values(null)";
+    string sql_test12 = "insert into tt(id, name) values(984254545, now())";
     string sql_test13 = "select a.*  from tt a";
     string sql_test16 = "delete from tt where id=590076 limit 1";
     string sql_test17 = "insert into pp(id) values ('1000')";
@@ -143,7 +145,7 @@ ORDER BY tt.name";
         (2, 'Sales', 10), \
         (3, 'Finance', 20)";
 
-    if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql_test13)))
+    if (OB_SUCCESS != (ret = query_actuator->generate_exec_plan(sql_test12)))
     { 
         ret = JD_ERR_GEN_PLAN;
     }

@@ -247,7 +247,6 @@ COMMENT           { return COMMENT; }
 DATABASES		  { return DATABASES; }	
 PROCESSLIST		  { return PROCESSLIST; }
 PARAMETERS        { return PARAMETERS; }
-PASSWORD          { return PASSWORD; }
 PRECISION         { return PRECISION; }
 PREPARE           { return PREPARE; }
 PRIMARY           { return PRIMARY; }

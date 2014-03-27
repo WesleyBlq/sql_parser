@@ -2171,30 +2171,34 @@ int QueryActuator::reparse_insert_stmt_rows_value(
         {
             shard_key_index = i;
             has_found_sharding_key = true;
+            #if 0
             if (insert_stmt->get_column_item(i)->column_name_ == table_schema->get_sequence_name())
             {
-                ret = JD_ERR_NOT_SUPPORT_INSERT_AUTPINCR_KEY;
+                ret = JD_ERR_NOT_SUPPORT_INSERT_AUTOINCR_KEY;
                 jlog(WARNING, "Now we DO NOT support insert operation with auto_increment key");
                 return ret;
             }
+            #endif
             break;
         }
     }
 
-    jlog (INFO,"table_schema->get_sequence_name() :%s", table_schema->get_sequence_name().data() );
+    //jlog (INFO,"table_schema->get_sequence_name() :%s", table_schema->get_sequence_name().data() );
     //not found sharding key
     if (!has_found_sharding_key)
     {
-        if (table_schema->get_sequence_name().empty())
+        //if (table_schema->get_sequence_name().empty())
         {
             ret = JD_ERR_NOT_SUPPORT_INSERT_NO_KEY;
             jlog(WARNING, "Now we DO NOT support insert operation without sharding-key");
             return ret;
         }
+        #if 0
         else
         {
             has_auto_incr_sharding_key = true;
         }
+        #endif
     }
     
     for (i = 0; i < all_value_rows.size(); i++)

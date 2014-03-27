@@ -7,10 +7,10 @@
 #include <algorithm>
 #include <stdarg.h>
 #include <string>
-#include "../include/jderror.h"
+#include "../common/jderror.h"
+#include "../common/log.h"
 #include "ob_define.h"
 #include "ob_obj_type.h"
-#include "log.h"
 
 using namespace std;
 using namespace jdbd::common;

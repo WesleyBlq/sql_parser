@@ -9,8 +9,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <openssl/md5.h>
-#include "log.h"
-#include "../include/jderror.h"
+#include "../common/log.h"
+#include "../common/jderror.h"
 #include "../route/meta_reader.h"
 #include "../route/router.h"
 #include "../route/shard.h"

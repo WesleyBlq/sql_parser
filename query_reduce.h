@@ -23,10 +23,10 @@ using namespace jdbd::sql;
 #define REDUCE_HAVING                                   4
 #define REDUCE_ORDER                                    5
 
-#define EXECUTE_GROUP                                   10
-#define EXECUTE_AGGREGATE                               11
-#define EXECUTE_HAVING                                  12
-#define EXECUTE_ORDER                                   13
+#define EXECUTE_GROUP                                   16
+#define EXECUTE_AGGREGATE                               32
+#define EXECUTE_HAVING                                  64
+#define EXECUTE_ORDER                                   128
 
 using namespace std;
 using namespace jdbd::common;

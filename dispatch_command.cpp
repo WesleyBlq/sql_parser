@@ -15,8 +15,8 @@
 #include <pthread.h>
 #include "../acl/sql_acl.h"
 #include "../acl/privileges.h"
-#include "../log/log.h"
-#include "../include/jderror.h"
+#include "../common/log.h"
+#include "../common/jderror.h"
 #include "../route/meta_reader.h"
 #include "dispatch_command.h"
 
